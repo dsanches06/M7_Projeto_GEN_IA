@@ -1,2 +1,9 @@
-backend/node_modules
-clickUp/node_modules
+# Dependencies
+node_modules/
+backend/node_modules/
+clickUp/node_modules/
+
+# Environment variables
+.env
+backend/.env
+clickUp/.env
