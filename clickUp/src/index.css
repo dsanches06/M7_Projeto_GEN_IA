@@ -2,9 +2,20 @@
 
 @theme {
   --animate-cursor-blink: blink 1s step-end infinite;
+  --animate-fadeIn: fadeIn 0.3s ease-in;
   @keyframes blink {
     from, to { opacity: 1; }
     50% { opacity: 0; }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
@@ -14,4 +25,64 @@
 
 body {
   @apply m-0 bg-[#0d0d0d] text-[#ececec];
+}
+
+.dark-theme body {
+  @apply bg-[#0d0d0d] text-[#ececec];
+}
+
+.light-theme body {
+  @apply bg-[#f8fafc] text-[#0f172a];
+}
+
+.light-theme .bg-[#1a1a1a] {
+  background-color: #f1f5f9;
+}
+
+.light-theme .text-white {
+  color: #0f172a;
+}
+
+.light-theme .bg-[#2a2a2a] {
+  background-color: #e2e8f0;
+}
+
+.light-theme .border-[#333333] {
+  border-color: #cbd5e1;
+}
+
+.light-theme .text-gray-400 {
+  color: #475569;
+}
+
+.light-theme .text-gray-300 {
+  color: #475569;
+}
+
+.light-theme .text-gray-500 {
+  color: #64748b;
+}
+
+.light-theme .placeholder-gray-500::placeholder {
+  color: #94a3b8;
+}
+
+.light-theme .hover\:bg-[#333333]:hover {
+  background-color: #cbd5e1;
+}
+
+/* Chat animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in;
 }

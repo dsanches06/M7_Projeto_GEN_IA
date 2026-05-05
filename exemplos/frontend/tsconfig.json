@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "esnext",
+    "lib": ["ES2020", "DOM"],
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  },
+  "include": ["main.ts", "src/**/*"],
+  "exclude": ["node_modules", "dist", "testes"]
+}

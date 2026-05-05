@@ -1,0 +1,148 @@
+import { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
+import { ThemeToggle } from './ThemeToggle';
+
+export function Header({ currentPage = 'dashboard', onPageChange = () => {}, onChatOpen = () => {} }) {
+  const [openSubmenu, setOpenSubmenu] = useState(null);
+  const { theme, toggleTheme } = useTheme();
+
+  const menuItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: '📊',
+      submenu: [
+        { label: 'Visão Geral', id: 'dashboard-overview' },
+        { label: 'Minhas Tarefas', id: 'my-tasks' },
+        { label: 'Estatísticas', id: 'statistics' }
+      ]
+    },
+    {
+      id: 'projects',
+      label: 'Projetos',
+      icon: '📁',
+      submenu: [
+        { label: 'Todos os Projetos', id: 'all-projects' },
+        { label: 'Novo Projeto', id: 'new-project' },
+        { label: 'Frontend', id: 'project-frontend' },
+        { label: 'Backend', id: 'project-backend' },
+        { label: 'Design', id: 'project-design' }
+      ]
+    },
+    {
+      id: 'tasks',
+      label: 'Tarefas',
+      icon: '📋',
+      submenu: [
+        { label: 'Todas as Tarefas', id: 'all-tasks' },
+        { label: 'Minhas Tarefas', id: 'my-tasks' },
+        { label: 'Atrasadas', id: 'overdue-tasks' },
+        { label: 'Concluídas', id: 'completed-tasks' }
+      ]
+    },
+    {
+      id: 'teams',
+      label: 'Teams',
+      icon: '👥',
+      submenu: [
+        { label: 'Meu Team', id: 'my-team' },
+        { label: 'Criar Team', id: 'create-team' },
+        { label: 'Membros', id: 'team-members' }
+      ]
+    },
+    {
+      id: 'tags',
+      label: 'Tags',
+      icon: '🏷️',
+      submenu: [
+        { label: 'Todas as Tags', id: 'all-tags' },
+        { label: 'Criar Tag', id: 'create-tag' }
+      ]
+    }
+  ];
+
+  return (
+    <header className="bg-[#1a1a1a] border-b border-[#333333] px-6 py-3 sticky top-0 z-40">
+      <div className="flex items-center justify-between gap-4">
+        
+        {/* Logo & Title */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">✓</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">ClickUp</h1>
+            <p className="text-xs text-gray-400 -mt-1">TaskBot AI</p>
+          </div>
+        </div>
+
+        {/* Navigation Menu with Submenus */}
+        <nav className="flex items-center gap-1 flex-1 overflow-x-auto">
+          {menuItems.map(item => (
+            <div
+              key={item.id}
+              className="relative group"
+              onMouseEnter={() => setOpenSubmenu(item.id)}
+              onMouseLeave={() => setOpenSubmenu(null)}
+            >
+              <button
+                onClick={() => onPageChange(item.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                  currentPage === item.id
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a]'
+                }`}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+                {item.submenu && <span className="text-xs ml-1">▼</span>}
+              </button>
+
+              {item.submenu && (
+                <div className="absolute left-0 mt-0 w-56 bg-[#2a2a2a] border border-[#333333] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2 z-50">
+                  {item.submenu.map((sub, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => onPageChange(sub.id)}
+                      className="w-full text-left px-4 py-2 text-gray-300 hover:text-white hover:bg-[#333333] text-sm transition flex items-center gap-2"
+                    >
+                      <span>•</span>
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        {/* Right Side - Search, Theme Toggle, Chat, User */}
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Buscar..."
+            className="hidden md:block bg-[#2a2a2a] border border-[#333333] rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500 w-32"
+          />
+
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+          <button
+            onClick={onChatOpen}
+            className="px-4 py-2 bg-[#2a2a2a] hover:bg-[#333333] text-gray-300 hover:text-white rounded-lg transition text-sm"
+          >
+            🤖 ChatBot
+          </button>
+
+          <button className="relative p-2 text-gray-300 hover:text-white hover:bg-[#2a2a2a] rounded-lg transition">
+            🔔
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+
+          <button className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold hover:bg-blue-700 transition text-sm">
+            U
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}

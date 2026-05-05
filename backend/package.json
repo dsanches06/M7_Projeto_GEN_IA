@@ -5,7 +5,7 @@
   "main": "src/app.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon --env-file=src/.env src/app.js"
+    "start": "nodemon --env-file=.env src/app.js"
   },
   "keywords": [],
   "author": "",
