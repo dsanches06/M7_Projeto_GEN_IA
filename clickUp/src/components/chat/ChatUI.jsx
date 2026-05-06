@@ -115,7 +115,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
         onClick={onClose}
       />
 
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[360px] flex-col bg-page border-l border-surface shadow-2xl rounded-tl-3xl rounded-bl-3xl overflow-hidden">
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[320px] flex-col bg-page border-l border-surface shadow-2xl rounded-tl-3xl rounded-bl-3xl overflow-hidden">
         <ChatHeaderUI onClose={onClose} />
 
         <div className="flex-1 overflow-y-auto bg-surface-2 px-6 py-4 space-y-4">
