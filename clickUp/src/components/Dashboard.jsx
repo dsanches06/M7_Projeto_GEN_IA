@@ -59,27 +59,29 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
           <p className="text-muted">Bem-vindo ao seu espaço de trabalho</p>
         </div>
 
-        <div className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">Tarefas Totais</p>
-              <p className="text-3xl font-bold text-main">{stats.total}</p>
+        <div className="grid gap-6">
+          <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+                <p className="text-muted text-sm mb-3">Tarefas Totais</p>
+                <p className="text-3xl font-bold text-main">{stats.total}</p>
+              </div>
+              <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+                <p className="text-muted text-sm mb-3">Em Progresso</p>
+                <p className="text-3xl font-bold text-blue-400">{stats.inProgress}</p>
+              </div>
+              <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+                <p className="text-muted text-sm mb-3">Concluídas</p>
+                <p className="text-3xl font-bold text-green-400">{stats.completed}</p>
+              </div>
+              <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+                <p className="text-muted text-sm mb-3">A Fazer</p>
+                <p className="text-3xl font-bold text-muted">{stats.todo}</p>
+              </div>
             </div>
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">Em Progresso</p>
-              <p className="text-3xl font-bold text-blue-400">{stats.inProgress}</p>
-            </div>
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">Concluídas</p>
-              <p className="text-3xl font-bold text-green-400">{stats.completed}</p>
-            </div>
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">A Fazer</p>
-              <p className="text-3xl font-bold text-muted">{stats.todo}</p>
-            </div>
-          </div>
+          </section>
 
-          <div className="bg-surface-3 border border-surface rounded-3xl p-6">
+          <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
               <div>
                 <h3 className="text-xl font-bold text-main">Minhas Tarefas</h3>
@@ -99,11 +101,11 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
                 ))}
               </div>
             ) : (
-              <div className="bg-surface-2 border border-surface rounded-2xl p-8 text-center">
+              <div className="bg-surface-3 border border-surface rounded-2xl p-8 text-center">
                 <p className="text-muted">Nenhuma tarefa ainda. Use o ChatBot para criar uma! 🤖</p>
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
     </main>
