@@ -30,6 +30,7 @@ import chatHistoryRoutes from "./routes/chatHistoryRoutes.js";
 import conversationRoutes from "./routes/conversationRoutes.js";
 import meetingSummarieRoutes from "./routes/meetingSummarieRoutes.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
+import chatBotRoutes from "./routes/chatBotRoutes.js";
 import logger from "./middlewares/loggerMiddleware.js";
 
 const app = express();
@@ -39,9 +40,9 @@ dotenv.config();
 app.use(express.json());
 app.use(
   cors({
-    origin: "*", // Permitir todas as origens (ajuste conforme necessário para produção)
-    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Cabeçalhos permitidos
+    origin: process.env.CLIENT_URL,
+    methods: ["GET", "POST", "PUT", "DELETE"], 
+    allowedHeaders: ["Content-Type", "Authorization"], 
   }),
 );
 app.use(express.urlencoded({ extended: true }));
@@ -88,6 +89,17 @@ app.use("/chat", chatHistoryRoutes);
 app.use("/conversations", conversationRoutes);
 app.use("/meetingsummaries", meetingSummarieRoutes);
 app.use("/tickets", ticketRoutes);
+
+// Endpoint genérico para o ChatBot com GenAI e Function Calls
+app.use("/bot", chatBotRoutes);
+
+
+//endpoint geral
+app.get("/", (req, res) => {
+  res.json({
+    message: "Bem-vindo à API ClickUp",
+  });
+});
 
 /* Iniciar o servidor */
 const PORT = process.env.PORT || 3000;

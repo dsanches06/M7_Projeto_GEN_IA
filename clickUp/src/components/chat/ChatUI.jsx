@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatService } from '@/services/chatService';
+import { botService } from '@/services/botService';
 import {
   ChatBubbleUI,
   ChatHeaderUI,
@@ -8,30 +8,25 @@ import {
   ChatInputUI
 } from '@/components/chat';
 
-const quickQuestions = [
-  'What are your business hours?',
-  'How can I track my order?',
-  "What's your return policy?"
-];
-
 /**
- * ChatUI - Modal flutuante do ChatBot AI
+ * ChatUI - Modal flutuante do ChatBot AI com GenAI Function Calls
  * Integrado com Dashboard para atualizar tarefas em tempo real
  * 
  * Padrão: Segue arquitetura de componentes do frontend original
+ * Usa: botService para executar function calls automaticamente
  */
 export function ChatUI({ isOpen, onClose, onTaskCreated }) {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Olá! 👋 Sou o TaskBot AI. Descreve uma tarefa em linguagem natural e vou ajudar-te a organizá-la.\n\nExemplos:\n• 'Adiciona uma tarefa urgente para rever código amanhã'\n• 'Cria uma tarefa de alta prioridade para bug do login'\n• 'Muda a prioridade da última tarefa para média'",
+      text: "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
       sender: 'bot',
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [lastTask, setLastTask] = useState(null);
+  const [conversationHistory, setConversationHistory] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -53,7 +48,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     if (!input.trim() || loading) return;
 
     const userMsg = {
-      id: messages.length + 1,
+      id: Date.now(),
       text: input,
       sender: 'user',
       timestamp: new Date()
@@ -64,36 +59,44 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     setLoading(true);
 
     try {
-      const response = await chatService.sendMessage(
+      // Enviar para o bot com function calls
+      const response = await botService.sendMessageToBot(
         input,
-        messages.map(m => ({
-          role: m.sender === 'bot' ? 'assistant' : 'user',
-          content: m.text
-        }))
+        conversationHistory
       );
 
+      if (!response.success) {
+        throw new Error(response.error || 'Erro ao processar mensagem');
+      }
+
+      // Adicionar resposta do bot
       const botMsg = {
-        id: messages.length + 2,
-        text: response.message || response.content || "Desculpa, não consegui processar isso.",
+        id: Date.now() + 1,
+        text: response.message,
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        functionResults: response.functionResults
       };
       setMessages(prev => [...prev, botMsg]);
 
-      const taskData = chatService.extractTaskData(response.message || response.content);
-      if (taskData) {
-        setLastTask(taskData);
-        if (onTaskCreated) {
-          onTaskCreated(taskData);
-        }
+      // Atualizar histórico da conversa
+      if (response.updatedHistory) {
+        setConversationHistory(response.updatedHistory);
+      }
+
+      // Se houver resultado de function call, criar tarefa
+      if (botService.hasFunctionResults(response)) {
+        const functionResult = botService.getFirstFunctionResult(response);
+        handleCreateTaskFromFunction(functionResult);
       }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMsg = {
-        id: messages.length + 2,
-        text: `❌ Erro ao processar mensagem: ${error.message}`,
+        id: Date.now() + 1,
+        text: `❌ Erro: ${error.message}`,
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        isError: true
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
@@ -101,9 +104,62 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     }
   };
 
-  const handleQuickQuestion = (question) => {
-    setInput(question);
-    inputRef.current?.focus();
+  /**
+   * Criar tarefa a partir do resultado da função
+   */
+  const handleCreateTaskFromFunction = async (functionResult) => {
+    try {
+      const taskData = botService.extractTaskDataFromFunctionResult(
+        functionResult
+      );
+
+      if (!taskData) {
+        throw new Error('Não foi possível extrair dados da tarefa');
+      }
+
+      // Callback para criar tarefa no Dashboard
+      if (onTaskCreated) {
+        onTaskCreated({
+          title: taskData.title,
+          description: taskData.description,
+          priority: getPriorityLabel(taskData.priority_id),
+          dueDate: taskData.due_date ? taskData.due_date.split('T')[0] : new Date().toISOString().split('T')[0],
+          estimated_hours: taskData.estimated_hours
+        });
+      }
+
+      // Adicionar mensagem de sucesso
+      const successMsg = {
+        id: Date.now() + 2,
+        text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
+        sender: 'system',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, successMsg]);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      const errorMsg = {
+        id: Date.now() + 2,
+        text: `⚠️ Erro ao criar tarefa: ${error.message}`,
+        sender: 'system',
+        timestamp: new Date(),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    }
+  };
+
+  /**
+   * Converter ID de prioridade para label
+   */
+  const getPriorityLabel = (priorityId) => {
+    const priorities = {
+      1: 'alta',
+      2: 'alta',
+      3: 'média',
+      4: 'baixa'
+    };
+    return priorities[priorityId] || 'média';
   };
 
   if (!isOpen) return null;
@@ -120,31 +176,19 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
 
         <div className="flex-1 overflow-y-auto bg-surface-2 px-6 py-4 space-y-4">
           {messages.map(msg => (
-            <ChatBubbleUI key={msg.id} message={msg} sender={msg.sender} />
+            <ChatBubbleUI 
+              key={msg.id} 
+              message={msg} 
+              sender={msg.sender}
+              functionResults={msg.functionResults}
+              isError={msg.isError}
+            />
           ))}
 
           {loading && <ChatLoadingUI />}
 
-          <div className="bg-surface-3 border border-surface rounded-3xl p-4">
-            <p className="text-sm font-semibold text-main mb-3">Quick questions:</p>
-            <div className="space-y-2">
-              {quickQuestions.map((question) => (
-                <button
-                  key={question}
-                  type="button"
-                  onClick={() => handleQuickQuestion(question)}
-                  className="w-full text-left rounded-2xl border border-surface bg-page px-4 py-3 text-sm text-secondary hover:border-[var(--primary)] hover:bg-surface-3 transition"
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div ref={messagesEndRef} />
         </div>
-
-        <ChatTaskDisplayUI taskData={lastTask} />
 
         <ChatInputUI
           value={input}

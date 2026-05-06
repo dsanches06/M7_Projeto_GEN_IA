@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-export function Header() {
+export function Header({ onChatOpen }) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
 
