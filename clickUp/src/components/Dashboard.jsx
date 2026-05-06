@@ -1,4 +1,4 @@
-import { TaskCard } from './TaskCard';
+import { TaskCard } from '@/components/TaskCard';
 
 export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
   const defaultTasks = [
@@ -53,53 +53,57 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
 
   return (
     <main className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header da página */}
+      <div className="w-full max-w-7xl mx-auto px-6 py-6">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-main mb-2">Dashboard</h2>
           <p className="text-muted">Bem-vindo ao seu espaço de trabalho</p>
         </div>
 
-        {/* Cards de estatísticas */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-surface-2 border border-surface rounded-lg p-4">
-            <p className="text-muted text-sm mb-2">Tarefas Totais</p>
-            <p className="text-3xl font-bold text-main">{stats.total}</p>
-          </div>
-          <div className="bg-surface-2 border border-surface rounded-lg p-4">
-            <p className="text-muted text-sm mb-2">Em Progresso</p>
-            <p className="text-3xl font-bold text-blue-400">{stats.inProgress}</p>
-          </div>
-          <div className="bg-surface-2 border border-surface rounded-lg p-4">
-            <p className="text-muted text-sm mb-2">Concluídas</p>
-            <p className="text-3xl font-bold text-green-400">{stats.completed}</p>
-          </div>
-          <div className="bg-surface-2 border border-surface rounded-lg p-4">
-            <p className="text-muted text-sm mb-2">A Fazer</p>
-            <p className="text-3xl font-bold text-muted">{stats.todo}</p>
-          </div>
-        </div>
-
-        {/* Seção de tarefas */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-main">Minhas Tarefas</h3>
-            <button className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold py-2 px-4 rounded-lg transition">
-              + Nova Tarefa
-            </button>
+        <div className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+              <p className="text-muted text-sm mb-3">Tarefas Totais</p>
+              <p className="text-3xl font-bold text-main">{stats.total}</p>
+            </div>
+            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+              <p className="text-muted text-sm mb-3">Em Progresso</p>
+              <p className="text-3xl font-bold text-blue-400">{stats.inProgress}</p>
+            </div>
+            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+              <p className="text-muted text-sm mb-3">Concluídas</p>
+              <p className="text-3xl font-bold text-green-400">{stats.completed}</p>
+            </div>
+            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
+              <p className="text-muted text-sm mb-3">A Fazer</p>
+              <p className="text-3xl font-bold text-muted">{stats.todo}</p>
+            </div>
           </div>
 
-          {allTasks.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {allTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))}
+          <div className="bg-surface-3 border border-surface rounded-3xl p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-main">Minhas Tarefas</h3>
+                <p className="text-muted mt-2 max-w-2xl">
+                  Aqui estão as tarefas recentes e o seu progresso. Use o botão ao lado para adicionar novas atividades rapidamente.
+                </p>
+              </div>
+              <button className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold py-2 px-4 rounded-lg transition">
+                + Nova Tarefa
+              </button>
             </div>
-          ) : (
-            <div className="bg-surface-2 border border-surface rounded-lg p-8 text-center">
-              <p className="text-muted">Nenhuma tarefa ainda. Use o ChatBot para criar uma! 🤖</p>
-            </div>
-          )}
+
+            {allTasks.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {allTasks.map(task => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-surface-2 border border-surface rounded-2xl p-8 text-center">
+                <p className="text-muted">Nenhuma tarefa ainda. Use o ChatBot para criar uma! 🤖</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>

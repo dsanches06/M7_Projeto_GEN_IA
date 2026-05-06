@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatService } from '../services/chatService';
+import { chatService } from '@/services/chatService';
 
 export function ChatMessage({ message, sender }) {
   const isBot = sender === 'bot';

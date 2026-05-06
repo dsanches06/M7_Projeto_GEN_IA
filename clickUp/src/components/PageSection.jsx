@@ -1,6 +1,6 @@
 export function PageSection({ title, description }) {
   return (
-    <div className="w-full max-w-6xl mx-auto px-4">
+    <div className="w-full max-w-7xl mx-auto px-6 py-6">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-main mb-2">{title}</h2>
         <p className="text-muted">{description}</p>
