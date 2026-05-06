@@ -233,7 +233,7 @@ export default function ChatPage() {
 
   return (
     <div
-      className={`h-screen flex flex-col transition-colors ${isDark ? "bg-[#0d0d0d] text-white" : "bg-gray-50 text-black"}`}
+      className="h-screen flex flex-col transition-colors"
     >
       <HeaderUI
         onNewChat={() => {
