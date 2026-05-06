@@ -21,67 +21,119 @@
 
 :root {
   color-scheme: dark;
+  --bg: #0d0d0d;
+  --surface: #111111;
+  --surface-2: #1a1a1a;
+  --surface-3: #2a2a2a;
+  --text: #ececec;
+  --text-muted: #94a3b8;
+  --text-secondary: #9ca3af;
+  --border: #333333;
+  --border-strong: #444444;
+  --primary: #2463eb;
+  --primary-hover: #1d4ed8;
+}
+
+.light-theme {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-secondary: #475569;
+  --border: #cbd5e1;
+  --border-strong: #94a3b8;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
 }
 
 body {
-  @apply m-0 bg-[#0d0d0d] text-[#ececec];
+  @apply m-0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
-.dark-theme body {
-  @apply bg-[#0d0d0d] text-[#ececec];
+* {
+  box-sizing: border-box;
 }
 
-.light-theme body {
-  @apply bg-[#f8fafc] text-[#0f172a];
+.text-main {
+  color: var(--text);
 }
 
-.light-theme .bg-[#1a1a1a] {
-  background-color: #f1f5f9;
+.text-muted {
+  color: var(--text-muted);
 }
 
-.light-theme .text-white {
-  color: #0f172a;
+.text-secondary {
+  color: var(--text-secondary);
 }
 
-.light-theme .bg-[#2a2a2a] {
-  background-color: #e2e8f0;
+.bg-page {
+  background-color: var(--bg);
 }
 
-.light-theme .border-[#333333] {
-  border-color: #cbd5e1;
+.bg-surface {
+  background-color: var(--surface);
 }
 
-.light-theme .text-gray-400 {
-  color: #475569;
+.bg-surface-2 {
+  background-color: var(--surface-2);
 }
 
-.light-theme .text-gray-300 {
-  color: #475569;
+.bg-surface-3 {
+  background-color: var(--surface-3);
 }
 
-.light-theme .text-gray-500 {
-  color: #64748b;
+.border-surface {
+  border-color: var(--border);
 }
 
-.light-theme .placeholder-gray-500::placeholder {
-  color: #94a3b8;
+.border-surface-strong {
+  border-color: var(--border-strong);
 }
 
-.light-theme .hover\:bg-[#333333]:hover {
-  background-color: #cbd5e1;
+.hover\:bg-surface-2:hover {
+  background-color: var(--surface-2);
 }
 
-/* Chat animations */
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.hover\:text-main:hover {
+  color: var(--text);
 }
+
+/* Main content layout */
+main {
+  margin-top: 60px;
+  padding: 40px 20px 60px 20px;
+  min-height: calc(100vh - 180px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Smooth transitions */
+header {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+h1, h2, h3, h4 {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
 
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-in;

@@ -1,89 +1,76 @@
-import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from './ThemeToggle';
 
-export function Header({ currentPage = 'dashboard', onPageChange = () => {}, onChatOpen = () => {} }) {
+export function Header() {
   const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { 
-      id: 'projetos', 
-      label: 'Projetos', 
-      icon: '📂',
-      submenu: [
-        { label: 'Equipas', id: 'equipas', icon: '👥' },
-        { label: 'Sprints', id: 'sprints', icon: '🚩' }
-      ]
-    },
-    { id: 'utilizadores', label: 'Utilizadores', icon: '👤' },
-    { id: 'tags', label: 'Tags', icon: '🏷️' },
-    { id: 'tarefas', label: 'Tarefas', icon: '📋' }
+    { id: 'dashboard', path: '/dashboard', label: 'Dashboard' },
+    { id: 'projetos', path: '/projetos', label: 'Projetos' },
+    { id: 'equipas', path: '/equipas', label: 'Equipas' },
+    { id: 'sprints', path: '/sprints', label: 'Sprints' },
+    { id: 'utilizadores', path: '/utilizadores', label: 'Utilizadores' },
+    { id: 'tags', path: '/tags', label: 'Tags' },
+    { id: 'tarefas', path: '/tarefas', label: 'Tarefas' }
   ];
 
   return (
-    <header className="bg-[#111111] text-white px-6 py-2 sticky top-0 z-50 border-b border-white/5">
-      <div className="max-w-[1600px] mx-auto flex items-center justify-between h-12">
-        
-        {/* Lado Esquerdo: Logo e Subtítulo */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-bold tracking-tight leading-none">ClickUp</h1>
-          <p className="text-[14px] text-gray-500 font-medium">Project Management</p>
-        </div>
+    <header className={`fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-2.5 backdrop-blur-sm transition-colors ${
+      isDark 
+        ? 'bg-[rgba(13,13,13,0.8)] shadow-[0_2px_4px_rgba(0,0,0,0.4)]' 
+        : 'bg-[rgba(248,250,252,0.8)] shadow-[0_2px_4px_rgba(0,0,0,0.1)]'
+    }`}>
+      {/* Logo */}
+      <div className="flex-shrink-0">
+        <h1 className={`text-2xl font-bold tracking-tight ${
+          isDark
+            ? 'text-white'
+            : 'text-slate-900'
+        }`}>
+          ClickUp
+        </h1>
+      </div>
 
-        {/* Centro: Menu de Navegação Estilo "Pílula" */}
-        <nav className="flex items-center bg-[#2a2a2a] rounded-md p-1 border border-white/5 shadow-inner">
+      {/* Navigation Menu */}
+      <nav className="flex-1 flex justify-center">
+        <ul className="flex gap-4 items-center">
           {menuItems.map((item) => (
-            <div key={item.id} className="relative group">
-              <button
-                onClick={() => onPageChange(item.id)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded text-[13px] font-medium transition-all
-                  ${currentPage === item.id || (item.id === 'projetos' && item.submenu)
-                    ? 'bg-[#353535] text-[#82b39b] shadow-sm' 
-                    : 'text-gray-400 hover:text-white hover:bg-[#353535]/50'
+            <li key={item.id}>
+              <NavLink
+                to={item.path}
+                className={({ isActive }) => `
+                  font-semibold transition-all duration-300 px-3 py-1.5 rounded-md
+                  ${isActive
+                    ? isDark
+                      ? 'bg-white text-slate-900 transform scale-105'
+                      : 'bg-slate-900 text-white transform scale-105'
+                    : isDark
+                      ? 'text-gray-300 hover:text-white hover:bg-slate-700'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-gray-200'
                   }
                 `}
               >
-                <span className="text-[14px]">{item.icon}</span>
                 {item.label}
-                {item.submenu && <span className="text-[10px] opacity-30 ml-0.5">▼</span>}
-              </button>
-
-              {/* Dropdown - Projetos */}
-              {item.submenu && (
-                <div className="absolute top-[calc(100%+8px)] left-0 w-44 bg-[#1e1e1e] border border-white/10 rounded-md shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 overflow-hidden">
-                  {item.submenu.map((sub, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => onPageChange(sub.id)}
-                      className="w-full text-left px-4 py-2.5 text-xs text-gray-300 hover:bg-[#82b39b] hover:text-[#111] transition-colors flex items-center gap-3 border-b border-white/5 last:border-0"
-                    >
-                      <span>{sub.icon}</span>
-                      {sub.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+              </NavLink>
+            </li>
           ))}
-        </nav>
+        </ul>
+      </nav>
 
-        {/* Lado Direito: Ações */}
-        <div className="flex items-center gap-4">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          
-          <button
-            onClick={onChatOpen}
-            className="bg-[#2463eb] hover:bg-[#1d4ed8] text-white text-[11px] font-bold px-4 py-2 rounded uppercase tracking-wider transition-colors"
-          >
-            CHATBOT
-          </button>
-
-          <div className="w-8 h-8 bg-[#2a2a2a] border border-white/10 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-400 hover:border-[#82b39b] cursor-pointer transition-all">
-            U
-          </div>
+      {/* Right Actions */}
+      <div className="flex-shrink-0 flex items-center gap-3">
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all ${
+          isDark
+            ? 'bg-slate-700 border border-slate-600 text-gray-300 hover:border-cyan-400'
+            : 'bg-gray-200 border border-gray-300 text-gray-600 hover:border-blue-400'
+        }`}>
+          U
         </div>
       </div>
     </header>
   );
 }
+

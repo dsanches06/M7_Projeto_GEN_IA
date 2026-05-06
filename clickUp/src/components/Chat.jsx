@@ -8,8 +8,8 @@ export function ChatMessage({ message, sender }) {
     <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} mb-4`}>
       <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
         isBot 
-          ? 'bg-[#2a2a2a] text-gray-300 rounded-bl-none' 
-          : 'bg-blue-600 text-white rounded-br-none'
+          ? 'bg-surface-3 text-secondary rounded-bl-none' 
+          : 'bg-[var(--primary)] text-white rounded-br-none'
       }`}>
         <p className="text-sm">{message}</p>
       </div>
@@ -45,13 +45,13 @@ export function ChatInput({ onSendMessage, disabled = false }) {
         onKeyPress={handleKeyPress}
         placeholder="Descreva sua tarefa ou comando..."
         disabled={disabled}
-        className="flex-1 bg-[#2a2a2a] text-white border border-[#333333] rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-blue-500 disabled:opacity-50"
+        className="flex-1 bg-surface-3 text-main border border-surface rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-[var(--primary)] disabled:opacity-50 placeholder:text-muted"
         rows={3}
       />
       <button
         onClick={handleSend}
         disabled={disabled || !input.trim()}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 self-end"
+        className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50 self-end"
       >
         {disabled ? '⏳' : '📤'}
       </button>

@@ -16,7 +16,7 @@ export function ChatInputUI({ value, onChange, onSubmit, disabled = false, input
   };
 
   return (
-    <form onSubmit={onSubmit} className="border-t border-[#333333] px-6 py-4 bg-[#1a1a1a]">
+    <form onSubmit={onSubmit} className="border-t border-surface px-6 py-4 bg-surface-2">
       <div className="flex gap-2">
         <textarea
           ref={ref}
@@ -25,18 +25,18 @@ export function ChatInputUI({ value, onChange, onSubmit, disabled = false, input
           onKeyPress={handleKeyPress}
           placeholder="Digita tua tarefa aqui..."
           disabled={disabled}
-          className="flex-1 bg-[#2a2a2a] text-white border border-[#333333] rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-blue-500 disabled:opacity-50 text-sm"
+          className="flex-1 bg-surface-3 text-main border border-surface rounded-lg px-4 py-3 resize-none focus:outline-none focus:border-[var(--primary)] disabled:opacity-50 text-sm placeholder:text-muted"
           rows={2}
         />
         <button
           type="submit"
           disabled={disabled || !value.trim()}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
+          className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold px-4 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed self-end"
         >
           {disabled ? '⏳' : '➤'}
         </button>
       </div>
-      <p className="text-gray-500 text-xs mt-2">
+      <p className="text-muted text-xs mt-2">
         💡 Dica: Usa Shift+Enter para nova linha
       </p>
     </form>

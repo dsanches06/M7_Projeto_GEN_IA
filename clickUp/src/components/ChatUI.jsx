@@ -122,7 +122,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
       />
 
       {/* Modal ChatUI */}
-      <div className="fixed bottom-0 right-0 top-0 w-full md:w-96 bg-[#0d0d0d] border-l border-[#333333] z-50 flex flex-col shadow-2xl">
+      <div className="fixed bottom-0 right-0 top-0 w-full md:w-96 bg-page border-l border-surface z-50 flex flex-col shadow-2xl">
         
         {/* Header */}
         <ChatHeaderUI onClose={onClose} />

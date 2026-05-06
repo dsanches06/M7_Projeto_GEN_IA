@@ -10,8 +10,8 @@ export function ChatBubbleUI({ message, sender }) {
       <div
         className={`max-w-xs px-4 py-3 rounded-lg ${
           isBot
-            ? 'bg-[#2a2a2a] text-gray-300 rounded-bl-none'
-            : 'bg-blue-600 text-white rounded-br-none'
+            ? 'bg-surface-3 text-secondary rounded-bl-none'
+            : 'bg-[var(--primary)] text-white rounded-br-none'
         }`}
       >
         <p className="text-sm whitespace-pre-wrap">{message.text}</p>
