@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 import { mapTaskDTOResponse, mapTaskStatsDTOResponse } from "../dto/mapDTO.js";
+import { formattedDate } from "../utils/formattedDate.js";
 
 /* Função para buscar todas as tarefas */
 export const getAllTasks = async (search, sort) => {
@@ -79,7 +80,7 @@ export const createTask = async (data) => {
       taskData.category_id,
       taskData.project_id,
       taskData.estimated_hours,
-      taskData.due_date,
+      formattedDate(taskData.due_date),
       taskData.completed_at,
     ],
   );
