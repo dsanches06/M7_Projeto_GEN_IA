@@ -1,12 +1,16 @@
-// API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Backend URL for chat endpoints. If VITE_BACKEND_URL is not set, use localhost:3000.
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
-// Serviço de Chat com Gemini
 export const chatService = {
-  // Enviar mensagem e receber resposta em stream
-  async sendMessage(message, conversationHistory = []) {
+  async sendMessageToBotStream(
+    message,
+    conversationHistory = [],
+    onChunk,
+    onDone,
+    conversationId = null,
+  ) {
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${BACKEND_URL}/chat/message/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -14,99 +18,183 @@ export const chatService = {
         body: JSON.stringify({
           message,
           conversationHistory,
-          model: 'gemini-3-flash'
-        })
+          conversationId,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`Chat API error: ${response.statusText}`);
       }
 
-      return response.json();
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let event = null;
+      let data = '';
+      let donePayload = null;
+
+      const flushEvent = () => {
+        if (!event) return;
+
+        if (event === 'message') {
+          try {
+            const payload = JSON.parse(data);
+            if (payload?.text) {
+              onChunk(payload.text);
+            }
+          } catch (e) {
+            console.warn('Failed to parse stream message payload', e);
+          }
+        }
+
+        if (event === 'done') {
+          try {
+            const payload = JSON.parse(data);
+            donePayload = payload;
+            if (onDone) onDone(payload);
+          } catch (e) {
+            console.warn('Failed to parse stream done payload', e);
+          }
+        }
+
+        if (event === 'error') {
+          try {
+            const payload = JSON.parse(data);
+            throw new Error(payload?.message || 'Erro no stream do chat');
+          } catch (e) {
+            throw e;
+          }
+        }
+
+        event = null;
+        data = '';
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            event = line.replace('event:', '').trim();
+          } else if (line.startsWith('data:')) {
+            data += line.replace('data:', '').trim();
+          } else if (line.trim() === '') {
+            flushEvent();
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        const lines = buffer.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            event = line.replace('event:', '').trim();
+          } else if (line.startsWith('data:')) {
+            data += line.replace('data:', '').trim();
+          } else if (line.trim() === '') {
+            flushEvent();
+          }
+        }
+        flushEvent();
+      }
+
+      return donePayload ?? { success: true };
     } catch (error) {
       console.error('Chat service error:', error);
       throw error;
     }
   },
 
-  // Extrair dados de tarefa da resposta do Gemini
-  extractTaskData(geminiResponse) {
+  async sendMessageToConversation(conversationId, message) {
     try {
-      // Procura por JSON estruturado na resposta
+      const response = await fetch(
+        `${BACKEND_URL}/chat/conversation/${conversationId}/message`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Chat API error: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Chat service error:', error);
+      throw error;
+    }
+  },
+
+  async sendMessage(
+    message,
+    conversationHistory = [],
+    onChunk,
+    onDone,
+    conversationId = null,
+  ) {
+    return this.sendMessageToBotStream(
+      message,
+      conversationHistory,
+      onChunk,
+      onDone,
+      conversationId,
+    );
+  },
+
+  extractTaskDataFromFunctionResult(functionResult) {
+    if (!functionResult || !functionResult.result) {
+      return null;
+    }
+
+    const data = functionResult.result;
+    return {
+      title: data.title,
+      description: data.description,
+      type_id: data.types_id,
+      status_id: data.status_id,
+      priority_id: data.priority_id,
+      category_id: data.category_id,
+      project_id: data.project_id,
+      created_at: data.created_at,
+      due_date: data.due_date,
+      completed_at: data.completed_at,
+      estimated_hours: data.estimated_hours,
+    };
+  },
+
+  extractTaskData(geminiResponse) {
+    if (!geminiResponse) return null;
+    if (typeof geminiResponse === 'object') return geminiResponse;
+
+    try {
       const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
-      return null;
     } catch (error) {
       console.error('Error extracting task data:', error);
-      return null;
     }
+
+    return null;
   },
 
-  // Criar tarefa via API
-  async createTask(taskData) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Create task error: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      console.error('Create task error:', error);
-      throw error;
-    }
+  hasFunctionResults(response) {
+    return response && response.success && Array.isArray(response.functionResults) && response.functionResults.length > 0;
   },
 
-  // Atualizar tarefa
-  async updateTask(taskId, taskData) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Update task error: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      console.error('Update task error:', error);
-      throw error;
+  getFirstFunctionResult(response) {
+    if (this.hasFunctionResults(response)) {
+      return response.functionResults[0];
     }
+    return null;
   },
-
-  // Listar tarefas
-  async getTasks(filters = {}) {
-    try {
-      const params = new URLSearchParams(filters);
-      const response = await fetch(`${API_BASE_URL}/tasks?${params}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Get tasks error: ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      console.error('Get tasks error:', error);
-      throw error;
-    }
-  }
 };

@@ -1,38 +1,42 @@
-import { useState, useRef, useEffect } from 'react';
-import { botService } from '@/services/botService';
+import { useState, useRef, useEffect } from "react";
+import { chatService } from "@/services/chatService";
+import { InfoBanner } from "@/components/ui/InfoBanner";
 import {
   ChatBubbleUI,
   ChatHeaderUI,
   ChatLoadingUI,
   ChatTaskDisplayUI,
-  ChatInputUI
-} from '@/components/chat';
+  ChatInputUI,
+} from "@/components/chat";
 
 /**
  * ChatUI - Modal flutuante do ChatBot AI com GenAI Function Calls
  * Integrado com Dashboard para atualizar tarefas em tempo real
- * 
+ *
  * Padrão: Segue arquitetura de componentes do frontend original
- * Usa: botService para executar function calls automaticamente
+ * Usa: chatService para executar function calls automaticamente
  */
 export function ChatUI({ isOpen, onClose, onTaskCreated }) {
   const [messages, setMessages] = useState([
     {
       id: 1,
       text: "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
-      sender: 'bot',
-      timestamp: new Date()
-    }
+      sender: "bot",
+      timestamp: new Date(),
+    },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+  const [banner, setBanner] = useState(null);
+  const [streamingBotMessageId, setStreamingBotMessageId] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   // Auto scroll para última mensagem
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Focus no input quando abre
@@ -42,65 +46,111 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     }
   }, [isOpen]);
 
+  // Limpa o banner automaticamente após 3 segundos
+  useEffect(() => {
+    if (!banner) return;
+
+    const timeout = window.setTimeout(() => {
+      setBanner(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [banner]);
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
 
     if (!input.trim() || loading) return;
 
+    const userMessage = input.trim();
     const userMsg = {
       id: Date.now(),
-      text: input,
-      sender: 'user',
-      timestamp: new Date()
+      text: userMessage,
+      sender: "user",
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    const botMsgId = Date.now() + 1;
+    const botMsg = {
+      id: botMsgId,
+      text: "",
+      sender: "bot",
+      timestamp: new Date(),
+      functionResults: [],
+    };
+
+    const updatedConversationHistory = [
+      ...conversationHistory,
+      { role: "user", content: userMessage },
+    ];
+
+    setMessages((prev) => [...prev, userMsg, botMsg]);
+    setConversationHistory(updatedConversationHistory);
+    setStreamingBotMessageId(botMsgId);
+    setInput("");
     setLoading(true);
 
     try {
-      // Enviar para o bot com function calls
-      const response = await botService.sendMessageToBot(
-        input,
-        conversationHistory
+      await chatService.sendMessageToBotStream(
+        userMessage,
+        updatedConversationHistory,
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botMsgId
+                ? { ...msg, text: `${msg.text || ""}${chunk}` }
+                : msg
+            )
+          );
+        },
+        (donePayload) => {
+          setStreamingBotMessageId(null);
+
+          if (donePayload?.conversationId) {
+            setConversationId(donePayload.conversationId);
+          }
+
+          if (donePayload?.message) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === botMsgId
+                  ? { ...msg, text: donePayload.message }
+                  : msg
+              )
+            );
+            setConversationHistory((prev) => [
+              ...prev,
+              { role: "assistant", content: donePayload.message },
+            ]);
+          }
+
+          if (donePayload?.functionResults?.length) {
+            const functionResult = donePayload.functionResults[0];
+            handleCreateTaskFromFunction(functionResult);
+          }
+
+          if (donePayload?.task && onTaskCreated) {
+            onTaskCreated(donePayload.task);
+          }
+        },
+        conversationId,
       );
-
-      if (!response.success) {
-        throw new Error(response.error || 'Erro ao processar mensagem');
-      }
-
-      // Adicionar resposta do bot
-      const botMsg = {
-        id: Date.now() + 1,
-        text: response.message,
-        sender: 'bot',
-        timestamp: new Date(),
-        functionResults: response.functionResults
-      };
-      setMessages(prev => [...prev, botMsg]);
-
-      // Atualizar histórico da conversa
-      if (response.updatedHistory) {
-        setConversationHistory(response.updatedHistory);
-      }
-
-      // Se houver resultado de function call, criar tarefa
-      if (botService.hasFunctionResults(response)) {
-        const functionResult = botService.getFirstFunctionResult(response);
-        handleCreateTaskFromFunction(functionResult);
-      }
     } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMsg = {
-        id: Date.now() + 1,
-        text: `❌ Erro: ${error.message}`,
-        sender: 'bot',
-        timestamp: new Date(),
-        isError: true
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      console.error("Error sending message:", error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMsgId
+            ? {
+                ...msg,
+                text: `❌ Erro: ${error.message}`,
+                isError: true,
+              }
+            : msg
+        )
+      );
     } finally {
       setLoading(false);
+      setStreamingBotMessageId(null);
     }
   };
 
@@ -109,63 +159,48 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
    */
   const handleCreateTaskFromFunction = async (functionResult) => {
     try {
-      const taskData = botService.extractTaskDataFromFunctionResult(
-        functionResult
-      );
+      const taskData =
+        chatService.extractTaskDataFromFunctionResult(functionResult);
 
       if (!taskData) {
-        throw new Error('Não foi possível extrair dados da tarefa');
+        throw new Error("Não foi possível extrair dados da tarefa");
       }
 
-      // Callback para criar tarefa no Dashboard
+      // Callback para criar tarefa no Dashboard / backend
       if (onTaskCreated) {
-        onTaskCreated({
-          title: taskData.title,
-          description: taskData.description,
-          priority: getPriorityLabel(taskData.priority_id),
-          dueDate: taskData.due_date ? taskData.due_date.split('T')[0] : new Date().toISOString().split('T')[0],
-          estimated_hours: taskData.estimated_hours
-        });
+        await onTaskCreated(taskData);
       }
 
       // Adicionar mensagem de sucesso
       const successMsg = {
         id: Date.now() + 2,
         text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
-        sender: 'system',
-        timestamp: new Date()
+        sender: "system",
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, successMsg]);
+      setMessages((prev) => [...prev, successMsg]);
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error("Error creating task:", error);
+      setBanner({
+        message: `Erro ao criar tarefa: ${error.message}`,
+        type: "error",
+      });
       const errorMsg = {
         id: Date.now() + 2,
         text: `⚠️ Erro ao criar tarefa: ${error.message}`,
-        sender: 'system',
+        sender: "system",
         timestamp: new Date(),
-        isError: true
+        isError: true,
       };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
     }
-  };
-
-  /**
-   * Converter ID de prioridade para label
-   */
-  const getPriorityLabel = (priorityId) => {
-    const priorities = {
-      1: 'alta',
-      2: 'alta',
-      3: 'média',
-      4: 'baixa'
-    };
-    return priorities[priorityId] || 'média';
   };
 
   if (!isOpen) return null;
 
   return (
     <>
+      {banner && <InfoBanner message={banner.message} type={banner.type} />}
       <div
         className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
         onClick={onClose}
@@ -175,10 +210,10 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
         <ChatHeaderUI onClose={onClose} />
 
         <div className="flex-1 overflow-y-auto bg-surface-2 px-6 py-4 space-y-4">
-          {messages.map(msg => (
-            <ChatBubbleUI 
-              key={msg.id} 
-              message={msg} 
+          {messages.map((msg) => (
+            <ChatBubbleUI
+              key={msg.id}
+              message={msg}
               sender={msg.sender}
               functionResults={msg.functionResults}
               isError={msg.isError}

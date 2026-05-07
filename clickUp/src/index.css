@@ -60,6 +60,45 @@ body {
   box-sizing: border-box;
 }
 
+.banner {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  max-width: min(380px, calc(100% - 2rem));
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: auto;
+}
+
+.banner--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.banner--info {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.banner--success {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.banner--error {
+  background: linear-gradient(135deg, #f97316, #dc2626);
+}
+
+.banner--warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
 .text-main {
   color: var(--text);
 }

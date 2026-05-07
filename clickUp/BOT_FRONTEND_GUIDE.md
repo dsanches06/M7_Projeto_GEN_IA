@@ -40,7 +40,7 @@ VITE_BACKEND_URL=http://localhost:3000
 
 ### Instalação do Componente
 
-1. O `botService.js` já está pronto para usar
+1. O `chatService.js` já está pronto para usar
 2. O `ChatBot.jsx` já está pronto para usar
 
 ## 💻 Uso Básico
@@ -123,7 +123,7 @@ function MyComponent() {
          │
          ▼
 ┌─────────────────────────┐
-│  botService.sendMessage │  ← Fetch para /bot/message
+│  botService.sendMessage │  ← Fetch para /chat/message
 └────────┬────────────────┘
          │
          ▼

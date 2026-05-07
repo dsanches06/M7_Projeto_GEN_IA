@@ -1,38 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Dashboard, ChatUI, PageSection } from "@/components";
 import MainLayout from "@/components/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
+import * as taskService from "@/services/taskService";
+import { InfoBanner } from "./components/ui/InfoBanner";
 
 function App() {
   const [showChat, setShowChat] = useState(false);
   const [tasks, setTasks] = useState([]);
+  const [banner, setBanner] = useState(null);
 
-  const handleTaskCreated = (taskData) => {
-    const newTask = {
-      id: Date.now(),
-      title: taskData.task || taskData.title || "Nova Tarefa",
-      description: taskData.description || "",
-      status: "a fazer",
-      priority:
-        taskData.priority?.toLowerCase() === "urgente"
-          ? "alta"
-          : taskData.priority?.toLowerCase() === "high"
-            ? "alta"
-            : taskData.priority?.toLowerCase() === "medium"
-              ? "média"
-              : "média",
-      assignee: taskData.assignee || "Não atribuído",
-      dueDate: taskData.dueDate || new Date().toISOString().split("T")[0],
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const data = await taskService.fetchTasks();
+        setTasks(data);
+      } catch (error) {
+        console.error(error);
+        setBanner({
+          message: "Erro ao carregar tarefas: ",
+          type: "error",
+        });
+      }
     };
 
-    setTasks((prev) => [newTask, ...prev]);
-    console.log("✅ Nova tarefa criada:", newTask);
+    loadTasks();
+  }, []);
+
+  const handleTaskCreated = async (taskData) => {
+    try {
+      const createdTask = await taskService.createTask(taskData);
+      setTasks((prev) => [createdTask, ...prev]);
+      setBanner({
+        message: "✅ Nova tarefa criada no backend!",
+        type: "success",
+      });
+      console.log("✅ Nova tarefa criada no backend:", createdTask);
+    } catch (error) {
+      console.error("Erro criando tarefa no backend:", error);
+      setBanner({
+        message: `Erro ao criar tarefa: ${error.message}`,
+        type: "error",
+      });
+    }
   };
 
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      {/* Configuração das Future Flags para evitar avisos da v7 */}
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />

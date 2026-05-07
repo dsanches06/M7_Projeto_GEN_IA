@@ -1,7 +1,6 @@
 import { Type } from "@google/genai";
 
-// Define a função em que o modelc é chamado para controlar as tarefas
-
+// Define a função em que o modelo pode chamar para controlar as tarefas
 export const setTaskValuesFunctionDeclaration = {
   name: "set_create_task_values",
   description: "Define os valores para criar uma tarefa no ClickUp",
@@ -61,7 +60,10 @@ export const setTaskValuesFunctionDeclaration = {
   },
 };
 
-//função que será chamada pelo model para criar a tarefa, recebe os valores definidos na função acima e retorna um objeto com esses valores
+// Lista de declarações de funções disponíveis para o modelo
+export const functionDeclarations = [setTaskValuesFunctionDeclaration];
+
+// Função que será chamada pelo modelo para criar a tarefa, recebe os valores definidos na função acima e retorna um objeto com esses valores
 export function setCreateTaskValues(
   title,
   description,

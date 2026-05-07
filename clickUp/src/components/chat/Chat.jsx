@@ -77,48 +77,63 @@ export function Chat({ onTaskCreated }) {
   }, [messages]);
 
   const handleSendMessage = async (userMessage) => {
-    // Adicionar mensagem do utilizador
     const userMsg = {
       id: messages.length + 1,
       text: userMessage,
       sender: 'user'
     };
-    setMessages([...messages, userMsg]);
+    const botMsgId = messages.length + 2;
+    const botMsg = {
+      id: botMsgId,
+      text: '',
+      sender: 'bot'
+    };
+
+    setMessages([...messages, userMsg, botMsg]);
     setLoading(true);
 
     try {
-      // Enviar para o chatService
-      const response = await chatService.sendMessage(
+      await chatService.sendMessageToBotStream(
         userMessage,
-        messages.map(m => ({ role: m.sender === 'bot' ? 'assistant' : 'user', content: m.text }))
-      );
-
-      // Adicionar resposta do bot
-      const botMsg = {
-        id: messages.length + 2,
-        text: response.message || response.content || "Desculpa, não consegui processar isso.",
-        sender: 'bot'
-      };
-      setMessages(prev => [...prev, botMsg]);
-
-      // Tentar extrair dados de tarefa
-      const taskData = chatService.extractTaskData(response.message || response.content);
-      if (taskData) {
-        setLastTask(taskData);
-        
-        // Notificar pai que uma tarefa foi criada
-        if (onTaskCreated) {
-          onTaskCreated(taskData);
+        messages.map(m => ({ role: m.sender === 'bot' ? 'assistant' : 'user', content: m.text })),
+        (chunk) => {
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === botMsgId
+                ? { ...msg, text: `${msg.text || ''}${chunk}` }
+                : msg
+            )
+          );
+        },
+        (donePayload) => {
+          if (donePayload?.functionResults?.length) {
+            const taskData = chatService.extractTaskDataFromFunctionResult(donePayload.functionResults[0]);
+            if (taskData) {
+              setLastTask(taskData);
+              if (onTaskCreated) onTaskCreated(taskData);
+            }
+          } else {
+            const finalText = messages.find(msg => msg.id === botMsgId)?.text || '';
+            const taskData = chatService.extractTaskData(finalText);
+            if (taskData) {
+              setLastTask(taskData);
+              if (onTaskCreated) onTaskCreated(taskData);
+            }
+          }
         }
-      }
+      );
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMsg = {
-        id: messages.length + 2,
-        text: "❌ Erro ao processar mensagem. Tenta novamente!",
-        sender: 'bot'
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === botMsgId
+            ? {
+                ...msg,
+                text: "❌ Erro ao processar mensagem. Tenta novamente!",
+              }
+            : msg
+        )
+      );
     } finally {
       setLoading(false);
     }

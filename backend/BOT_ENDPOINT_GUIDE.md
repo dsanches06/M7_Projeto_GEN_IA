@@ -9,7 +9,7 @@ Endpoint genérico que permite enviar mensagens de chat e executar automaticamen
 ### 1. Enviar Mensagem ao Bot (Sem Histórico)
 
 ```
-POST /bot/message
+POST /chat/message
 ```
 
 **Request Body:**
@@ -52,7 +52,7 @@ POST /bot/message
 ### 2. Enviar Mensagem em uma Conversa Específica
 
 ```
-POST /bot/conversation/:conversationId/message
+POST /chat/conversation/:conversationId/message
 ```
 
 **Request Body:**
@@ -84,7 +84,7 @@ POST /bot/conversation/:conversationId/message
 
 ```bash
 # Enviar mensagem simples
-curl -X POST http://localhost:3000/bot/message \
+curl -X POST http://localhost:3000/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Crie uma tarefa para implementar a funcionalidade de login com prioridade alta",
@@ -97,7 +97,7 @@ curl -X POST http://localhost:3000/bot/message \
 ```javascript
 // Enviar mensagem ao bot
 async function sendMessageToBot(message, conversationHistory = []) {
-  const response = await fetch('http://localhost:3000/bot/message', {
+  const response = await fetch('http://localhost:3000/chat/message', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -1,4 +1,4 @@
-import express from "express";
+import express, { application } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import projectRoutes from "./routes/projectRoutes.js";
@@ -26,11 +26,11 @@ import reminderRoutes from "./routes/reminderRoutes.js";
 import mentionRoutes from "./routes/mentionRoutes.js";
 import timeLogRoutes from "./routes/timeLogRoutes.js";
 import statisticsRoutes from "./routes/statisticsRoutes.js";
-import chatHistoryRoutes from "./routes/chatHistoryRoutes.js";
 import conversationRoutes from "./routes/conversationRoutes.js";
 import meetingSummarieRoutes from "./routes/meetingSummarieRoutes.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
-import chatBotRoutes from "./routes/chatBotRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import * as chatBotController from "./controllers/chatBotController.js";
 import logger from "./middlewares/loggerMiddleware.js";
 
 const app = express();
@@ -40,24 +40,25 @@ dotenv.config();
 app.use(express.json());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
-    methods: ["GET", "POST", "PUT", "DELETE"], 
-    allowedHeaders: ["Content-Type", "Authorization"], 
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 app.use(express.urlencoded({ extended: true }));
 app.use(logger);
 
-/* Health Check Endpoint */
-app.get("/health", (req, res) => {
+/* Endpoint Geral */
+app.get("/", (req, res) => {
   res.json({
     status: "OK",
-    message: "ClickUp API is running",
+    message: `ClickUp API is running in ${process.env.NODE_ENV || 3001}  `,
     timestamp: new Date().toISOString(),
-    port: process.env.PORT || 3000,
+    port: process.env.PORT || 3001,
   });
 });
 
+// Rotas
 app.use("/projects", projectRoutes);
 app.use("/users", userRoutes);
 app.use("/tasks", taskRoutes);
@@ -83,26 +84,14 @@ app.use("/reminders", reminderRoutes);
 app.use("/mentions", mentionRoutes);
 app.use("/time_logs", timeLogRoutes);
 app.use("/statistics/ranking", statisticsRoutes);
-
-// CRUD - Histórico de Chats e Conversas
-app.use("/chat", chatHistoryRoutes);
 app.use("/conversations", conversationRoutes);
 app.use("/meetingsummaries", meetingSummarieRoutes);
 app.use("/tickets", ticketRoutes);
-
-// Endpoint genérico para o ChatBot com GenAI e Function Calls
-app.use("/bot", chatBotRoutes);
-
-
-//endpoint geral
-app.get("/", (req, res) => {
-  res.json({
-    message: "Bem-vindo à API ClickUp",
-  });
-});
+// Depois: O roteador genérico
+app.use("/chat", chatRoutes);
 
 /* Iniciar o servidor */
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 ClickBot v3 (@google/genai) em http://localhost:${PORT}`);
 });

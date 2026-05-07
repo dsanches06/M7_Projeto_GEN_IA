@@ -86,12 +86,9 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
               <div>
                 <h3 className="text-xl font-bold text-main">Minhas Tarefas</h3>
                 <p className="text-muted mt-2 max-w-2xl">
-                  Aqui estão as tarefas recentes e o seu progresso. Use o botão ao lado para adicionar novas atividades rapidamente.
+                  Use o ChatBot 🤖 ao lado para criar novas tarefas utilizando inteligência artificial.
                 </p>
               </div>
-              <button className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold py-2 px-4 rounded-lg transition">
-                + Nova Tarefa
-              </button>
             </div>
 
             {allTasks.length > 0 ? (

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { botService } from '@/services/botService';
+import { chatService, BACKEND_URL } from '@/services/chatService';
 
 /**
  * Componente de Chat com Bot GenAI
@@ -11,6 +11,8 @@ export function ChatBot() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+  const [streamingBotMessageId, setStreamingBotMessageId] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Fazer scroll para o final das mensagens
@@ -35,58 +37,92 @@ export function ChatBot() {
     setError(null);
     setLoading(true);
 
-    // Adicionar mensagem do usuário ao chat
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        text: userMessage,
-        sender: 'user',
-        timestamp: new Date(),
-      },
-    ]);
+    const botMsgId = Date.now() + 1;
+    const userMsg = {
+      id: Date.now(),
+      text: userMessage,
+      sender: 'user',
+      timestamp: new Date(),
+    };
+    const botMsg = {
+      id: botMsgId,
+      text: '',
+      sender: 'bot',
+      timestamp: new Date(),
+      functionResults: [],
+    };
+
+    const updatedConversationHistory = [
+      ...conversationHistory,
+      { role: 'user', content: userMessage },
+    ];
+
+    setMessages((prev) => [...prev, userMsg, botMsg]);
+    setConversationHistory(updatedConversationHistory);
+    setStreamingBotMessageId(botMsgId);
 
     try {
-      // Enviar para o bot
-      const response = await botService.sendMessageToBot(
+      await chatService.sendMessageToBotStream(
         userMessage,
-        conversationHistory
-      );
-
-      if (!response.success) {
-        throw new Error(response.error || 'Erro ao processar mensagem');
-      }
-
-      // Adicionar resposta do bot ao chat
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: response.message,
-          sender: 'bot',
-          timestamp: new Date(),
-          functionResults: response.functionResults,
+        updatedConversationHistory,
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botMsgId
+                ? { ...msg, text: `${msg.text || ''}${chunk}` }
+                : msg
+            )
+          );
         },
-      ]);
+        (donePayload) => {
+          setStreamingBotMessageId(null);
 
-      // Atualizar histórico da conversa
-      if (response.updatedHistory) {
-        setConversationHistory(response.updatedHistory);
-      }
+          if (donePayload?.conversationId) {
+            setConversationId(donePayload.conversationId);
+          }
+
+          if (donePayload?.message) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === botMsgId
+                  ? { ...msg, text: donePayload.message }
+                  : msg
+              )
+            );
+            setConversationHistory((prev) => [
+              ...prev,
+              { role: 'assistant', content: donePayload.message },
+            ]);
+          }
+
+          if (donePayload?.functionResults?.length) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === botMsgId
+                  ? { ...msg, functionResults: donePayload.functionResults }
+                  : msg
+              )
+            );
+          }
+        },
+        conversationId,
+      );
     } catch (err) {
       setError(err.message);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: `Erro: ${err.message}`,
-          sender: 'bot',
-          timestamp: new Date(),
-          isError: true,
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMsgId
+            ? {
+                ...msg,
+                text: `Erro: ${err.message}`,
+                isError: true,
+              }
+            : msg
+        )
+      );
     } finally {
       setLoading(false);
+      setStreamingBotMessageId(null);
     }
   };
 
@@ -95,7 +131,7 @@ export function ChatBot() {
    */
   const handleCreateTask = async (functionResult) => {
     try {
-      const taskData = botService.extractTaskDataFromFunctionResult(
+      const taskData = chatService.extractTaskDataFromFunctionResult(
         functionResult
       );
 
@@ -104,7 +140,7 @@ export function ChatBot() {
       }
 
       // Fazer fetch para criar a tarefa (você pode adaptar o endpoint)
-      const response = await fetch('http://localhost:3000/tasks', {
+      const response = await fetch(`${BACKEND_URL}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
