@@ -1,5 +1,5 @@
 // Backend URL for chat endpoints. If VITE_BACKEND_URL is not set, use localhost:3001.
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 export const chatService = {
   async sendMessageToBotStream(
@@ -11,9 +11,9 @@ export const chatService = {
   ) {
     try {
       const response = await fetch(`${BACKEND_URL}/chat/message/stream`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message,
@@ -28,46 +28,46 @@ export const chatService = {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let buffer = "";
       let event = null;
-      let data = '';
+      let data = "";
       let donePayload = null;
 
       const flushEvent = () => {
         if (!event) return;
 
-        if (event === 'message') {
+        if (event === "message") {
           try {
             const payload = JSON.parse(data);
             if (payload?.text) {
               onChunk(payload.text);
             }
           } catch (e) {
-            console.warn('Failed to parse stream message payload', e);
+            console.warn("Failed to parse stream message payload", e);
           }
         }
 
-        if (event === 'done') {
+        if (event === "done") {
           try {
             const payload = JSON.parse(data);
             donePayload = payload;
             if (onDone) onDone(payload);
           } catch (e) {
-            console.warn('Failed to parse stream done payload', e);
+            console.warn("Failed to parse stream done payload", e);
           }
         }
 
-        if (event === 'error') {
+        if (event === "error") {
           try {
             const payload = JSON.parse(data);
-            throw new Error(payload?.message || 'Erro no stream do chat');
+            throw new Error(payload?.message || "Erro no stream do chat");
           } catch (e) {
             throw e;
           }
         }
 
         event = null;
-        data = '';
+        data = "";
       };
 
       while (true) {
@@ -75,28 +75,28 @@ export const chatService = {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith('event:')) {
-            event = line.replace('event:', '').trim();
-          } else if (line.startsWith('data:')) {
-            data += line.replace('data:', '').trim();
-          } else if (line.trim() === '') {
+          if (line.startsWith("event:")) {
+            event = line.replace("event:", "").trim();
+          } else if (line.startsWith("data:")) {
+            data += line.replace("data:", "").trim();
+          } else if (line.trim() === "") {
             flushEvent();
           }
         }
       }
 
       if (buffer.trim()) {
-        const lines = buffer.split('\n');
+        const lines = buffer.split("\n");
         for (const line of lines) {
-          if (line.startsWith('event:')) {
-            event = line.replace('event:', '').trim();
-          } else if (line.startsWith('data:')) {
-            data += line.replace('data:', '').trim();
-          } else if (line.trim() === '') {
+          if (line.startsWith("event:")) {
+            event = line.replace("event:", "").trim();
+          } else if (line.startsWith("data:")) {
+            data += line.replace("data:", "").trim();
+          } else if (line.trim() === "") {
             flushEvent();
           }
         }
@@ -105,7 +105,7 @@ export const chatService = {
 
       return donePayload ?? { success: true };
     } catch (error) {
-      console.error('Chat service error:', error);
+      console.error("Chat service error:", error);
       throw error;
     }
   },
@@ -115,12 +115,12 @@ export const chatService = {
       const response = await fetch(
         `${BACKEND_URL}/chat/conversation/${conversationId}/message`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ message }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -129,7 +129,7 @@ export const chatService = {
 
       return await response.json();
     } catch (error) {
-      console.error('Chat service error:', error);
+      console.error("Chat service error:", error);
       throw error;
     }
   },
@@ -173,7 +173,7 @@ export const chatService = {
 
   extractTaskData(geminiResponse) {
     if (!geminiResponse) return null;
-    if (typeof geminiResponse === 'object') return geminiResponse;
+    if (typeof geminiResponse === "object") return geminiResponse;
 
     try {
       const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/);
@@ -181,14 +181,19 @@ export const chatService = {
         return JSON.parse(jsonMatch[0]);
       }
     } catch (error) {
-      console.error('Error extracting task data:', error);
+      console.error("Error extracting task data:", error);
     }
 
     return null;
   },
 
   hasFunctionResults(response) {
-    return response && response.success && Array.isArray(response.functionResults) && response.functionResults.length > 0;
+    return (
+      response &&
+      response.success &&
+      Array.isArray(response.functionResults) &&
+      response.functionResults.length > 0
+    );
   },
 
   getFirstFunctionResult(response) {
@@ -196,5 +201,31 @@ export const chatService = {
       return response.functionResults[0];
     }
     return null;
+  },
+
+  async getConversations() {
+    try {
+      const response = await fetch(`${BACKEND_URL}/conversations`);
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar conversas: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      throw error;
+    }
+  },
+
+  async getChatHistory(conversationId) {
+    try {
+      const response = await fetch(`${BACKEND_URL}/chat/history/conversation/${conversationId}`);
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar histórico: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+      throw error;
+    }
   },
 };

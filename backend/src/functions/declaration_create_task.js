@@ -63,21 +63,17 @@ export const setTaskValuesFunctionDeclaration = {
 // Lista de declarações de funções disponíveis para o modelo
 export const functionDeclarations = [setTaskValuesFunctionDeclaration];
 
+const parseNumber = (value, fallback = 0) => {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+  const number = Number(value);
+  return Number.isNaN(number) ? fallback : number;
+};
+
 // Função que será chamada pelo modelo para criar a tarefa, recebe os valores definidos na função acima e retorna um objeto com esses valores
-export function setCreateTaskValues(
-  title,
-  description,
-  types_id,
-  status_id,
-  priority_id,
-  category_id,
-  project_id,
-  created_at,
-  due_date,
-  completed_at,
-  estimated_hours,
-) {
-  return {
+export function setCreateTaskValues(args = {}) {
+  const {
     title,
     description,
     types_id,
@@ -89,5 +85,19 @@ export function setCreateTaskValues(
     due_date,
     completed_at,
     estimated_hours,
+  } = args;
+
+  return {
+    title: title?.toString().trim() || "",
+    description: description?.toString().trim() || "",
+    types_id: parseNumber(types_id, parseNumber(args.type_id, parseNumber(args.typeId, 1))),
+    status_id: parseNumber(status_id, parseNumber(args.statusId, 1)),
+    priority_id: parseNumber(priority_id, parseNumber(args.priorityId, 1)),
+    category_id: parseNumber(category_id, parseNumber(args.categoryId, 1)),
+    project_id: parseNumber(project_id, parseNumber(args.projectId, 1)),
+    created_at: created_at || args.createdAt || new Date().toISOString(),
+    due_date: due_date || args.dueDate || null,
+    completed_at: completed_at || args.completedAt || null,
+    estimated_hours: parseNumber(estimated_hours, parseNumber(args.estimatedHours, 0)),
   };
 }

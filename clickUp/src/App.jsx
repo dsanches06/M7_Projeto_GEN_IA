@@ -30,13 +30,25 @@ function App() {
 
   const handleTaskCreated = async (taskData) => {
     try {
-      const createdTask = await taskService.createTask(taskData);
-      setTasks((prev) => [createdTask, ...prev]);
-      setBanner({
-        message: "✅ Nova tarefa criada no backend!",
-        type: "success",
-      });
-      console.log("✅ Nova tarefa criada no backend:", createdTask);
+      // Se já é um objeto completo com ID (vindo do backend), adiciona direto
+      if (taskData.id) {
+        const transformedTask = taskService.transformTaskForDisplay(taskData);
+        setTasks((prev) => [transformedTask, ...prev]);
+        setBanner({
+          message: "✅ Nova tarefa criada com sucesso!",
+          type: "success",
+        });
+        console.log("✅ Nova tarefa adicionada ao dashboard:", transformedTask);
+      } else {
+        // Se é dados parciais, cria no backend (compatibilidade)
+        const createdTask = await taskService.createTask(taskData);
+        setTasks((prev) => [createdTask, ...prev]);
+        setBanner({
+          message: "✅ Nova tarefa criada no backend!",
+          type: "success",
+        });
+        console.log("✅ Nova tarefa criada no backend:", createdTask);
+      }
     } catch (error) {
       console.error("Erro criando tarefa no backend:", error);
       setBanner({

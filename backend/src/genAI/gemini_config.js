@@ -1,27 +1,17 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
+import createSystemPrompt from "./createSystemPrompt.js";
 import dotenv from "dotenv";
-
-dotenv.config();
+dotenv.config({ path: "../.env" });
 
 // Criar instância do modelo
 const genAI = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const MODEL_NAME = "gemini-3.1-flash-lite-preview";
+const MODEL_NAME = "gemini-3-flash-preview";
 
-/**
- * Prompt do Sistema
- */
-function createSystemPrompt() {
-  return `És o ClickBot, um assistente para criar, editar, atualizar, remover e atribuir tarefas no ClickUp.
-- Responde de forma clara e direta.
-- Quando o utilizador pedir para criar, editar, atualizar, remover ou assinalar uma tarefa, escolhe a declaração de função correta entre as disponíveis e usa-a com argumentos JSON válidos.
-- Se o pedido envolver atribuir responsabilidade, inclui o utilizador que deve ser assinado na tarefa.
-- Usa apenas as funções declaradas, sem inventar nomes novos.
-- Não respondas com markdown, apenas texto limpo ou um objecto JSON quando solicitado.
-- Se não houver necessidade de chamar uma função, responde normalmente como assistente.`;
-}
+
+
 
 /**
  * Função Genérica para gerar conteúdo
@@ -37,16 +27,21 @@ const generateAIContent = async (contents, options = {}) => {
   try {
     const result = await genAI.models.generateContent({
       model: MODEL_NAME,
-      systemInstruction: systemInstruction,
       contents,
-      tools: tools,
-      generationConfig: {
+      config: {
+        systemInstruction,
         temperature,
+        tools: tools ? [{ functionDeclarations: tools }] : undefined,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: FunctionCallingConfigMode.ANY,
+          },
+        },
         ...extraConfig,
       },
     });
 
-    return result.response;
+    return result;
   } catch (error) {
     console.error("Erro ao gerar conteúdo IA:", error);
     throw error;
@@ -64,11 +59,16 @@ export const generateAIContentStream = async (contents, options = {}) => {
   try {
     const result = await genAI.models.generateContentStream({
       model: MODEL_NAME,
-      systemInstruction: systemInstruction,
       contents,
-      tools: tools,
-      generationConfig: {
+      config: {
+        systemInstruction,
         temperature,
+        tools: tools ? [{ functionDeclarations: tools }] : undefined,
+        toolConfig: {
+          functionCallingConfig: {
+            mode: FunctionCallingConfigMode.ANY,
+          },
+        },
         ...extraConfig,
       },
     });

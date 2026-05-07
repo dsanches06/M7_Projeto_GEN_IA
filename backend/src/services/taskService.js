@@ -42,22 +42,45 @@ export const getTasksByProjectId = async (projectId, search, sort) => {
 };
 
 /* Função para criar tarefa */
+const parseNumber = (value, fallback = 0) => {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+  const number = Number(value);
+  return Number.isNaN(number) ? fallback : number;
+};
+
 export const createTask = async (data) => {
+  const taskData = {
+    title: data.title?.toString().trim() || "",
+    description: data.description?.toString().trim() || "",
+    types_id: parseNumber(data.types_id ?? data.type_id ?? data.typeId, 1),
+    status_id: parseNumber(data.status_id ?? data.statusId, 1),
+    priority_id: parseNumber(data.priority_id ?? data.priorityId, 1),
+    category_id: parseNumber(data.category_id ?? data.categoryId, 1),
+    project_id: parseNumber(data.project_id ?? data.projectId, 1),
+    estimated_hours: parseNumber(data.estimated_hours ?? data.estimatedHours, 0),
+    due_date: data.due_date || data.dueDate || null,
+    completed_at: data.completed_at || data.completedAt || null,
+  };
+
   const [result] = await db.query(
-    "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [
-      data.title,
-      data.description,
-      data.types_id,
-      data.status_id,
-      data.priority_id,
-      data.category_id,
-      data.project_id,
-      data.estimated_hours,
-      data.due_date || null,
+      taskData.title,
+      taskData.description,
+      taskData.types_id,
+      taskData.status_id,
+      taskData.priority_id,
+      taskData.category_id,
+      taskData.project_id,
+      taskData.estimated_hours,
+      taskData.due_date,
+      taskData.completed_at,
     ],
   );
-  return mapTaskDTOResponse({ id: result.insertId, ...data });
+
+  return mapTaskDTOResponse({ id: result.insertId, ...taskData });
 };
 
 /* Função para alterar o status da tarefa */

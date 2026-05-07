@@ -49,6 +49,11 @@ const getTextFromResponse = (response) => {
 };
 
 const extractFunctionCall = (response) => {
+  const functionCalls = response?.functionCalls || response?.candidates?.[0]?.functionCalls;
+  if (Array.isArray(functionCalls) && functionCalls.length) {
+    return functionCalls[0];
+  }
+
   const candidate = response?.candidates?.[0];
   if (!candidate) return null;
 
@@ -96,13 +101,18 @@ export async function processChatMessage(
 
     // 3. Verificar se houve chamada de função
     if (functionCall) {
-      const { name, args } = functionCall;
+      const { name } = functionCall;
+      const rawArgs = functionCall.args || functionCall.arguments || {};
+      const args =
+        typeof rawArgs === "string"
+          ? JSON.parse(rawArgs)
+          : rawArgs;
       const handler = functionHandlers[name];
 
       if (!handler) throw new Error(`Função ${name} não suportada.`);
 
       // Executar a função real (DB/API)
-      const result = await handler(...Object.values(args));
+      const result = await handler(args);
 
       const assistantCandidate = response.candidates?.[0];
       const assistantContent = Array.isArray(assistantCandidate?.content)
@@ -113,7 +123,7 @@ export async function processChatMessage(
       const followUpContents = [
         ...contents,
         {
-          role: "assistant",
+          role: "model",
           functionCall,
           parts: assistantContent,
         },
@@ -201,14 +211,20 @@ export async function processChatMessageStream(
     const response = await generateAIContent(contents, { tools: toolConfig });
     const functionCall = extractFunctionCall(response);
     const assistantText = getTextFromResponse(response);
+    let finalText = "";
 
     if (functionCall) {
-      const { name, args } = functionCall;
+      const { name } = functionCall;
+      const rawArgs = functionCall.args || functionCall.arguments || {};
+      const args =
+        typeof rawArgs === "string"
+          ? JSON.parse(rawArgs)
+          : rawArgs;
       const handler = functionHandlers[name];
 
       if (!handler) throw new Error(`Função ${name} não suportada.`);
 
-      const result = await handler(...Object.values(args));
+      const result = await handler(args);
 
       const assistantCandidate = response.candidates?.[0];
       const assistantContent = Array.isArray(assistantCandidate?.content)
@@ -218,7 +234,7 @@ export async function processChatMessageStream(
       const followUpContents = [
         ...contents,
         {
-          role: "assistant",
+          role: "model",
           functionCall,
           parts: assistantContent,
         },
@@ -239,13 +255,22 @@ export async function processChatMessageStream(
         tools: toolConfig,
       });
 
-      for await (const chunk of finalStream.stream) {
+      const finalStreamIterator =
+        typeof finalStream[Symbol.asyncIterator] === "function"
+          ? finalStream
+          : finalStream.stream;
+
+      for await (const chunk of finalStreamIterator) {
         const chunkText = getTextFromStreamChunk(chunk);
-        if (chunkText) onChunk(chunkText);
+        if (chunkText) {
+          finalText += chunkText;
+          onChunk(chunkText);
+        }
       }
 
       return {
         success: true,
+        message: finalText || assistantText || `Função ${name} executada com sucesso.`,
         functionResults: [
           { functionName: name, arguments: args, result, functionCall },
         ],
@@ -256,13 +281,20 @@ export async function processChatMessageStream(
       tools: toolConfig,
     });
 
-    for await (const chunk of stream.stream) {
+    const streamIterator =
+      typeof stream[Symbol.asyncIterator] === "function" ? stream : stream.stream;
+
+    for await (const chunk of streamIterator) {
       const chunkText = getTextFromStreamChunk(chunk);
-      if (chunkText) onChunk(chunkText);
+      if (chunkText) {
+        finalText += chunkText;
+        onChunk(chunkText);
+      }
     }
 
     return {
       success: true,
+      message: finalText,
       functionResults: [],
     };
   } catch (error) {

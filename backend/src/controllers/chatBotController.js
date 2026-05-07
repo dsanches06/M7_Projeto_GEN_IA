@@ -77,12 +77,13 @@ export const sendMessageToBotStream = async (req, res) => {
       }
     );
 
+    const assistantText = result.message || finalText;
     let createdTask = null;
     if (result.success !== false) {
       await createChatHistory({
         conversation_id: actualConversationId,
         role_id: ROLE_ASSISTANT,
-        content: finalText,
+        content: assistantText,
       });
 
       const taskFunctionResult = result.functionResults?.[0];
@@ -101,7 +102,7 @@ export const sendMessageToBotStream = async (req, res) => {
 
     sendEvent("done", {
       success: true,
-      message: finalText,
+      message: assistantText,
       conversationId: actualConversationId,
       functionResults: result.functionResults || [],
       task: createdTask,
