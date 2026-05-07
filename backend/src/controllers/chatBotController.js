@@ -93,9 +93,11 @@ export const sendMessageToBotStream = async (req, res) => {
         taskFunctionResult.result
       ) {
         try {
+          console.log("📝 Criando tarefa com dados:", taskFunctionResult.result);
           createdTask = await createTask(taskFunctionResult.result);
+          console.log("✅ Tarefa criada com sucesso:", createdTask);
         } catch (taskError) {
-          console.error("Erro ao salvar tarefa no banco:", taskError);
+          console.error("❌ Erro ao salvar tarefa no banco:", taskError);
         }
       }
     }

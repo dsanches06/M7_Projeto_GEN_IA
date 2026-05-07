@@ -59,6 +59,25 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     return () => window.clearTimeout(timeout);
   }, [banner]);
 
+  // Formata a data com validação
+  const formatConversationDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Data inválida";
+      }
+      return date.toLocaleString("pt-PT", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return "Data inválida";
+    }
+  };
+
   // Carrega todas as conversas quando o chat abre
   useEffect(() => {
     if (!isOpen) return;
@@ -282,13 +301,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                 >
                   <p className="font-medium text-main truncate">{conv.title}</p>
                   <p className="text-xs text-muted mt-1">
-                    {new Date(conv.created_at).toLocaleDateString("pt-PT", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatConversationDate(conv.created_at)}
                   </p>
                 </button>
               ))}

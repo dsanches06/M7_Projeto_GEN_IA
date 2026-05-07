@@ -51,6 +51,8 @@ const parseNumber = (value, fallback = 0) => {
 };
 
 export const createTask = async (data) => {
+  console.log("📥 Recebido no createTask:", data);
+  
   const taskData = {
     title: data.title?.toString().trim() || "",
     description: data.description?.toString().trim() || "",
@@ -63,6 +65,8 @@ export const createTask = async (data) => {
     due_date: data.due_date || data.dueDate || null,
     completed_at: data.completed_at || data.completedAt || null,
   };
+
+  console.log("💾 Salvando no BD:", taskData);
 
   const [result] = await db.query(
     "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -80,6 +84,7 @@ export const createTask = async (data) => {
     ],
   );
 
+  console.log("✅ Tarefa inserida com ID:", result.insertId);
   return mapTaskDTOResponse({ id: result.insertId, ...taskData });
 };
 
