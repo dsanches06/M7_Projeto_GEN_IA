@@ -1,5 +1,5 @@
-// Backend URL for chat endpoints. If VITE_BACKEND_URL is not set, use localhost:3000.
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+// Backend URL for chat endpoints. If VITE_BACKEND_URL is not set, use localhost:3001.
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export const chatService = {
   async sendMessageToBotStream(

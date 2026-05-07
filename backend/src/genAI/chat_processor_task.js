@@ -66,7 +66,9 @@ const extractFunctionCall = (response) => {
   }
 
   if (content?.parts && Array.isArray(content.parts)) {
-    return content.parts.find((part) => part.functionCall)?.functionCall || null;
+    return (
+      content.parts.find((part) => part.functionCall)?.functionCall || null
+    );
   }
 
   return null;
@@ -136,8 +138,11 @@ export async function processChatMessage(
       const finalText = getTextFromResponse(finalResponse);
       return {
         success: true,
-        message: finalText || assistantText || `Função ${name} executada com sucesso.`,
-        functionResults: [{ functionName: name, arguments: args, result, functionCall }],
+        message:
+          finalText || assistantText || `Função ${name} executada com sucesso.`,
+        functionResults: [
+          { functionName: name, arguments: args, result, functionCall },
+        ],
       };
     }
 
@@ -241,7 +246,9 @@ export async function processChatMessageStream(
 
       return {
         success: true,
-        functionResults: [{ functionName: name, arguments: args, result, functionCall }],
+        functionResults: [
+          { functionName: name, arguments: args, result, functionCall },
+        ],
       };
     }
 

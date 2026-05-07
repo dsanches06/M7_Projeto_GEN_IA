@@ -71,48 +71,13 @@ function App() {
                 />
               }
             />
-            <Route
-              path="equipas"
-              element={
-                <PageSection
-                  title="Equipas"
-                  description="Veja sua equipe, membros e colaborações."
-                />
-              }
-            />
-            <Route
-              path="sprints"
-              element={
-                <PageSection
-                  title="Sprints"
-                  description="Acompanhe sprints e ciclos de trabalho."
-                />
-              }
-            />
+
             <Route
               path="utilizadores"
               element={
                 <PageSection
                   title="Utilizadores"
                   description="Administre usuários e permissões."
-                />
-              }
-            />
-            <Route
-              path="tags"
-              element={
-                <PageSection
-                  title="Tags"
-                  description="Organize tarefas com tags e filtros."
-                />
-              }
-            />
-            <Route
-              path="tarefas"
-              element={
-                <PageSection
-                  title="Tarefas"
-                  description="Visualize e gerencie todas as tarefas."
                 />
               }
             />
