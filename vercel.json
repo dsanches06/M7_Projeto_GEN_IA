@@ -1,13 +1,23 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix clickUp install && npm --prefix backend install && npm --prefix clickUp run build && npm --prefix backend run init-db",
+  "buildCommand": "npm --prefix clickUp install && npm --prefix clickUp run build && npm --prefix backend install && npm --prefix backend run init-db",
   "outputDirectory": "clickUp/dist",
   "functions": {
-    "backend/src/server.js": {
+    "backend/api/index.js": {
       "runtime": "nodejs18.x"
     }
   },
   "env": {
     "DATABASE_URL": "@database_url"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
