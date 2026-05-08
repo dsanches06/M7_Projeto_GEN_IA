@@ -3,7 +3,7 @@
   "buildCommand": "npm --prefix clickUp install && npm --prefix clickUp run build && npm --prefix backend install && npm --prefix backend run init-db",
   "outputDirectory": "clickUp/dist",
   "functions": {
-    "backend/api/index.js": {
+    "api/index.js": {
       "runtime": "nodejs18.x"
     }
   },
