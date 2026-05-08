@@ -27,7 +27,7 @@ import mentionRoutes from "./routes/mentionRoutes.js";
 import timeLogRoutes from "./routes/timeLogRoutes.js";
 import statisticsRoutes from "./routes/statisticsRoutes.js";
 import conversationRoutes from "./routes/conversationRoutes.js";
-import meetingSummarieRoutes from "./routes/meetingSummarieRoutes.js";
+import summaryRoute from "./routes/summaryRoute.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import * as chatBotController from "./controllers/chatBotController.js";
@@ -88,7 +88,7 @@ apiRouter.use("/mentions", mentionRoutes);
 apiRouter.use("/time_logs", timeLogRoutes);
 apiRouter.use("/statistics/ranking", statisticsRoutes);
 apiRouter.use("/conversations", conversationRoutes);
-apiRouter.use("/meetingsummaries", meetingSummarieRoutes);
+apiRouter.use("/summaries", summaryRoutes);
 apiRouter.use("/tickets", ticketRoutes);
 
 

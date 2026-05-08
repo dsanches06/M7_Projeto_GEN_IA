@@ -97,13 +97,34 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     loadConversations();
   }, [isOpen]);
 
-  // Carrega o histórico quando uma conversa é selecionada
+  // Carrega o resumo quando uma conversa é selecionada
   const handleSelectConversation = async (selectedConversation) => {
     try {
       setConversationId(selectedConversation.id);
       setShowConversationsList(false);
 
-      // Carrega o histórico dessa conversa
+      let summary = null;
+      try {
+        summary = await chatService.getChatSummary(selectedConversation.id);
+      } catch (summaryError) {
+        console.warn("Resumo não disponível, buscando histórico em vez disso:", summaryError);
+      }
+
+      if (summary && summary.summary) {
+        setMessages([
+          {
+            id: `${selectedConversation.id}-summary`,
+            text: summary.summary,
+            sender: "bot",
+            timestamp: new Date(summary.created_at || Date.now()),
+          },
+        ]);
+        setConversationHistory([
+          { role: "assistant", content: summary.summary },
+        ]);
+        return;
+      }
+
       const history = await chatService.getChatHistory(selectedConversation.id);
       if (history && history.length > 0) {
         // Transforma o histórico em formato de mensagens
@@ -122,9 +143,19 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
           content: msg.content,
         }));
         setConversationHistory(reconstructedHistory);
+      } else {
+        setMessages([
+          {
+            id: `${selectedConversation.id}-empty`,
+            text: "Resumo da conversa não encontrado. Inicie uma nova mensagem para continuar.",
+            sender: "bot",
+            timestamp: new Date(),
+          },
+        ]);
+        setConversationHistory([]);
       }
     } catch (error) {
-      console.error("Erro ao carregar histórico da conversa:", error);
+      console.error("Erro ao carregar resumo da conversa:", error);
       setBanner({
         message: "Erro ao carregar conversa",
         type: "error",
@@ -374,6 +405,28 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                 className="p-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
               >
                 📋 Mudar conversa
+              </button>
+            )}
+
+            {/* Botão para iniciar nova conversa quando ainda não há histórico */}
+            {conversations.length === 0 && (
+              <button
+                onClick={() => {
+                  setConversationId(null);
+                  setShowConversationsList(false);
+                  setMessages([
+                    {
+                      id: 1,
+                      text: "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
+                      sender: "bot",
+                      timestamp: new Date(),
+                    },
+                  ]);
+                  setConversationHistory([]);
+                }}
+                className="p-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
+              >
+                ➕ Iniciar nova conversa
               </button>
             )}
           </>

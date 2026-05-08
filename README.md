@@ -15,34 +15,41 @@ Criar um assistente que gere o workflow do utilizador via Linguagem Natural
 
 ### Configuração do Banco de Dados
 
-Para produção, você pode usar:
-- **Neon (PostgreSQL)**: Recomendado para Vercel
-- **PlanetScale, Railway, ou AWS RDS**: Para MySQL
+Este projeto foi migrado para **Neon PostgreSQL** para melhor compatibilidade com Vercel.
 
-#### Migração para Neon
-Veja [NEON_MIGRATION_README.md](NEON_MIGRATION_README.md) para instruções completas.
+#### Database: Neon (PostgreSQL)
+- **Tipo**: PostgreSQL gerenciado na nuvem
+- **Ideal para**: Serverless, Vercel, aplicações modernas
+- **Vantagem**: Scaling automático, backups inclusos
+
+Para migração completa, veja [DEPLOYMENT_NEON.md](DEPLOYMENT_NEON.md).
 
 ### Passos para Deploy
 
-1. **Conecte seu repositório** no Vercel
-2. **Configure as variáveis de ambiente** na aba "Environment Variables":
+1. **Crie um projeto no Neon**:
+   - Acesse https://console.neon.tech
+   - Crie um novo projeto
+   - Copie a CONNECTION STRING do tipo "Connection pooler"
+
+2. **Conecte seu repositório** no Vercel
+
+3. **Configure as variáveis de ambiente** na aba "Environment Variables":
    ```
-   DB_HOST=your_mysql_host
-   DB_USER=your_mysql_user
-   DB_PASSWORD=your_mysql_password
-   DB_NAME=your_mysql_database
-   DB_PORT=3306
+   DATABASE_URL=postgresql://neondb_owner:password@host/database
    CLIENT_URL=https://your-app.vercel.app
    MODEL_NAME=gemini-3-flash-preview
    GEMINI_API_KEY=your_gemini_api_key
    ```
-3. **Deploy automático** será feito a cada push na branch main
+
+4. **Deploy automático** será feito a cada push na branch main
+   - O `init-db` será executado automaticamente
+   - Schema e dados iniciais serão criados no Neon
 
 ### Estrutura do Deploy
 
-- **Frontend (clickUp)**: Build estático servido na raiz
-- **Backend**: API servida em `/api/*`
-- **Banco**: MySQL externo (não incluído no deploy)
+- **Frontend (clickUp)**: Build estático (Vite) servido na raiz
+- **Backend**: API Express em `/api/*`
+- **Banco**: Neon PostgreSQL (inicializado automaticamente)
 
 ### Desenvolvimento Local
 

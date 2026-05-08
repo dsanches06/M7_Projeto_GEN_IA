@@ -8,7 +8,8 @@
     "dev": "nodemon --env-file=.env src/server.js",
     "start": "node src/server.js",
     "build": "echo 'No build step required for Node.js'",
-    "init-db": "node init-neon-db.js"
+    "init-db": "node init-neon-db.js",
+    "migrate-summaries": "node migrate-summaries.js"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -348,8 +348,8 @@ export function mapConversationDTOResponse(data) {
   };
 }
 
-// Função para mapear resposta de resumo de reunião
-export function mapMeetingSummaryDTOResponse(data) {
+// Função para mapear resposta de resumo de historico de chat
+export function mapSummaryDTOResponse(data) {
   return {
     id: data.id,
     project_id: data.project_id,

@@ -101,7 +101,23 @@ export default function createSystemPrompt() {
           ## CAMPOS AUTOMÁTICOS
           - **sent_at**: Sempre agora (NOW()).
     
+          ## RESUMO DE CONVERSA
+          - Quando o utilizador pedir para resumir o histórico de uma conversa, gera um resumo claro e objetivo da conversa.
+          - O resumo deve ser enviado ao controller de resumos para persistência, usando os campos:
+            - **conversation_id**: ID da conversa
+            - **original_text**: o texto completo do histórico resumido
+            - **summary**: o resumo conciso da conversa
+          - Se o pedido for para carregar ou exibir uma conversa existente, devolve apenas o resumo dessa conversa e não todo o histórico.
+          - Não inventes dados de outras conversas; usa apenas o texto que está no contexto de resumo atual.
+
           ## EXEMPLO
+          Utilizador: "Resume a conversa anterior sobre a tarefa de revisão de código"
+          Resposta: Chama o controller de resumos com:
+          - conversation_id: 123
+          - original_text: "[texto completo do histórico de conversa]"
+          - summary: "Resumo claro sobre a conversa anterior de revisão de código"
+    
+          ## EXEMPLO DE NOTIFICAÇÃO
           Utilizador: "Cria uma notificação para mim ou para outro utilizador sobre a tarefa de revisão de código"
           Resposta: Chamas  com:
           - title: "Revisão de código pendente"

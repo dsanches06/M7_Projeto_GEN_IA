@@ -110,6 +110,13 @@ class ChatService extends BaseService {
   }
 
   /**
+   * Busca resumo de chat de uma conversa
+   */
+  async getChatSummary(conversationId) {
+    return this.fetchData(`/summaries/conversation/${conversationId}`);
+  }
+
+  /**
    * Busca histórico de chat de uma conversa
    */
   async getChatHistory(conversationId) {

@@ -10,6 +10,9 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+console.log('🚀 Iniciando inicialização do banco Neon...');
+console.log('DATABASE_URL configurada:', process.env.DATABASE_URL ? '✅' : '❌');
+
 // Neon connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -20,16 +23,7 @@ async function runSQLFile(filePath) {
   try {
     console.log(`📄 Executando ${filePath}...`);
     const sql = readFileSync(filePath, 'utf8');
-
-    // Split SQL commands by semicolon (basic approach)
-    const commands = sql.split(';').filter(cmd => cmd.trim().length > 0);
-
-    for (const command of commands) {
-      if (command.trim()) {
-        await pool.query(command.trim());
-      }
-    }
-
+    await pool.query(sql);
     console.log(`✅ ${filePath} executado com sucesso`);
   } catch (error) {
     console.error(`❌ Erro ao executar ${filePath}:`, error.message);
@@ -38,34 +32,41 @@ async function runSQLFile(filePath) {
 }
 
 async function initDatabase() {
+  console.log('🔍 Verificando DATABASE_URL...');
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL não configurada');
     process.exit(1);
   }
 
+  console.log('🔌 Tentando conectar ao Neon...');
   try {
-    console.log('🔌 Conectando ao Neon...');
+    console.log('⏳ Fazendo query de teste...');
     await pool.query('SELECT NOW()');
-    console.log('✅ Conectado ao Neon');
+    console.log('✅ Conectado ao Neon com sucesso!');
 
-    // Execute schema first
+    console.log('📄 Preparando para executar schema...');
     await runSQLFile(join(__dirname, 'database-init-postgres.sql'));
+    console.log('✅ Schema executado!');
 
-    // Then seed data
+    console.log('📄 Preparando para executar seed...');
     await runSQLFile(join(__dirname, 'database-seed-postgres.sql'));
+    console.log('✅ Seed executado!');
 
     console.log('🎉 Banco de dados inicializado com sucesso!');
 
   } catch (error) {
-    console.error('❌ Erro na inicialização:', error);
+    console.error('❌ Erro na inicialização:', error.message);
+    console.error('Stack:', error.stack);
     process.exit(1);
   } finally {
+    console.log('🔌 Fechando conexão...');
     await pool.end();
+    console.log('✅ Conexão fechada');
   }
 }
 
 // Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   initDatabase();
 }
 

@@ -43,17 +43,7 @@ CREATE TABLE project (
         ON DELETE CASCADE
 );
 
-/* Meeting Summaries */
-CREATE TABLE meeting_summaries (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    project_id INT,
-    original_text VARCHAR(300) NOT NULL,
-    summary VARCHAR(200),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id)
-        REFERENCES project (id)
-        ON DELETE CASCADE
-);
+
 
 -- Tabela Principal de Sessões de Chat
 CREATE TABLE conversations (
@@ -74,6 +64,18 @@ CREATE TABLE chat_history (
         ON DELETE CASCADE,
      FOREIGN KEY (role_id)
         REFERENCES roles (id)
+);
+
+/*  Summaries */
+CREATE TABLE summaries (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    conversation_id INT,
+    original_text VARCHAR(300) NOT NULL,
+    summary VARCHAR(200),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id)
+        REFERENCES conversations (id)
+        ON DELETE CASCADE
 );
 
 /* Ticket */
