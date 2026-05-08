@@ -15,7 +15,12 @@ Criar um assistente que gere o workflow do utilizador via Linguagem Natural
 
 ### Configuração do Banco de Dados
 
-Para produção, você precisará configurar um banco MySQL na nuvem (ex: PlanetScale, Railway, ou AWS RDS).
+Para produção, você pode usar:
+- **Neon (PostgreSQL)**: Recomendado para Vercel
+- **PlanetScale, Railway, ou AWS RDS**: Para MySQL
+
+#### Migração para Neon
+Veja [NEON_MIGRATION_README.md](NEON_MIGRATION_README.md) para instruções completas.
 
 ### Passos para Deploy
 
