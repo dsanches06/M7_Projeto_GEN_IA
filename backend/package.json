@@ -9,7 +9,8 @@
     "start": "node src/server.js",
     "build": "echo 'No build step required for Node.js'",
     "init-db": "node init-neon-db.js",
-    "migrate-summaries": "node migrate-summaries.js"
+    "migrate-summaries": "node migrate-summaries.js",
+    "full-migration": "node full-migration.js"
   },
   "engines": {
     "node": ">=18.0.0"
