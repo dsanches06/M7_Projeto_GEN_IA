@@ -4,7 +4,20 @@
  * Evita duplicação de código entre chatService, ticketService e notificationService
  */
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "/api";
+const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || "/api";
+const BACKEND_URL = (() => {
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (
+      rawBackendUrl.includes("localhost") &&
+      hostname !== "localhost" &&
+      hostname !== "127.0.0.1"
+    ) {
+      return "/api";
+    }
+  }
+  return rawBackendUrl;
+})();
 
 class BaseService {
   constructor(baseEndpoint) {
