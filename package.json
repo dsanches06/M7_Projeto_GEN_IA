@@ -1,0 +1,7 @@
+{
+  "name": "m7-projeto-gen-ia",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix clickUp install && npm --prefix clickUp run build"
+  }
+}
