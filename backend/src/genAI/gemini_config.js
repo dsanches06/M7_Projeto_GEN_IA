@@ -3,15 +3,22 @@ import createSystemPrompt from "./createSystemPrompt.js";
 import dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY is not defined in environment variables.");
+  process.exit(1);
+}
+
+if (!process.env.MODEL_NAME) {
+  console.error("MODEL_NAME is not defined in environment variables.");
+  process.exit(1);
+}
+
 // Criar instância do modelo
 const genAI = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const MODEL_NAME = "gemini-3-flash-preview";
-
-
-
+const MODEL_NAME = process.env.MODEL_NAME;
 
 /**
  * Função Genérica para gerar conteúdo

@@ -1,5 +1,5 @@
-import { db } from "../db.js";
-import { mapUserDTOResponse, mapUserStatsDTOResponse } from "../dto/mapDTO.js";
+import { db } from "../../db.js";
+import { mapUserDTOResponse, mapUserStatsDTOResponse } from "../../dto/mapDTO.js";
 
 /* Função para buscar todos os utilizadores */
 export const getAllUsers = async (search, sort) => {

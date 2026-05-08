@@ -1,7 +1,17 @@
-// Backend URL for chat endpoints. If VITE_BACKEND_URL is not set, use localhost:3001.
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+import BaseService from "./BaseService.js";
 
-export const chatService = {
+/**
+ * ChatService - Serviço de Chat com IA
+ * Herda de BaseService para evitar duplicação de código
+ */
+class ChatService extends BaseService {
+  constructor() {
+    super("/chat");
+  }
+
+  /**
+   * Envia mensagem para o bot com streaming
+   */
   async sendMessageToBotStream(
     message,
     conversationHistory = [],
@@ -9,131 +19,30 @@ export const chatService = {
     onDone,
     conversationId = null,
   ) {
-    try {
-      const response = await fetch(`${BACKEND_URL}/chat/message/stream`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message,
-          conversationHistory,
-          conversationId,
-        }),
-      });
+    const payload = {
+      message,
+      conversationHistory,
+      conversationId,
+    };
+    return this.sendStreamMessage(
+      "/chat/message/stream",
+      payload,
+      onChunk,
+      onDone,
+    );
+  }
 
-      if (!response.ok) {
-        throw new Error(`Chat API error: ${response.statusText}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let event = null;
-      let data = "";
-      let donePayload = null;
-
-      const flushEvent = () => {
-        if (!event) return;
-
-        if (event === "message") {
-          try {
-            const payload = JSON.parse(data);
-            if (payload?.text) {
-              onChunk(payload.text);
-            }
-          } catch (e) {
-            console.warn("Failed to parse stream message payload", e);
-          }
-        }
-
-        if (event === "done") {
-          try {
-            const payload = JSON.parse(data);
-            donePayload = payload;
-            if (onDone) onDone(payload);
-          } catch (e) {
-            console.warn("Failed to parse stream done payload", e);
-          }
-        }
-
-        if (event === "error") {
-          try {
-            const payload = JSON.parse(data);
-            throw new Error(payload?.message || "Erro no stream do chat");
-          } catch (e) {
-            throw e;
-          }
-        }
-
-        event = null;
-        data = "";
-      };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("event:")) {
-            event = line.replace("event:", "").trim();
-          } else if (line.startsWith("data:")) {
-            data += line.replace("data:", "").trim();
-          } else if (line.trim() === "") {
-            flushEvent();
-          }
-        }
-      }
-
-      if (buffer.trim()) {
-        const lines = buffer.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("event:")) {
-            event = line.replace("event:", "").trim();
-          } else if (line.startsWith("data:")) {
-            data += line.replace("data:", "").trim();
-          } else if (line.trim() === "") {
-            flushEvent();
-          }
-        }
-        flushEvent();
-      }
-
-      return donePayload ?? { success: true };
-    } catch (error) {
-      console.error("Chat service error:", error);
-      throw error;
-    }
-  },
-
+  /**
+   * Envia mensagem em uma conversa específica
+   */
   async sendMessageToConversation(conversationId, message) {
-    try {
-      const response = await fetch(
-        `${BACKEND_URL}/chat/conversation/${conversationId}/message`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ message }),
-        },
-      );
+    const endpoint = `/chat/conversation/${conversationId}/message`;
+    return this.sendMessage(endpoint, { message });
+  }
 
-      if (!response.ok) {
-        throw new Error(`Chat API error: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Chat service error:", error);
-      throw error;
-    }
-  },
-
+  /**
+   * Alias para sendMessageToBotStream para compatibilidade
+   */
   async sendMessage(
     message,
     conversationHistory = [],
@@ -148,8 +57,11 @@ export const chatService = {
       onDone,
       conversationId,
     );
-  },
+  }
 
+  /**
+   * Extrai dados de tarefa do function result
+   */
   extractTaskDataFromFunctionResult(functionResult) {
     if (!functionResult || !functionResult.result) {
       return null;
@@ -169,8 +81,11 @@ export const chatService = {
       completed_at: data.completed_at,
       estimated_hours: data.estimated_hours,
     };
-  },
+  }
 
+  /**
+   * Extrai dados de tarefa de resposta do Gemini
+   */
   extractTaskData(geminiResponse) {
     if (!geminiResponse) return null;
     if (typeof geminiResponse === "object") return geminiResponse;
@@ -185,47 +100,22 @@ export const chatService = {
     }
 
     return null;
-  },
+  }
 
-  hasFunctionResults(response) {
-    return (
-      response &&
-      response.success &&
-      Array.isArray(response.functionResults) &&
-      response.functionResults.length > 0
-    );
-  },
-
-  getFirstFunctionResult(response) {
-    if (this.hasFunctionResults(response)) {
-      return response.functionResults[0];
-    }
-    return null;
-  },
-
+  /**
+   * Busca todas as conversas
+   */
   async getConversations() {
-    try {
-      const response = await fetch(`${BACKEND_URL}/conversations`);
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar conversas: ${response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching conversations:", error);
-      throw error;
-    }
-  },
+    return this.fetchData("/conversations");
+  }
 
+  /**
+   * Busca histórico de chat de uma conversa
+   */
   async getChatHistory(conversationId) {
-    try {
-      const response = await fetch(`${BACKEND_URL}/chat/history/conversation/${conversationId}`);
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar histórico: ${response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching chat history:", error);
-      throw error;
-    }
-  },
-};
+    return this.fetchData(`/chat/history/conversation/${conversationId}`);
+  }
+}
+
+// Exporta instância singleton
+export const chatService = new ChatService();

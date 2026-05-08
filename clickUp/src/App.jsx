@@ -93,6 +93,15 @@ function App() {
                 />
               }
             />
+              <Route
+              path="tickets"
+              element={
+                <PageSection
+                  title="Tickets"
+                  description="Gerencie seus tickets de suporte."
+                />
+              }
+            />
             <Route
               path="*"
               element={

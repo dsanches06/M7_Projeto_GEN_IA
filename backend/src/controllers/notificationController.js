@@ -1,4 +1,7 @@
 import * as notificationService from "../services/notificationService.js";
+// Adicionado: Para processar mensagens com genAI para notificações
+import { processChatMessageStream } from "../genAI/notification/chat_processor_notification.js";
+import { createNotification as createNotificationService } from "../services/notificationService.js";
 
 /* Função para obter todas as notificações */
 export const getNotifications = async (req, res) => {
@@ -66,6 +69,89 @@ export const getUnreadNotifications = async (req, res) => {
     res
       .status(400)
       .json({ message: "Erro ao buscar notificações não lidas" });
+  }
+};
+
+/**
+ * Processa uma mensagem para criação de notificação com IA
+ * Executa function calls automaticamente e retorna o resultado em stream
+ */
+export const sendMessageToBotStream = async (req, res) => {
+  try {
+    const { message, conversationHistory = [], userId } = req.body;
+
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Mensagem não pode estar vazia",
+      });
+    }
+
+    const userMessage = message.trim();
+    const resolvedHistory = conversationHistory || [];
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const sendEvent = (event, data) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    let finalText = "";
+    const result = await processChatMessageStream(
+      userMessage,
+      resolvedHistory,
+      (chunkText) => {
+        finalText += chunkText;
+        sendEvent("message", { text: chunkText });
+      },
+    );
+
+    const assistantText = result.message || finalText;
+    let createdNotification = null;
+
+    if (result.success !== false) {
+      const notificationFunctionResult = result.functionResults?.[0];
+      if (
+        notificationFunctionResult &&
+        notificationFunctionResult.functionName ===
+          "set_create_notification_values" &&
+        notificationFunctionResult.result
+      ) {
+        try {
+          console.log(
+            "📬 Criando notificação com dados:",
+            notificationFunctionResult.result,
+          );
+          createdNotification = await createNotificationService(
+            notificationFunctionResult.result,
+          );
+          console.log("✅ Notificação criada com sucesso:", createdNotification);
+        } catch (notificationError) {
+          console.error(
+            "❌ Erro ao salvar notificação no banco:",
+            notificationError,
+          );
+        }
+      }
+    }
+
+    sendEvent("done", {
+      success: true,
+      message: assistantText,
+      functionResults: result.functionResults || [],
+      notification: createdNotification,
+    });
+    res.end();
+  } catch (error) {
+    console.error("Erro no controller stream de notificações:", error);
+    res.write(
+      `event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`,
+    );
+    res.end();
   }
 };
 

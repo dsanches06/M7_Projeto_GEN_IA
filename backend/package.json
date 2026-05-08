@@ -2,10 +2,15 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "src/app.js",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon --env-file=.env src/app.js"
+    "dev": "nodemon --env-file=.env src/server.js",
+    "start": "node src/server.js",
+    "build": "echo 'No build step required for Node.js'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",

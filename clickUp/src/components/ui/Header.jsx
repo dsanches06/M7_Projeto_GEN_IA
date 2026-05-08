@@ -1,15 +1,23 @@
 import { NavLink } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import NotificationButton from "./notifications/NotificationButton.jsx";
+import NotificationBox from "./notifications/NotificationBox.jsx";
+import { useState } from "react";
 
 export function Header({ onChatOpen }) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  // Mock user for now - replace with actual user context later
+  const user = { id: 1, name: "User" };
 
   const menuItems = [
     { id: "dashboard", path: "/dashboard", label: "Dashboard" },
     { id: "projetos", path: "/projetos", label: "Projetos" },
     { id: "utilizadores", path: "/utilizadores", label: "Utilizadores" },
+    { id: "tickets", path: "/tickets", label: "Tickets" },
   ];
 
   return (
@@ -61,6 +69,10 @@ export function Header({ onChatOpen }) {
       {/* Right Actions */}
       <div className="flex-shrink-0 flex items-center gap-3">
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <NotificationButton
+          user={user}
+          onToggle={() => setIsNotificationOpen(!isNotificationOpen)}
+        />
         <div
           className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all ${
             isDark
@@ -70,7 +82,14 @@ export function Header({ onChatOpen }) {
         >
           U
         </div>
+        {/* Botão para abrir notificações */}
+
       </div>
+      <NotificationBox
+        user={user}
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+      />
     </header>
   );
 }

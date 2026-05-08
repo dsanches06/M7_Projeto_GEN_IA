@@ -1,5 +1,5 @@
 export const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+  import.meta.env.VITE_BACKEND_URL || "/api";
 
 function getPriorityLabel(priorityId) {
   const priorities = {

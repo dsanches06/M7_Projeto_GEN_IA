@@ -1,4 +1,4 @@
-import express, { application } from "express";
+import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import projectRoutes from "./routes/projectRoutes.js";
@@ -59,39 +59,46 @@ app.get("/", (req, res) => {
 });
 
 // Rotas
-app.use("/projects", projectRoutes);
-app.use("/users", userRoutes);
-app.use("/tasks", taskRoutes);
-app.use("/tags", tagRoutes);
-app.use("/notifications", notificationRoutes);
-app.use("/sprints", sprintRoutes);
-app.use("/project_status", projectStatusRoutes);
-app.use("/task_status", taskStatusRoutes);
-app.use("/categories", categoryRoutes);
-app.use("/task_types", taskTypesRoutes);
-app.use("/priorities", priorityRoutes);
-app.use("/tags_task", tagTaskRoutes);
-app.use("/task_assignees", taskAssigneesRoutes);
-app.use("/teams", teamRoutes);
-app.use("/team_members_roles", teamMembersRoleRoutes);
-app.use("/task_attachments", taskAttachmentRoutes);
-app.use("/task_votes", taskVoteRoutes);
-app.use("/task_status_history", taskStatusHistoryRoutes);
-app.use("/project_permissions", projectPermissionRoutes);
-app.use("/task_dependencies", taskDependencyRoutes);
-app.use("/favorite_tasks", favoriteTaskRoutes);
-app.use("/reminders", reminderRoutes);
-app.use("/mentions", mentionRoutes);
-app.use("/time_logs", timeLogRoutes);
-app.use("/statistics/ranking", statisticsRoutes);
-app.use("/conversations", conversationRoutes);
-app.use("/meetingsummaries", meetingSummarieRoutes);
-app.use("/tickets", ticketRoutes);
-// Depois: O roteador genérico
-app.use("/chat", chatRoutes);
+const apiRouter = express.Router();
 
-/* Iniciar o servidor */
+apiRouter.use("/chat", chatRoutes);
+apiRouter.use("/projects", projectRoutes);
+apiRouter.use("/users", userRoutes);
+apiRouter.use("/tasks", taskRoutes);
+apiRouter.use("/tags", tagRoutes);
+apiRouter.use("/notifications", notificationRoutes);
+apiRouter.use("/sprints", sprintRoutes);
+apiRouter.use("/project_status", projectStatusRoutes);
+apiRouter.use("/task_status", taskStatusRoutes);
+apiRouter.use("/categories", categoryRoutes);
+apiRouter.use("/task_types", taskTypesRoutes);
+apiRouter.use("/priorities", priorityRoutes);
+apiRouter.use("/tags_task", tagTaskRoutes);
+apiRouter.use("/task_assignees", taskAssigneesRoutes);
+apiRouter.use("/teams", teamRoutes);
+apiRouter.use("/team_members_roles", teamMembersRoleRoutes);
+apiRouter.use("/task_attachments", taskAttachmentRoutes);
+apiRouter.use("/task_votes", taskVoteRoutes);
+apiRouter.use("/task_status_history", taskStatusHistoryRoutes);
+apiRouter.use("/project_permissions", projectPermissionRoutes);
+apiRouter.use("/task_dependencies", taskDependencyRoutes);
+apiRouter.use("/favorite_tasks", favoriteTaskRoutes);
+apiRouter.use("/reminders", reminderRoutes);
+apiRouter.use("/mentions", mentionRoutes);
+apiRouter.use("/time_logs", timeLogRoutes);
+apiRouter.use("/statistics/ranking", statisticsRoutes);
+apiRouter.use("/conversations", conversationRoutes);
+apiRouter.use("/meetingsummaries", meetingSummarieRoutes);
+apiRouter.use("/tickets", ticketRoutes);
+
+
+//rota para deploy no vercel
+app.use("/api", apiRouter);
+
 const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
-  console.log(`🚀 ClickBot v3 (@google/genai) em http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
+
+export default app;

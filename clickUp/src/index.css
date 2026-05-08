@@ -99,6 +99,102 @@ body {
   background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
+/* Notification Styles */
+.notifi-box {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 350px;
+  max-height: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.notifi-box.open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.notifi-box.bottom {
+  top: auto;
+  bottom: 100%;
+  transform: translateY(10px);
+}
+
+.notifi-box.bottom.open {
+  transform: translateY(0);
+}
+
+.notifi-box h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.notifi-item {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.notifi-item:last-child {
+  border-bottom: none;
+}
+
+.notifi-item .text strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.notifi-item .text p {
+  margin: 0.25rem 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.icon-button {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+  color: var(--text);
+}
+
+.icon-button:hover {
+  background-color: var(--surface-2);
+}
+
+.icon-button-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  border: 2px solid var(--surface);
+}
+
 .text-main {
   color: var(--text);
 }

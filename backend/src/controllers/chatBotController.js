@@ -1,4 +1,4 @@
-import { processChatMessage, processChatMessageStream } from "../genAI/chat_processor_task.js";
+import { processChatMessage, processChatMessageStream } from "../genAI/task/chat_processor_task.js";
 import { createChatHistory, getChatHistoryByConversationId } from "../services/chatHistoryService.js";
 import { createConversation, getConversationById } from "../services/conversationService.js";
 import { createTask } from "../services/taskService.js";
