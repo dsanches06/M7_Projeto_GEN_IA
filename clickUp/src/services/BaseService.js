@@ -4,19 +4,27 @@
  * Evita duplicação de código entre chatService, ticketService e notificationService
  */
 
-const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || "/api";
+const rawBackendUrl = import.meta.env.VITE_BACKEND_URL;
+const isLocalhost =
+  typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const BACKEND_URL = (() => {
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    if (
-      rawBackendUrl.includes("localhost") &&
-      hostname !== "localhost" &&
-      hostname !== "127.0.0.1"
-    ) {
+  if (isLocalhost) {
+    return rawBackendUrl || "http://localhost:3001";
+  }
+
+  if (rawBackendUrl) {
+    const hasLocalhostInUrl =
+      rawBackendUrl.startsWith("http://localhost") ||
+      rawBackendUrl.startsWith("https://localhost") ||
+      rawBackendUrl.startsWith("http://127.0.0.1");
+    if (hasLocalhostInUrl) {
       return "/api";
     }
+    return rawBackendUrl;
   }
-  return rawBackendUrl;
+
+  return "/api";
 })();
 
 class BaseService {
