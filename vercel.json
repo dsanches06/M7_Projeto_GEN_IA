@@ -1,5 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd clickUp && npm run build",
+  "buildCommand": "npm --prefix clickUp install && npm --prefix clickUp run build",
   "outputDirectory": "clickUp/dist"
 }
