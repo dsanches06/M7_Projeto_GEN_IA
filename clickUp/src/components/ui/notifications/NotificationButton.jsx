@@ -11,12 +11,10 @@ const NotificationButton = ({ user, onToggle }) => {
   }, [user]);
 
   const fetchUnreadCount = async () => {
-    if (!user) return;
-
     setLoading(true);
     setError(false);
     try {
-      const notifications = await notificationService.getUnreadNotifications(user.id);
+      const notifications = await notificationService.getUnreadNotifications(user?.id);
       const count = notifications.filter(n => !n.is_read).length;
       setUnreadCount(count);
     } catch (err) {

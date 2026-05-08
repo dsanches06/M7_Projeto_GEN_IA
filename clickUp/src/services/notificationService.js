@@ -15,19 +15,35 @@ class NotificationService extends BaseService {
    */
   async getUnreadNotifications(userId) {
     try {
-      const data = await this.fetchData(
-        `/users/${userId}/notifications/unread`,
-      );
-      return data.map(
-        (notif) =>
-          new Notification(
-            notif.id,
-            notif.title,
-            notif.message,
-            notif.is_read,
-            notif.sent_at,
-          ),
-      );
+      if (userId) {
+        const data = await this.fetchData(
+          `/users/${userId}/notifications/unread`,
+        );
+        return data.map(
+          (notif) =>
+            new Notification(
+              notif.id,
+              notif.title,
+              notif.message,
+              notif.is_read,
+              notif.sent_at,
+            ),
+        );
+      }
+
+      const data = await this.fetchData(`/notifications`);
+      return data
+        .filter((notif) => !notif.is_read)
+        .map(
+          (notif) =>
+            new Notification(
+              notif.id,
+              notif.title,
+              notif.message,
+              notif.is_read,
+              notif.sent_at,
+            ),
+        );
     } catch (error) {
       console.error("Error fetching unread notifications:", error);
       throw error;
@@ -35,11 +51,14 @@ class NotificationService extends BaseService {
   }
 
   /**
-   * Busca todas as notificações de um usuário
+   * Busca todas as notificações ou notificaçãos de um usuário específico
    */
   async getNotificationsByUser(userId) {
     try {
-      const data = await this.fetchData(`/users/${userId}/notifications`);
+      const endpoint = userId
+        ? `/users/${userId}/notifications`
+        : `/notifications`;
+      const data = await this.fetchData(endpoint);
       return data.map(
         (notif) =>
           new Notification(
@@ -52,6 +71,35 @@ class NotificationService extends BaseService {
       );
     } catch (error) {
       console.error("Error fetching notifications:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Busca notificações globais ou de um usuário específico
+   */
+  async getNotifications(userId) {
+    return this.getNotificationsByUser(userId);
+  }
+
+  /**
+   * Busca todas as notificações sem filtro de usuário
+   */
+  async getAllNotifications() {
+    try {
+      const data = await this.fetchData(`/notifications`);
+      return data.map(
+        (notif) =>
+          new Notification(
+            notif.id,
+            notif.title,
+            notif.message,
+            notif.is_read,
+            notif.sent_at,
+          ),
+      );
+    } catch (error) {
+      console.error("Error fetching all notifications:", error);
       throw error;
     }
   }
@@ -84,22 +132,49 @@ class NotificationService extends BaseService {
    */
   async markNotificationAsRead(userId, notificationId) {
     try {
-      const response = await fetch(
-        `${this.BACKEND_URL}/users/${userId}/notifications/${notificationId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ is_read: true }),
+      const endpoint = userId
+        ? `${this.BACKEND_URL}/users/${userId}/notifications/${notificationId}`
+        : `${this.BACKEND_URL}/notifications/${notificationId}`;
+      const response = await fetch(endpoint, {
+        method: userId ? "PATCH" : "PUT",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ is_read: true }),
+      });
       if (!response.ok) {
         throw new Error("Failed to mark notification as read");
       }
       return await response.json();
     } catch (error) {
       console.error("Error marking notification as read:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Atualiza uma notificação genérica
+   */
+  async updateNotification(notificationId, updateData) {
+    try {
+      const response = await fetch(
+        `${this.BACKEND_URL}/notifications/${notificationId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateData),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update notification");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating notification:", error);
       throw error;
     }
   }

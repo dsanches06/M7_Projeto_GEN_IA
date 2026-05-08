@@ -31,12 +31,10 @@ const NotificationBox = ({ user, isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const fetchNotifications = async () => {
-    if (!user) return;
-
     setLoading(true);
     setError(null);
     try {
-      const data = await notificationService.getNotificationsByUser(user.id);
+      const data = await notificationService.getNotifications(user?.id);
       setNotifications(data);
     } catch (err) {
       setError('Erro ao carregar notificações');
