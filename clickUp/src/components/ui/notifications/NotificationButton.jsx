@@ -32,10 +32,17 @@ const NotificationButton = ({ user, onToggle }) => {
   };
 
   return (
-    <button className="icon-button" onClick={handleClick}>
-      <span>
-        <i className="fa-solid fa-bell fa-2xl fa-shake" style={{ pointerEvents: 'none' }}></i>
-      </span>
+    <button className="icon-button" onClick={handleClick} aria-label="Notificações">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        width="24"
+        height="24"
+        fill="currentColor"
+        style={{ display: 'block' }}
+      >
+        <path d="M12 2a5 5 0 0 0-5 5v3.08A7 7 0 0 0 5 17.94L5 18h14l0-.06a7 7 0 0 0-2-7.86V7a5 5 0 0 0-5-5Zm0 20a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3Z" />
+      </svg>
       <span className="icon-button-badge" style={error ? { backgroundColor: '#dc3545' } : {}}>
         {loading ? '...' : error ? '!' : unreadCount.toString()}
       </span>
