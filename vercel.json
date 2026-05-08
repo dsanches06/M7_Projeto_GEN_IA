@@ -1,18 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "clickUp/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "clickUp/dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "clickUp/dist/$1"
-    }
-  ]
+  "buildCommand": "cd clickUp && npm run build",
+  "outputDirectory": "clickUp/dist"
 }
