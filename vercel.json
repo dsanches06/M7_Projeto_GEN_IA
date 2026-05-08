@@ -5,32 +5,14 @@
       "src": "clickUp/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "clickUp/dist"
       }
-    },
-    {
-      "src": "backend/package.json",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/src/app.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/clickUp/dist/$1"
+      "dest": "clickUp/dist/$1"
     }
-  ],
-  "env": {
-    "DB_HOST": "@db_host",
-    "DB_USER": "@db_user",
-    "DB_PASSWORD": "@db_password",
-    "DB_NAME": "@db_name",
-    "DB_PORT": "@db_port",
-    "CLIENT_URL": "@client_url",
-    "MODEL_NAME": "@model_name",
-    "GEMINI_API_KEY": "@gemini_api_key"
-  }
+  ]
 }
