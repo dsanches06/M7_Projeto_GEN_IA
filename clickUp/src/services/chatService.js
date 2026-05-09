@@ -1,4 +1,5 @@
-import BaseService from "./BaseService.js";
+import BaseService from "../services/BaseService.js";
+import { Task } from "../models/Task.js";
 
 /**
  * ChatService - Serviço de Chat com IA
@@ -67,20 +68,7 @@ class ChatService extends BaseService {
       return null;
     }
 
-    const data = functionResult.result;
-    return {
-      title: data.title,
-      description: data.description,
-      type_id: data.types_id,
-      status_id: data.status_id,
-      priority_id: data.priority_id,
-      category_id: data.category_id,
-      project_id: data.project_id,
-      created_at: data.created_at,
-      due_date: data.due_date,
-      completed_at: data.completed_at,
-      estimated_hours: data.estimated_hours,
-    };
+    return Task.fromObject(functionResult.result)?.toPayload() || null;
   }
 
   /**
@@ -88,12 +76,15 @@ class ChatService extends BaseService {
    */
   extractTaskData(geminiResponse) {
     if (!geminiResponse) return null;
-    if (typeof geminiResponse === "object") return geminiResponse;
+    if (typeof geminiResponse === "object") {
+      return Task.fromObject(geminiResponse)?.toPayload() || null;
+    }
 
     try {
       const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        return Task.fromObject(parsed)?.toPayload() || null;
       }
     } catch (error) {
       console.error("Error extracting task data:", error);

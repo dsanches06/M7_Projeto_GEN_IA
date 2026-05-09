@@ -1,4 +1,4 @@
-import BaseService from "./BaseService.js";
+import BaseService from "../services/BaseService.js";
 import Notification from "../models/Notification.js";
 
 /**
@@ -76,10 +76,13 @@ class NotificationService extends BaseService {
   }
 
   /**
-   * Busca notificações globais ou de um usuário específico
+   * Busca notificações do usuário ou, em modo de teste, todas as não lidas
    */
   async getNotifications(userId) {
-    return this.getNotificationsByUser(userId);
+    if (userId) {
+      return this.getNotificationsByUser(userId);
+    }
+    return this.getUnreadNotifications();
   }
 
   /**

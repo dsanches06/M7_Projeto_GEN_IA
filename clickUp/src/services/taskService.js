@@ -1,4 +1,5 @@
-import { getBackendUrl } from "./BaseService.js";
+import { getBackendUrl } from "../services/BaseService.js";
+import { Task } from "../models/Task.js";
 
 export const BACKEND_URL = getBackendUrl();
 
@@ -24,21 +25,8 @@ function getStatusLabel(statusId) {
 }
 
 function normalizeTaskPayload(taskData) {
-  return {
-    title: taskData.title || taskData.task || "",
-    description: taskData.description || taskData.body || "",
-    types_id: taskData.types_id ?? taskData.type_id ?? taskData.typeId ?? 1,
-    status_id: taskData.status_id ?? taskData.status_id ?? 1,
-    priority_id: taskData.priority_id ?? taskData.priority_id ?? 1,
-    category_id: taskData.category_id ?? taskData.category_id ?? 1,
-    project_id: taskData.project_id ?? taskData.project_id ?? 1,
-    created_at:
-      taskData.created_at || taskData.createdAt || new Date().toISOString(),
-    due_date: taskData.due_date || taskData.dueDate || new Date().toISOString(),
-    completed_at: taskData.completed_at ?? taskData.completedAt ?? null,
-    estimated_hours: taskData.estimated_hours ?? taskData.estimatedHours ?? 0,
-    assignee: taskData.assignee || "Não atribuído",
-  };
+  const task = Task.fromObject(taskData);
+  return task ? task.toPayload() : Task.fromObject({}).toPayload();
 }
 
 function transformTaskForDisplay(task) {

@@ -10,8 +10,8 @@ export function Header({ onChatOpen }) {
   const isDark = theme === "dark";
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
-  // Mock user for now - replace with actual user context later
-  const user = { id: 1, name: "User" };
+  // Mock user removed while the app runs in anonymous/test mode.
+  const user = null;
 
   const menuItems = [
     { id: "dashboard", path: "/dashboard", label: "Dashboard" },

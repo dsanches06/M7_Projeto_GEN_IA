@@ -1,4 +1,4 @@
-import BaseService from "./BaseService.js";
+import BaseService from "../services/BaseService.js";
 import Ticket from "../models/Ticket.js";
 
 /**

@@ -34,7 +34,9 @@ const NotificationBox = ({ user, isOpen, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await notificationService.getNotifications(user?.id);
+      const data = user
+        ? await notificationService.getNotifications(user.id)
+        : await notificationService.getUnreadNotifications();
       setNotifications(data);
     } catch (err) {
       setError('Erro ao carregar notificações');
