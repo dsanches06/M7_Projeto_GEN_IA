@@ -68,6 +68,13 @@ const INITIAL_MESSAGE = {
  *  1. Envio de mensagem → IA responde em stream → resumo gerado em background
  *  2. Lista de conversas ordenada por data desc, agrupada por período
  *  3. Ao seleccionar conversa → carrega resumo da tabela summaries
+ *
+ * FIX: A tarefa é criada UMA única vez — pelo controller no backend.
+ *      O evento SSE "done" devolve {task: createdTask} com o registo já
+ *      persistido (tem ID). O frontend limita-se a adicioná-lo ao estado
+ *      local via onTaskCreated(donePayload.task).
+ *      handleCreateTaskFromFunction só é chamada quando o backend NÃO
+ *      devolveu uma task (caminho de fallback), evitando a inserção dupla.
  */
 export function ChatUI({ isOpen, onClose, onTaskCreated }) {
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
@@ -131,12 +138,10 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
             timestamp: new Date(summary.created_at || Date.now()),
           },
         ]);
-        // O resumo serve de contexto para a IA continuar a conversa
         setConversationHistory([
           { role: "assistant", content: summary.summary },
         ]);
       } else {
-        // Resumo ainda não gerado (conversa muito recente)
         setMessages([
           {
             id: `${selectedConv.id}-pending`,
@@ -168,6 +173,31 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     setMessages([{ ...INITIAL_MESSAGE, timestamp: new Date() }]);
     setConversationHistory([]);
     setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  // ── Criar tarefa a partir do function result (fallback) ───────────────────
+  // Only called when the backend did NOT return a pre-created task in the
+  // done event. Calling this alongside donePayload.task would produce a
+  // duplicate DB insert.
+  const handleCreateTaskFromFunction = async (functionResult) => {
+    try {
+      const taskData = chatService.extractTaskDataFromFunctionResult(functionResult);
+      if (!taskData) throw new Error("Não foi possível extrair dados da tarefa");
+      if (onTaskCreated) await onTaskCreated(taskData);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 2,
+          text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
+          sender: "system",
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (err) {
+      console.error("Error creating task:", err);
+      setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
+    }
   };
 
   // ── Enviar mensagem ───────────────────────────────────────────────────────
@@ -206,7 +236,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
       await chatService.sendMessageToBotStream(
         userMessage,
         updatedHistory,
-        // onChunk
+        // onChunk — stream text into the bot bubble
         (chunk) => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -214,11 +244,10 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
             )
           );
         },
-        // onDone
+        // onDone — handle final payload
         (donePayload) => {
           if (donePayload?.conversationId) {
             setConversationId(donePayload.conversationId);
-            // Actualiza lista de conversas para incluir a nova
             chatService.getConversations().then(setConversations).catch(() => {});
           }
 
@@ -235,6 +264,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
           }
 
           if (donePayload?.functionResults?.length) {
+            // Always surface the raw function data in the bubble
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === botMsgId
@@ -242,9 +272,19 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                   : m
               )
             );
-            handleCreateTaskFromFunction(donePayload.functionResults[0]);
+
+            // FIX: The backend controller already inserted the task into the DB
+            // and returned it as donePayload.task.  Only call
+            // handleCreateTaskFromFunction when that field is absent, i.e. when
+            // the controller did NOT persist the task (fallback path).
+            // Calling it unconditionally was the cause of the duplicate insert.
+            if (!donePayload.task) {
+              handleCreateTaskFromFunction(donePayload.functionResults[0]);
+            }
           }
 
+          // Backend already persisted the task (has a real DB id) — add it to
+          // the local UI state without touching the DB again.
           if (donePayload?.task && onTaskCreated) {
             onTaskCreated(donePayload.task);
           }
@@ -262,28 +302,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  // ── Criar tarefa a partir do function result ──────────────────────────────
-  const handleCreateTaskFromFunction = async (functionResult) => {
-    try {
-      const taskData = chatService.extractTaskDataFromFunctionResult(functionResult);
-      if (!taskData) throw new Error("Não foi possível extrair dados da tarefa");
-      if (onTaskCreated) await onTaskCreated(taskData);
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 2,
-          text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
-          sender: "system",
-          timestamp: new Date(),
-        },
-      ]);
-    } catch (err) {
-      console.error("Error creating task:", err);
-      setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
     }
   };
 
@@ -308,7 +326,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
         {/* ── Lista de Conversas ── */}
         {showConversationsList && (
           <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col">
-            {/* Cabeçalho da lista */}
             <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-main">
@@ -327,18 +344,15 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
               </button>
             </div>
 
-            {/* Conversas agrupadas por data, ordenadas desc */}
             <div className="flex-1 overflow-y-auto">
               {groupedConversations.map(({ label, convs }) => (
                 <div key={label}>
-                  {/* Header do grupo */}
                   <div className="px-4 py-1.5 bg-surface sticky top-0">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                       {label}
                     </span>
                   </div>
 
-                  {/* Conversas do grupo */}
                   {convs.map((conv) => (
                     <button
                       key={conv.id}
@@ -392,7 +406,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
               inputRef={inputRef}
             />
 
-            {/* Barra inferior — acesso ao histórico */}
             {conversations.length > 0 && (
               <button
                 onClick={() => setShowConversationsList(true)}
