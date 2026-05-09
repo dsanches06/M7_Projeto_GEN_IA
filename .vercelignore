@@ -25,7 +25,6 @@ exemplos/
 clickUp/src/**
 !clickUp/dist/
 backend/.nodemon.json
-backend/src/**
 !backend/build/
 backend/debug-*.js
 backend/check-tables*.js
