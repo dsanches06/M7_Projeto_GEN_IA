@@ -7,9 +7,6 @@
       "runtime": "nodejs18.x"
     }
   },
-  "env": {
-    "DATABASE_URL": "@database_url"
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
