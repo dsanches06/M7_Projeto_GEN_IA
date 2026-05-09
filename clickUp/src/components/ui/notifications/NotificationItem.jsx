@@ -10,7 +10,7 @@ const NotificationItem = ({ notification }) => {
       <div className="text">
         <strong>{title}</strong>
         <p>{message}</p>
-        {sentAt && <small style={{ fontSize:"12px", color:"#999" }}>{new Date(sentAt).toLocaleString("pt-PT")}</small>}
+        {sentAt && <small style={{ fontSize: "12px", color: "#999" }}>{new Date(sentAt).toLocaleString("pt-PT")}</small>}
       </div>
     </div>
   );

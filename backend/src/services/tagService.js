@@ -1,54 +1,13 @@
 import { db } from "../db.js";
 import { mapTagDTOResponse } from "../dto/mapDTO.js";
 
-/* Função para buscar todas as etiquetas */
-export const getAllTags = async () => {
-  const [tags] = await db.query("SELECT * FROM tags");
-  return tags.map(mapTagDTOResponse);
+export const getAllTags = async () => { const [r] = await db.query("SELECT * FROM tags"); return r.map(mapTagDTOResponse); };
+export const getTagById = async (id) => { const [r] = await db.query("SELECT * FROM tags WHERE id = ?", [id]); return r[0] ? mapTagDTOResponse(r[0]) : null; };
+export const createTag = async (data) => { const [result] = await db.query("INSERT INTO tags (name) VALUES (?)", [data.name.trim()]); return mapTagDTOResponse({ id: result.insertId, name: data.name.trim() }); };
+export const updateTag = async (id, data) => { const [, r] = await db.query("UPDATE tags SET name = ? WHERE id = ?", [data.name.trim(), id]); return r.affectedRows > 0 ? mapTagDTOResponse({ id, name: data.name.trim() }) : null; };
+export const deleteTag = async (id) => { const [, r] = await db.query("DELETE FROM tags WHERE id = ?", [id]); return r.affectedRows; };
+export const tagNameExists = async (name, excludeId = null) => {
+  let q = "SELECT COUNT(*) AS cnt FROM tags WHERE name = ?"; const p = [name];
+  if (excludeId) { q += " AND id != ?"; p.push(excludeId); }
+  const [r] = await db.query(q, p); return parseInt(r[0]?.cnt ?? r[0]?.count ?? 0) > 0;
 };
-
-/* Função para criar etiqueta */
-export const createTag = async (data) => {
-  const [result] = await db.query(
-    "INSERT INTO tags (name) VALUES (?)",
-    [data.name.trim()],
-  );
-  return mapTagDTOResponse({ id: result.insertId, name: data.name.trim() });
-};
-
-/* Função para buscar etiqueta por ID */
-export const getTagById = async (tagId) => {
-  const [tags] = await db.query("SELECT * FROM tags WHERE id = ?", [tagId]);
-  return tags[0] ? mapTagDTOResponse(tags[0]) : null;
-};
-
-/* Função para deletar etiqueta */
-export const deleteTag = async (tagId) => {
-  const [result] = await db.query("DELETE FROM tags WHERE id=?", [tagId]);
-  return result.affectedRows;
-};
-
-/* Função para atualizar etiqueta */
-export const updateTag = async (tagId, data) => {
-  const [result] = await db.query(
-    "UPDATE tags SET name = ? WHERE id = ?",
-    [data.name.trim(), tagId],
-  );
-  return result.affectedRows > 0 ? mapTagDTOResponse({ id: tagId, name: data.name.trim() }) : null;
-};
-
-/* Função para verificar se tag com mesmo nome já existe */
-export const tagNameExists = async (nome, excludeTagId = null) => {
-  let query = "SELECT COUNT(*) as count FROM tags WHERE name = ?";
-  const params = [nome];
-  
-  if (excludeTagId) {
-    query += " AND id != ?";
-    params.push(excludeTagId);
-  }
-  
-  const [result] = await db.query(query, params);
-  return result[0].count > 0;
-};
-
-

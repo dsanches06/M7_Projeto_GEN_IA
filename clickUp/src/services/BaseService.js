@@ -1,11 +1,3 @@
-/**
- * BaseService — Classe base para todos os serviços frontend
- *
- * getBackendUrl():
- *   Dev local  → "http://localhost:3001/api"  (backend expõe tudo sob /api)
- *   Produção   → "/api"
- *   VITE_BACKEND_URL externo → usa direto
- */
 export function getBackendUrl() {
   const raw = import.meta.env.VITE_BACKEND_URL;
   if (raw) {
@@ -20,27 +12,19 @@ export function getBackendUrl() {
 export const BACKEND_URL = getBackendUrl();
 
 class BaseService {
-  constructor(baseEndpoint) {
-    this.BACKEND_URL = BACKEND_URL;
-    this.baseEndpoint = baseEndpoint;
-  }
+  constructor(baseEndpoint) { this.BACKEND_URL = BACKEND_URL; this.baseEndpoint = baseEndpoint; }
 
   async sendStreamMessage(endpoint, payload, onChunk, onDone) {
     try {
-      const response = await fetch(`${this.BACKEND_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(`${this.BACKEND_URL}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) throw new Error(`API error: ${response.status} ${response.statusText}`);
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      const reader = response.body.getReader(), decoder = new TextDecoder();
       let buffer = "", event = null, data = "", donePayload = null;
       const flush = () => {
         if (!event) return;
         if (event === "message") { try { const p = JSON.parse(data); if (p?.text) onChunk(p.text); } catch {} }
-        if (event === "done")    { try { const p = JSON.parse(data); donePayload = p; if (onDone) onDone(p); } catch {} }
-        if (event === "error")   { try { const p = JSON.parse(data); throw new Error(p?.message || "Erro"); } catch (e) { throw e; } }
+        if (event === "done") { try { const p = JSON.parse(data); donePayload = p; if (onDone) onDone(p); } catch {} }
+        if (event === "error") { try { const p = JSON.parse(data); throw new Error(p?.message || "Erro"); } catch(e) { throw e; } }
         event = null; data = "";
       };
       while (true) {
@@ -49,27 +33,18 @@ class BaseService {
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n"); buffer = lines.pop() || "";
         for (const line of lines) {
-          if      (line.startsWith("event:")) event = line.replace("event:", "").trim();
-          else if (line.startsWith("data:"))  data += line.replace("data:", "").trim();
-          else if (line.trim() === "")        flush();
+          if (line.startsWith("event:")) event = line.replace("event:", "").trim();
+          else if (line.startsWith("data:")) data += line.replace("data:", "").trim();
+          else if (line.trim() === "") flush();
         }
       }
-      if (buffer.trim()) {
-        for (const line of buffer.split("\n")) {
-          if      (line.startsWith("event:")) event = line.replace("event:", "").trim();
-          else if (line.startsWith("data:"))  data += line.replace("data:", "").trim();
-          else if (line.trim() === "")        flush();
-        }
-        flush();
-      }
+      if (buffer.trim()) { for (const line of buffer.split("\n")) { if (line.startsWith("event:")) event = line.replace("event:","").trim(); else if (line.startsWith("data:")) data += line.replace("data:","").trim(); else if (line.trim()==="") flush(); } flush(); }
       return donePayload ?? { success: true };
     } catch (err) { console.error(`[${this.baseEndpoint}] stream error:`, err); throw err; }
   }
 
   async sendMessage(endpoint, payload) {
-    const res = await fetch(`${this.BACKEND_URL}${endpoint}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
-    });
+    const res = await fetch(`${this.BACKEND_URL}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
     return res.json();
   }

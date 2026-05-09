@@ -1,83 +1,29 @@
 import { db } from "../db.js";
 import { mapSprintDTOResponse, mapSprintStatsDTOResponse } from "../dto/mapDTO.js";
 
-/* Função para buscar todas as sprints */
 export const getAllSprints = async (search, sort) => {
   let [sprints] = await db.query("SELECT * FROM sprints");
-
-  if (search) {
-    sprints = sprints.filter(
-      (s) => s.name.toLowerCase().includes(search.toLowerCase()),
-    );
-  }
-
-  if (sort && (sort === "asc" || sort === "desc")) {
-    sprints.sort((a, b) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
-
-      if (sort === "asc") {
-        return nameA.localeCompare(nameB);
-      } else {
-        return nameB.localeCompare(nameA);
-      }
-    });
-  }
-
+  if (search) sprints = sprints.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()));
+  if (sort === "asc" || sort === "desc") sprints.sort((a, b) => { const na = (a.name || "").toLowerCase(), nb = (b.name || "").toLowerCase(); return sort === "asc" ? na.localeCompare(nb) : nb.localeCompare(na); });
   return sprints.map(mapSprintDTOResponse);
 };
-
-/* Função para buscar uma sprint por ID */
-export const getSprintById = async (sprintId) => {
-  const [sprints] = await db.query("SELECT * FROM sprints WHERE id = ?", [sprintId]);
-  return sprints.length > 0 ? mapSprintDTOResponse(sprints[0]) : null;
-};
-
-/* Função para criar sprint */
+export const getSprintById = async (id) => { const [r] = await db.query("SELECT * FROM sprints WHERE id = ?", [id]); return r[0] ? mapSprintDTOResponse(r[0]) : null; };
 export const createSprint = async (data) => {
-  const [result] = await db.query(
-    "INSERT INTO sprints (project_id, name, description, start_date, end_date, status_id) VALUES (?, ?, ?, ?, ?, ?)",
-    [data.project_id, data.name, data.description, data.start_date, data.end_date, data.status_id],
-  );
+  const [result] = await db.query("INSERT INTO sprints (project_id, name, description, start_date, end_date, status_id) VALUES (?, ?, ?, ?, ?, ?)", [data.project_id, data.name, data.description, data.start_date, data.end_date, data.status_id]);
   return mapSprintDTOResponse({ id: result.insertId, ...data });
 };
-
-/* Função para atualizar sprint */
 export const updateSprint = async (sprintId, data) => {
-  const { project_id, name, description, start_date, end_date, status_id } = data;
-  const [result] = await db.query(
-    "UPDATE sprints SET project_id=?, name=?, description=?, start_date=?, end_date=?, status_id=? WHERE id=?",
-    [project_id, name, description, start_date, end_date, status_id, sprintId],
-  );
-  return result.affectedRows;
+  const fields = [], values = [], add = (c, v) => { fields.push(c + " = ?"); values.push(v); };
+  if (data.project_id !== undefined) add("project_id", data.project_id);
+  if (data.name !== undefined) add("name", data.name);
+  if (data.description !== undefined) add("description", data.description);
+  if (data.start_date !== undefined) add("start_date", data.start_date);
+  if (data.end_date !== undefined) add("end_date", data.end_date);
+  if (data.status_id !== undefined) add("status_id", data.status_id);
+  if (!fields.length) return 0;
+  values.push(sprintId);
+  const [, r] = await db.query(`UPDATE sprints SET ${fields.join(", ")} WHERE id = ?`, values); return r.affectedRows;
 };
-
-/* Função para deletar sprint */
-export const deleteSprint = async (sprintId) => {
-  const [result] = await db.query("DELETE FROM sprints WHERE id=?", [sprintId]);
-  return result.affectedRows;
-};
-
-/* Função para obter estatísticas globais de sprints */
-export const getSprintsStats = async () => {
-  const [result] = await db.query("SELECT COUNT(*) as totalSprints FROM sprints");
-  return mapSprintStatsDTOResponse(result[0]);
-};
-
-/* Função para obter estatísticas de sprints */
-export const getSprintStats = async (sprintId) => {
-  const [result] = await db.query(`
-    SELECT 
-      COUNT(*) as totalTasks,
-      COALESCE(SUM(CASE WHEN t.status_id = 4 THEN 1 ELSE 0 END), 0) as completedTasks,
-      COALESCE(SUM(CASE WHEN t.status_id != 4 THEN 1 ELSE 0 END), 0) as pendingTasks
-    FROM sprint_tasks st
-    JOIN task t ON st.task_id = t.id
-    WHERE st.sprint_id = ?
-  `, [sprintId]);
-  
-  const stats = result[0];
-  return mapSprintStatsDTOResponse(stats);
-};
-
-
+export const deleteSprint = async (id) => { const [, r] = await db.query("DELETE FROM sprints WHERE id = ?", [id]); return r.affectedRows; };
+export const getSprintsStats = async () => { const [r] = await db.query("SELECT COUNT(*) AS ts FROM sprints"); return mapSprintStatsDTOResponse({ totalSprints: parseInt(r[0]?.ts ?? r[0]?.count ?? 0) }); };
+export const getSprintStats = async (id) => { const [r] = await db.query("SELECT COUNT(*) AS tt FROM sprint_tasks WHERE sprint_id = ?", [id]); return mapSprintStatsDTOResponse({ totalSprints: parseInt(r[0]?.tt ?? 0) }); };
