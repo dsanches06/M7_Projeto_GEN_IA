@@ -78,7 +78,7 @@ export const deleteSummary = async (req, res) => {
 export const updateSummary = async (req, res) => {
   try {
     const summaryId = Number(req.params.id);
-    const { conversationId, original_text, summary } = req.body;
+    const { conversationId, original_text } = req.body;
 
     if (
       !conversationId ||

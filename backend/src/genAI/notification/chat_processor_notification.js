@@ -2,7 +2,7 @@
 // FILE: chat_processor_notification.js
 // ======================================================
 
-import { BaseChatProcessor } from "../../models/BaseChatProcessor.js";
+import { BaseChatProcessor } from "../../models/chat/BaseChatProcessor.js";
 
 import {
   functionDeclarations,

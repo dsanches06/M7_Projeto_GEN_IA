@@ -27,7 +27,7 @@ import mentionRoutes from "./routes/mentionRoutes.js";
 import timeLogRoutes from "./routes/timeLogRoutes.js";
 import statisticsRoutes from "./routes/statisticsRoutes.js";
 import conversationRoutes from "./routes/conversationRoutes.js";
-import summaryRoute from "./routes/summaryRoute.js";
+import summaryRoutes from "./routes/summaryRoutes.js";
 import ticketRoutes from "./routes/ticketRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import * as chatBotController from "./controllers/chatBotController.js";
