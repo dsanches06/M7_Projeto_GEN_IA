@@ -1,257 +1,103 @@
 import { db } from "../db.js";
 import { mapTaskDTOResponse, mapTaskStatsDTOResponse } from "../dto/mapDTO.js";
-import { formattedDate } from "../utils/formattedDate.js";
 
-/* Função para buscar todas as tarefas */
+const parseNumber = (v, fb = 0) => { const n = Number(v); return (v == null || v === "" || isNaN(n)) ? fb : n; };
+const toDateStr   = (v) => { try { const d = new Date(v); return isNaN(d) ? null : d.toISOString().slice(0, 19).replace("T", " "); } catch { return null; } };
+
 export const getAllTasks = async (search, sort) => {
-  let query =
-    "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id";
-  const params = [];
-
-  if (search) {
-    query += " WHERE (t.title LIKE ? OR t.description LIKE ?)";
-    const searchTerm = `%${search}%`;
-    params.push(searchTerm, searchTerm);
-  }
-
-  if (sort && (sort === "asc" || sort === "desc")) {
-    query += ` ORDER BY title ${sort.toUpperCase()}`;
-  }
-
-  const [tasks] = await db.query(query, params);
-  return tasks.map(mapTaskDTOResponse);
+  let q = "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id";
+  const p = [];
+  if (search) { q += " WHERE (t.title LIKE ? OR t.description LIKE ?)"; p.push(`%${search}%`, `%${search}%`); }
+  if (sort === "asc" || sort === "desc") q += ` ORDER BY t.title ${sort.toUpperCase()}`;
+  const [rows] = await db.query(q, p);
+  return rows.map(mapTaskDTOResponse);
 };
 
-/* Função para buscar tarefas de um projeto específico */
 export const getTasksByProjectId = async (projectId, search, sort) => {
-  let query =
-    "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id WHERE t.project_id = ?";
-  const params = [projectId];
-
-  if (search) {
-    query += " AND (t.title LIKE ? OR t.description LIKE ?)";
-    const searchTerm = `%${search}%`;
-    params.push(searchTerm, searchTerm);
-  }
-
-  if (sort && (sort === "asc" || sort === "desc")) {
-    query += ` ORDER BY t.title ${sort.toUpperCase()}`;
-  }
-
-  const [tasks] = await db.query(query, params);
-  return tasks.map(mapTaskDTOResponse);
-};
-
-/* Função para criar tarefa */
-const parseNumber = (value, fallback = 0) => {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
-  }
-  const number = Number(value);
-  return Number.isNaN(number) ? fallback : number;
+  let q = "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id WHERE t.project_id = ?";
+  const p = [projectId];
+  if (search) { q += " AND (t.title LIKE ? OR t.description LIKE ?)"; p.push(`%${search}%`, `%${search}%`); }
+  if (sort === "asc" || sort === "desc") q += ` ORDER BY t.title ${sort.toUpperCase()}`;
+  const [rows] = await db.query(q, p);
+  return rows.map(mapTaskDTOResponse);
 };
 
 export const createTask = async (data) => {
-  console.log("📥 Recebido no createTask:", data);
-  
-  const taskData = {
-    title: data.title?.toString().trim() || "",
-    description: data.description?.toString().trim() || "",
-    types_id: parseNumber(data.types_id ?? data.type_id ?? data.typeId, 1),
-    status_id: parseNumber(data.status_id ?? data.statusId, 1),
-    priority_id: parseNumber(data.priority_id ?? data.priorityId, 1),
-    category_id: parseNumber(data.category_id ?? data.categoryId, 1),
-    project_id: parseNumber(data.project_id ?? data.projectId, 1),
-    estimated_hours: parseNumber(data.estimated_hours ?? data.estimatedHours, 0),
-    due_date: data.due_date || data.dueDate || null,
-    completed_at: data.completed_at || data.completedAt || null,
+  const d = {
+    title:           (data.title ?? "").toString().trim(),
+    description:     (data.description ?? "").toString().trim(),
+    types_id:        parseNumber(data.types_id   ?? data.type_id   ?? data.typeId,   1),
+    status_id:       parseNumber(data.status_id  ?? data.statusId,                    1),
+    priority_id:     parseNumber(data.priority_id ?? data.priorityId,                 1),
+    category_id:     parseNumber(data.category_id ?? data.categoryId,                 1),
+    project_id:      parseNumber(data.project_id  ?? data.projectId,                  1),
+    estimated_hours: parseNumber(data.estimated_hours ?? data.estimatedHours,          0),
+    due_date:        toDateStr(data.due_date  ?? data.dueDate),
+    completed_at:    toDateStr(data.completed_at ?? data.completedAt),
   };
-
-  console.log("💾 Salvando no BD:", taskData);
-
   const [result] = await db.query(
     "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [
-      taskData.title,
-      taskData.description,
-      taskData.types_id,
-      taskData.status_id,
-      taskData.priority_id,
-      taskData.category_id,
-      taskData.project_id,
-      taskData.estimated_hours,
-      formattedDate(taskData.due_date),
-      taskData.completed_at,
-    ],
-  );
-
-  console.log("✅ Tarefa inserida com ID:", result.insertId);
-  return mapTaskDTOResponse({ id: result.insertId, ...taskData });
+    [d.title, d.description, d.types_id, d.status_id, d.priority_id, d.category_id, d.project_id, d.estimated_hours, d.due_date, d.completed_at]);
+  return mapTaskDTOResponse({ id: result.insertId, ...d });
 };
 
-/* Função para alterar o status da tarefa */
 export const updateStatus = async (taskId, data) => {
-  const [result] = await db.query(
-    "UPDATE task SET status_id = ? WHERE id = ?",
-    [data.status_id, taskId],
-  );
-  return result.affectedRows;
+  const [, r] = await db.query("UPDATE task SET status_id = ? WHERE id = ?", [data.status_id, taskId]);
+  return r.affectedRows;
 };
 
-/* Função para atualizar tarefa */
 export const updateTask = async (taskId, data) => {
-  // Constrói a query dinamicamente apenas com os campos fornecidos
-  const fieldsToUpdate = [];
-  const values = [];
-
-  if (data.title !== undefined) {
-    fieldsToUpdate.push("title = ?");
-    values.push(data.title);
-  }
-  if (data.description !== undefined) {
-    fieldsToUpdate.push("description = ?");
-    values.push(data.description);
-  }
-  if (data.status_id !== undefined) {
-    fieldsToUpdate.push("status_id = ?");
-    values.push(data.status_id);
-  }
-  if (data.priority_id !== undefined) {
-    fieldsToUpdate.push("priority_id = ?");
-    values.push(data.priority_id);
-  }
-  if (data.category_id !== undefined) {
-    fieldsToUpdate.push("category_id = ?");
-    values.push(data.category_id);
-  }
-  if (data.types_id !== undefined) {
-    fieldsToUpdate.push("types_id = ?");
-    values.push(data.types_id);
-  }
-  if (data.estimated_hours !== undefined) {
-    fieldsToUpdate.push("estimated_hours = ?");
-    values.push(data.estimated_hours);
-  }
-  if (data.due_date !== undefined) {
-    fieldsToUpdate.push("due_date = ?");
-    values.push(data.due_date);
-  }
-  if (data.completed_at !== undefined) {
-    fieldsToUpdate.push("completed_at = ?");
-    values.push(data.completed_at);
-  }
-
+  const fields = [], values = [];
+  const add = (col, val) => { fields.push(`${col} = ?`); values.push(val); };
+  if (data.title       !== undefined) add("title",           data.title);
+  if (data.description !== undefined) add("description",     data.description);
+  if (data.status_id   !== undefined) add("status_id",       data.status_id);
+  if (data.priority_id !== undefined) add("priority_id",     data.priority_id);
+  if (data.category_id !== undefined) add("category_id",     data.category_id);
+  if (data.types_id    !== undefined) add("types_id",        data.types_id);
+  if (data.project_id  !== undefined) add("project_id",      data.project_id);
+  if (data.estimated_hours !== undefined) add("estimated_hours", data.estimated_hours);
+  if (data.due_date    !== undefined) add("due_date",        data.due_date);
+  if (data.completed_at !== undefined) add("completed_at",   data.completed_at);
+  if (!fields.length) return 0;
   values.push(taskId);
-
-  const [result] = await db.query(
-    `UPDATE task SET ${fieldsToUpdate.join(", ")} WHERE id = ?`,
-    values,
-  );
-  return result.affectedRows;
+  const [, r] = await db.query(`UPDATE task SET ${fields.join(", ")} WHERE id = ?`, values);
+  return r.affectedRows;
 };
 
-/* Função para deletar tarefa */
 export const deleteTask = async (taskId) => {
-  const [result] = await db.query("DELETE FROM task WHERE id=?", [taskId]);
-  return result.affectedRows;
+  const [, r] = await db.query("DELETE FROM task WHERE id = ?", [taskId]);
+  return r.affectedRows;
 };
 
-/* Função para buscar tarefa por ID */
 export const getTaskById = async (taskId) => {
-  const [tasks] = await db.query(
-    "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id WHERE t.id = ?",
-    [taskId],
-  );
-  return tasks[0] ? mapTaskDTOResponse(tasks[0]) : null;
+  const [rows] = await db.query(
+    "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id WHERE t.id = ?", [taskId]);
+  return rows[0] ? mapTaskDTOResponse(rows[0]) : null;
 };
 
-/* Função para adicionar etiqueta à tarefa */
 export const addTagToTask = async (taskId, tagId) => {
-  // Valida inputs
-  if (!taskId || taskId <= 0) {
-    throw new Error(`Tarefa ID inválida: ${taskId}`);
-  }
-  if (!tagId || tagId <= 0) {
-    throw new Error(`Etiqueta ID inválida ou não fornecida: ${tagId}`);
-  }
-
-  // Valida se a tarefa existe
+  if (!taskId || taskId <= 0) throw new Error(`Tarefa ID inválida: ${taskId}`);
+  if (!tagId  || tagId  <= 0) throw new Error(`Etiqueta ID inválida: ${tagId}`);
   const task = await getTaskById(taskId);
-  if (!task) {
-    throw new Error(`Tarefa com ID ${taskId} não encontrada`);
-  }
-
-  // Verifica se a tag já está associada
-  const [existing] = await db.query(
-    "SELECT * FROM tags_task WHERE task_id = ? AND tag_id = ?",
-    [taskId, tagId],
-  );
-
-  if (existing && existing.length > 0) {
-    throw new Error("Etiqueta já associada à tarefa");
-  }
-
-  // Insere a relação
-  const [result] = await db.query(
-    "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?)",
-    [taskId, tagId],
-  );
-
-  return { taskId, tagId, relationId: result.insertId };
+  if (!task) throw new Error(`Tarefa ${taskId} não encontrada`);
+  const [ex] = await db.query("SELECT * FROM tags_task WHERE task_id = ? AND tag_id = ?", [taskId, tagId]);
+  if (ex?.length > 0) throw new Error("Etiqueta já associada");
+  const [r] = await db.query("INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?)", [taskId, tagId]);
+  return { taskId, tagId, relationId: r.insertId };
 };
 
-/* Função para remover etiqueta da tarefa */
-export const removeTagFromTask = async (taskId, tagId) => {
-  const [result] = await db.query(
-    "DELETE FROM tags_task WHERE task_id = ? AND tag_id = ?",
-    [taskId, tagId],
-  );
-  return result.affectedRows;
-};
+export const removeTagFromTask    = async (taskId, tagId) => { const [, r] = await db.query("DELETE FROM tags_task WHERE task_id = ? AND tag_id = ?", [taskId, tagId]); return r.affectedRows; };
+export const getTagsByTaskId      = async (taskId)        => { const [r] = await db.query("SELECT * FROM tags_task WHERE task_id = ?", [taskId]); return r; };
+export const getTasksByTagId      = async (tagId)         => { const [r] = await db.query("SELECT t.* FROM task t INNER JOIN tags_task tt ON t.id = tt.task_id WHERE tt.tag_id = ?", [tagId]); return r.map(mapTaskDTOResponse); };
+export const removeTagFromAllTasks = async (tagId)        => { const [, r] = await db.query("DELETE FROM tags_task WHERE tag_id = ?", [tagId]); return r.affectedRows; };
+export const removeTicketFromAllTasks = async () => 0;
 
-/* Função para buscar etiquetas da tarefa */
-export const getTagsByTaskId = async (taskId) => {
-  const [relations] = await db.query(
-    "SELECT * FROM tags_task WHERE task_id = ?",
-    [taskId],
-  );
-  return relations;
-};
-
-export const getTasksByTagId = async (tagId) => {
-  const [tasks] = await db.query(
-    "SELECT t.* FROM task t INNER JOIN tags_task tt ON t.id = tt.task_id WHERE tt.tag_id = ?",
-    [tagId],
-  );
-  return tasks.map(mapTaskDTOResponse);
-};
-
-/* Função para remover etiqueta de todas as tarefas */
-export const removeTagFromAllTasks = async (tagId) => {
-  const [result] = await db.query("DELETE FROM tags_task WHERE tag_id = ?", [
-    tagId,
-  ]);
-  return result.affectedRows;
-};
-
-/* Função para buscar estatísticas das tarefas */
 export const getTaskStats = async () => {
-  const [result] = await db.query("SELECT COUNT(*) as totalTasks FROM task");
-  const totalTasks = result[0].totalTasks;
-
-  const [completedResult] = await db.query(
-    "SELECT COUNT(*) as completedTasks FROM task WHERE completed_at IS NOT NULL",
-  );
-  const completedTasks = completedResult[0].completedTasks;
-
-  const pendingTasks = totalTasks - completedTasks;
-  const completedPercentage =
-    totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(2) : "0.00";
-
-  return mapTaskStatsDTOResponse({
-    totalTasks,
-    completedTasks,
-    pendingTasks,
-    completedPercentage: completedPercentage + "%",
-  });
+  const [r1] = await db.query("SELECT COUNT(*) AS total FROM task");
+  const total = parseInt(r1[0]?.total ?? r1[0]?.count ?? 0);
+  const [r2] = await db.query("SELECT COUNT(*) AS completed FROM task WHERE completed_at IS NOT NULL");
+  const completed = parseInt(r2[0]?.completed ?? r2[0]?.count ?? 0);
+  const pct = total > 0 ? ((completed / total) * 100).toFixed(2) : "0.00";
+  return mapTaskStatsDTOResponse({ totalTasks: total, completedTasks: completed, pendingTasks: total - completed, completedPercentage: pct + "%" });
 };

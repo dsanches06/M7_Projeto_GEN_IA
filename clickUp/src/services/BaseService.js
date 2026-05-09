@@ -1,209 +1,88 @@
 /**
- * BaseService - Classe base para todos os serviços
- * Fornece métodos genéricos para streaming e comunicação com API
- * Evita duplicação de código entre chatService, ticketService e notificationService
+ * BaseService — Classe base para todos os serviços frontend
+ *
+ * getBackendUrl():
+ *   Dev local  → "http://localhost:3001/api"  (backend expõe tudo sob /api)
+ *   Produção   → "/api"
+ *   VITE_BACKEND_URL externo → usa direto
  */
-
-function getBackendUrl() {
-  const rawBackendUrl = import.meta.env.VITE_BACKEND_URL;
-  const isLocalhostUrl = rawBackendUrl
-    ? /^(?:https?:\/\/)(?:localhost|127\.0\.0\.1)(?::\d+)?/.test(rawBackendUrl)
-    : false;
-
-  if (import.meta.env.PROD) {
-    if (rawBackendUrl && !isLocalhostUrl) {
-      return rawBackendUrl;
-    }
-    return "/api";
+export function getBackendUrl() {
+  const raw = import.meta.env.VITE_BACKEND_URL;
+  if (raw) {
+    const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(raw);
+    if (!isLocal) return raw;
+    return raw.endsWith("/api") ? raw : raw.replace(/\/?$/, "/api");
   }
-
-  return rawBackendUrl || "http://localhost:3001";
+  if (import.meta.env.PROD) return "/api";
+  return "http://localhost:3001/api";
 }
 
-const BACKEND_URL = getBackendUrl();
+export const BACKEND_URL = getBackendUrl();
 
 class BaseService {
   constructor(baseEndpoint) {
     this.BACKEND_URL = BACKEND_URL;
-    this.baseEndpoint = baseEndpoint; // ex: "/chat", "/tickets", "/notifications"
+    this.baseEndpoint = baseEndpoint;
   }
 
-  /**
-   * Método genérico para streaming de dados
-   * Implementa a lógica SSE (Server-Sent Events) reutilizável
-   */
   async sendStreamMessage(endpoint, payload, onChunk, onDone) {
     try {
       const response = await fetch(`${this.BACKEND_URL}${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(`API error: ${response.status} ${response.statusText}`);
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
-      let event = null;
-      let data = "";
-      let donePayload = null;
-
-      const flushEvent = () => {
+      let buffer = "", event = null, data = "", donePayload = null;
+      const flush = () => {
         if (!event) return;
-
-        if (event === "message") {
-          try {
-            const parsedData = JSON.parse(data);
-            if (parsedData?.text) {
-              onChunk(parsedData.text);
-            }
-          } catch (e) {
-            console.warn("Failed to parse stream message payload", e);
-          }
-        }
-
-        if (event === "done") {
-          try {
-            const parsedData = JSON.parse(data);
-            donePayload = parsedData;
-            if (onDone) onDone(parsedData);
-          } catch (e) {
-            console.warn("Failed to parse stream done payload", e);
-          }
-        }
-
-        if (event === "error") {
-          try {
-            const parsedData = JSON.parse(data);
-            throw new Error(parsedData?.message || "Erro no stream");
-          } catch (e) {
-            throw e;
-          }
-        }
-
-        event = null;
-        data = "";
+        if (event === "message") { try { const p = JSON.parse(data); if (p?.text) onChunk(p.text); } catch {} }
+        if (event === "done")    { try { const p = JSON.parse(data); donePayload = p; if (onDone) onDone(p); } catch {} }
+        if (event === "error")   { try { const p = JSON.parse(data); throw new Error(p?.message || "Erro"); } catch (e) { throw e; } }
+        event = null; data = "";
       };
-
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
+        const lines = buffer.split("\n"); buffer = lines.pop() || "";
         for (const line of lines) {
-          if (line.startsWith("event:")) {
-            event = line.replace("event:", "").trim();
-          } else if (line.startsWith("data:")) {
-            data += line.replace("data:", "").trim();
-          } else if (line.trim() === "") {
-            flushEvent();
-          }
+          if      (line.startsWith("event:")) event = line.replace("event:", "").trim();
+          else if (line.startsWith("data:"))  data += line.replace("data:", "").trim();
+          else if (line.trim() === "")        flush();
         }
       }
-
       if (buffer.trim()) {
-        const lines = buffer.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("event:")) {
-            event = line.replace("event:", "").trim();
-          } else if (line.startsWith("data:")) {
-            data += line.replace("data:", "").trim();
-          } else if (line.trim() === "") {
-            flushEvent();
-          }
+        for (const line of buffer.split("\n")) {
+          if      (line.startsWith("event:")) event = line.replace("event:", "").trim();
+          else if (line.startsWith("data:"))  data += line.replace("data:", "").trim();
+          else if (line.trim() === "")        flush();
         }
-        flushEvent();
+        flush();
       }
-
       return donePayload ?? { success: true };
-    } catch (error) {
-      console.error(`${this.baseEndpoint} service error:`, error);
-      throw error;
-    }
+    } catch (err) { console.error(`[${this.baseEndpoint}] stream error:`, err); throw err; }
   }
 
-  /**
-   * Método genérico para envio de dados (sem stream)
-   */
   async sendMessage(endpoint, payload) {
-    try {
-      const response = await fetch(`${this.BACKEND_URL}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`${this.baseEndpoint} service error:`, error);
-      throw error;
-    }
+    const res = await fetch(`${this.BACKEND_URL}${endpoint}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+    return res.json();
   }
 
-  /**
-   * Método genérico para fetch GET
-   */
   async fetchData(endpoint) {
-    try {
-      const response = await fetch(`${this.BACKEND_URL}${endpoint}`);
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar dados: ${response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`${this.baseEndpoint} service error:`, error);
-      throw error;
-    }
+    const res = await fetch(`${this.BACKEND_URL}${endpoint}`);
+    if (!res.ok) throw new Error(`Erro ao buscar dados: ${res.status} ${res.statusText}`);
+    return res.json();
   }
 
-  /**
-   * Verifica se response possui function results
-   */
-  hasFunctionResults(response) {
-    return (
-      response &&
-      response.success &&
-      Array.isArray(response.functionResults) &&
-      response.functionResults.length > 0
-    );
-  }
-
-  /**
-   * Obtém o primeiro function result
-   */
-  getFirstFunctionResult(response) {
-    if (this.hasFunctionResults(response)) {
-      return response.functionResults[0];
-    }
-    return null;
-  }
-
-  /**
-   * Extrai dados de um function result
-   */
-  extractDataFromFunctionResult(functionResult, fieldMapping = {}) {
-    if (!functionResult || !functionResult.result) {
-      return null;
-    }
-
-    const data = functionResult.result;
-    // fieldMapping permite mapear campos específicos de cada tipo
-    return fieldMapping ? { ...data } : data;
-  }
+  hasFunctionResults(r) { return r && r.success && Array.isArray(r.functionResults) && r.functionResults.length > 0; }
+  getFirstFunctionResult(r) { return this.hasFunctionResults(r) ? r.functionResults[0] : null; }
+  extractDataFromFunctionResult(fr) { return fr?.result ? { ...fr.result } : null; }
 }
 
 export default BaseService;
