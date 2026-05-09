@@ -1,7 +1,18 @@
-import { processChatMessage, processChatMessageStream } from "../genAI/task/chat_processor_task.js";
-import { createChatHistory, getChatHistoryByConversationId } from "../services/chatHistoryService.js";
-import { createConversation, getConversationById } from "../services/conversationService.js";
+import {
+  processChatMessage,
+  processChatMessageStream,
+} from "../genAI/task/chat_processor_task.js";
+import { processChatMessage as processSummaryMessage } from "../genAI/summaries/chat_processor_summary.js";
+import {
+  createChatHistory,
+  getChatHistoryByConversationId,
+} from "../services/chatHistoryService.js";
+import {
+  createConversation,
+  getConversationById,
+} from "../services/conversationService.js";
 import { createTask } from "../services/taskService.js";
+import { upsertSummary } from "../services/summaryService.js";
 
 const ROLE_USER = 2;
 const ROLE_ASSISTANT = 3;
@@ -14,11 +25,54 @@ const buildConversationHistory = (historyRows) => {
 };
 
 /**
- * Processa uma mensagem de chat com função genAI
- * Executa function calls automaticamente e retorna o resultado
+ * Gera e persiste automaticamente o resumo da conversa em background.
+ * Usa o processador de resumos para chamar set_create_summary_values via IA.
+ * Não bloqueia a resposta principal — fire and forget.
+ */
+const autoGenerateSummary = async (conversationId) => {
+  try {
+    const historyRows = await getChatHistoryByConversationId(conversationId);
+    if (!historyRows || historyRows.length < 2) return; // Mínimo 1 troca para resumir
+
+    const historyText = historyRows
+      .slice(-12) // Últimas 12 mensagens para contexto
+      .map(
+        (r) =>
+          `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`
+      )
+      .join("\n");
+
+    const prompt = `Resume esta conversa de forma concisa (conversation_id: ${conversationId}). Histórico:\n${historyText}`;
+
+    const result = await processSummaryMessage(prompt, []);
+
+    if (result.functionResults?.[0]?.result) {
+      const funcData = result.functionResults[0].result;
+      await upsertSummary({
+        conversation_id: funcData.conversation_id || conversationId,
+        original_text: historyText.substring(0, 295),
+        summary:
+          (funcData.summary || result.message || "Resumo indisponível").substring(0, 195),
+      });
+    } else if (result.message) {
+      // Fallback: usa a resposta da IA como resumo
+      await upsertSummary({
+        conversation_id: conversationId,
+        original_text: historyText.substring(0, 295),
+        summary: result.message.substring(0, 195),
+      });
+    }
+  } catch (err) {
+    // Não crítico — não propaga o erro
+    console.warn("[AutoSummary] Non-critical error:", err.message);
+  }
+};
+
+/**
+ * Processa uma mensagem de chat com função genAI em modo stream.
+ * Após resposta, dispara geração de resumo em background.
  */
 export const sendMessageToBotStream = async (req, res) => {
-
   try {
     const { message, conversationHistory, conversationId } = req.body;
 
@@ -47,7 +101,12 @@ export const sendMessageToBotStream = async (req, res) => {
         resolvedConversationHistory = buildConversationHistory(historyRows);
       }
     } else {
-      const newConversation = await createConversation({ title: "Chat AI" });
+      // Usa as primeiras 50 letras da mensagem como título da conversa
+      const title =
+        userMessage.length > 50
+          ? userMessage.substring(0, 47) + "..."
+          : userMessage;
+      const newConversation = await createConversation({ title });
       actualConversationId = newConversation.id;
     }
 
@@ -79,6 +138,7 @@ export const sendMessageToBotStream = async (req, res) => {
 
     const assistantText = result.message || finalText;
     let createdTask = null;
+
     if (result.success !== false) {
       await createChatHistory({
         conversation_id: actualConversationId,
@@ -100,6 +160,9 @@ export const sendMessageToBotStream = async (req, res) => {
           console.error("❌ Erro ao salvar tarefa no banco:", taskError);
         }
       }
+
+      // Dispara geração de resumo em background (não bloqueia a resposta SSE)
+      setImmediate(() => autoGenerateSummary(actualConversationId));
     }
 
     sendEvent("done", {
@@ -112,14 +175,15 @@ export const sendMessageToBotStream = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("Erro no controller stream:", error);
-    res.write(`event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`);
+    res.write(
+      `event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`
+    );
     res.end();
   }
 };
 
 /**
- * Processa uma mensagem em uma conversa específica
- * Recupera histórico da conversa e processa a nova mensagem
+ * Processa uma mensagem em uma conversa específica.
  */
 export const sendMessageToConversation = async (req, res) => {
   try {
@@ -135,8 +199,7 @@ export const sendMessageToConversation = async (req, res) => {
 
     const userMessage = message.trim();
 
-    const chatHistoryRows =
-      await getChatHistoryByConversationId(conversationId);
+    const chatHistoryRows = await getChatHistoryByConversationId(conversationId);
     const conversationHistory = buildConversationHistory(chatHistoryRows);
 
     await createChatHistory({
@@ -153,6 +216,9 @@ export const sendMessageToConversation = async (req, res) => {
         role_id: ROLE_ASSISTANT,
         content: result.message,
       });
+
+      // Dispara geração de resumo em background
+      setImmediate(() => autoGenerateSummary(Number(conversationId)));
     }
 
     res.status(result.success ? 200 : 400).json({

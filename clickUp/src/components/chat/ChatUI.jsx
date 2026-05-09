@@ -1,30 +1,76 @@
 import { useState, useRef, useEffect } from "react";
 import { chatService } from "@/services/chatService";
+import { summaryService } from "@/services/summaryService";
 import { InfoBanner } from "@/components/ui/InfoBanner";
 import {
   ChatBubbleUI,
   ChatHeaderUI,
   ChatLoadingUI,
-  ChatTaskDisplayUI,
   ChatInputUI,
 } from "@/components/chat";
 
+// ── Agrupa conversas por data (mais recentes primeiro) ──────────────────────
+const groupConversationsByDate = (conversations) => {
+  const sorted = [...conversations].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - 7);
+
+  const groups = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
+
+  sorted.forEach((conv) => {
+    const d = new Date(conv.created_at);
+    if (d >= startOfToday) groups["Hoje"].push(conv);
+    else if (d >= startOfYesterday) groups["Ontem"].push(conv);
+    else if (d >= startOfWeek) groups["Esta Semana"].push(conv);
+    else groups["Anteriores"].push(conv);
+  });
+
+  return Object.entries(groups)
+    .filter(([, convs]) => convs.length > 0)
+    .map(([label, convs]) => ({ label, convs }));
+};
+
+// ── Formato de data legível ─────────────────────────────────────────────────
+const formatDate = (dateString) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleString("pt-PT", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
+
+const INITIAL_MESSAGE = {
+  id: "welcome",
+  text:
+    "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
+  sender: "bot",
+  timestamp: new Date(),
+};
+
 /**
- * ChatUI - Modal flutuante do ChatBot AI com GenAI Function Calls
- * Integrado com Dashboard para atualizar tarefas em tempo real
+ * ChatUI — Modal flutuante do TaskBot AI
  *
- * Padrão: Segue arquitetura de componentes do frontend original
- * Usa: chatService para executar function calls automaticamente
+ * Fluxo de conversas:
+ *  1. Envio de mensagem → IA responde em stream → resumo gerado em background
+ *  2. Lista de conversas ordenada por data desc, agrupada por período
+ *  3. Ao seleccionar conversa → carrega resumo da tabela summaries
  */
 export function ChatUI({ isOpen, onClose, onTaskCreated }) {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
-      sender: "bot",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
@@ -32,151 +78,112 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
   const [conversations, setConversations] = useState([]);
   const [showConversationsList, setShowConversationsList] = useState(false);
   const [banner, setBanner] = useState(null);
-  const [streamingBotMessageId, setStreamingBotMessageId] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto scroll para última mensagem
+  // ── Scroll automático ────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Focus no input quando abre
+  // ── Focus no input ao abrir ──────────────────────────────────────────────
   useEffect(() => {
-    if (isOpen) {
-      inputRef.current?.focus();
-    }
+    if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
-  // Limpa o banner automaticamente após 3 segundos
+  // ── Limpa o banner após 3 s ──────────────────────────────────────────────
   useEffect(() => {
     if (!banner) return;
-
-    const timeout = window.setTimeout(() => {
-      setBanner(null);
-    }, 3000);
-
-    return () => window.clearTimeout(timeout);
+    const t = setTimeout(() => setBanner(null), 3000);
+    return () => clearTimeout(t);
   }, [banner]);
 
-  // Formata a data com validação
-  const formatConversationDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return "Data inválida";
-      }
-      return date.toLocaleString("pt-PT", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (error) {
-      return "Data inválida";
-    }
-  };
-
-  // Carrega todas as conversas quando o chat abre
+  // ── Carrega conversas quando o chat abre ─────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
-
-    const loadConversations = async () => {
+    (async () => {
       try {
-        const allConversations = await chatService.getConversations();
-        if (allConversations && allConversations.length > 0) {
-          setConversations(allConversations);
+        const all = await chatService.getConversations();
+        if (all && all.length > 0) {
+          setConversations(all);
           setShowConversationsList(true);
         }
-      } catch (error) {
-        console.error("Erro ao carregar conversas:", error);
+      } catch (err) {
+        console.error("Erro ao carregar conversas:", err);
       }
-    };
-
-    loadConversations();
+    })();
   }, [isOpen]);
 
-  // Carrega o resumo quando uma conversa é selecionada
-  const handleSelectConversation = async (selectedConversation) => {
-    try {
-      setConversationId(selectedConversation.id);
-      setShowConversationsList(false);
+  // ── Seleccionar conversa — carrega APENAS o resumo ───────────────────────
+  const handleSelectConversation = async (selectedConv) => {
+    setConversationId(selectedConv.id);
+    setShowConversationsList(false);
 
-      let summary = null;
-      try {
-        summary = await chatService.getChatSummary(selectedConversation.id);
-      } catch (summaryError) {
-        console.warn("Resumo não disponível, buscando histórico em vez disso:", summaryError);
-      }
+    try {
+      const summary = await summaryService.getSummaryByConversationId(selectedConv.id);
 
       if (summary && summary.summary) {
         setMessages([
           {
-            id: `${selectedConversation.id}-summary`,
-            text: summary.summary,
+            id: `${selectedConv.id}-summary`,
+            text: `📋 Resumo da conversa anterior:\n\n${summary.summary}`,
             sender: "bot",
             timestamp: new Date(summary.created_at || Date.now()),
           },
         ]);
+        // O resumo serve de contexto para a IA continuar a conversa
         setConversationHistory([
           { role: "assistant", content: summary.summary },
         ]);
-        return;
-      }
-
-      const history = await chatService.getChatHistory(selectedConversation.id);
-      if (history && history.length > 0) {
-        // Transforma o histórico em formato de mensagens
-        const loadedMessages = history.map((msg, idx) => ({
-          id: idx,
-          text: msg.content,
-          sender: msg.role_id === 2 ? "user" : "bot", // 2 = user, 3 = assistant
-          timestamp: new Date(msg.created_at),
-        }));
-
-        setMessages(loadedMessages);
-
-        // Reconstrói o histórico de conversa para a IA
-        const reconstructedHistory = history.map((msg) => ({
-          role: msg.role_id === 2 ? "user" : "assistant",
-          content: msg.content,
-        }));
-        setConversationHistory(reconstructedHistory);
       } else {
+        // Resumo ainda não gerado (conversa muito recente)
         setMessages([
           {
-            id: `${selectedConversation.id}-empty`,
-            text: "Resumo da conversa não encontrado. Inicie uma nova mensagem para continuar.",
+            id: `${selectedConv.id}-pending`,
+            text: "⏳ O resumo desta conversa ainda está a ser gerado. Pode continuar a conversa normalmente.",
             sender: "bot",
             timestamp: new Date(),
           },
         ]);
         setConversationHistory([]);
       }
-    } catch (error) {
-      console.error("Erro ao carregar resumo da conversa:", error);
-      setBanner({
-        message: "Erro ao carregar conversa",
-        type: "error",
-      });
+    } catch (err) {
+      console.error("Erro ao carregar resumo:", err);
+      setMessages([
+        {
+          id: `${selectedConv.id}-error`,
+          text: "Não foi possível carregar o resumo. Pode continuar a conversa normalmente.",
+          sender: "bot",
+          timestamp: new Date(),
+        },
+      ]);
+      setConversationHistory([]);
     }
   };
 
+  // ── Iniciar nova conversa ─────────────────────────────────────────────────
+  const handleNewConversation = () => {
+    setConversationId(null);
+    setShowConversationsList(false);
+    setMessages([{ ...INITIAL_MESSAGE, timestamp: new Date() }]);
+    setConversationHistory([]);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  // ── Enviar mensagem ───────────────────────────────────────────────────────
   const handleSendMessage = async (e) => {
     e.preventDefault();
-
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
+    const botMsgId = Date.now() + 1;
+
     const userMsg = {
       id: Date.now(),
       text: userMessage,
       sender: "user",
       timestamp: new Date(),
     };
-
-    const botMsgId = Date.now() + 1;
     const botMsg = {
       id: botMsgId,
       text: "",
@@ -185,43 +192,40 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
       functionResults: [],
     };
 
-    const updatedConversationHistory = [
+    const updatedHistory = [
       ...conversationHistory,
       { role: "user", content: userMessage },
     ];
 
     setMessages((prev) => [...prev, userMsg, botMsg]);
-    setConversationHistory(updatedConversationHistory);
-    setStreamingBotMessageId(botMsgId);
+    setConversationHistory(updatedHistory);
     setInput("");
     setLoading(true);
 
     try {
       await chatService.sendMessageToBotStream(
         userMessage,
-        updatedConversationHistory,
+        updatedHistory,
+        // onChunk
         (chunk) => {
           setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === botMsgId
-                ? { ...msg, text: `${msg.text || ""}${chunk}` }
-                : msg
+            prev.map((m) =>
+              m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m
             )
           );
         },
+        // onDone
         (donePayload) => {
-          setStreamingBotMessageId(null);
-
           if (donePayload?.conversationId) {
             setConversationId(donePayload.conversationId);
+            // Actualiza lista de conversas para incluir a nova
+            chatService.getConversations().then(setConversations).catch(() => {});
           }
 
           if (donePayload?.message) {
             setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === botMsgId
-                  ? { ...msg, text: donePayload.message }
-                  : msg
+              prev.map((m) =>
+                m.id === botMsgId ? { ...m, text: donePayload.message } : m
               )
             );
             setConversationHistory((prev) => [
@@ -231,140 +235,140 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
           }
 
           if (donePayload?.functionResults?.length) {
-            const functionResult = donePayload.functionResults[0];
-            handleCreateTaskFromFunction(functionResult);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === botMsgId
+                  ? { ...m, functionResults: donePayload.functionResults }
+                  : m
+              )
+            );
+            handleCreateTaskFromFunction(donePayload.functionResults[0]);
           }
 
           if (donePayload?.task && onTaskCreated) {
             onTaskCreated(donePayload.task);
           }
         },
-        conversationId,
+        conversationId
       );
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } catch (err) {
+      console.error("Error sending message:", err);
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMsgId
-            ? {
-                ...msg,
-                text: `❌ Erro: ${error.message}`,
-                isError: true,
-              }
-            : msg
+        prev.map((m) =>
+          m.id === botMsgId
+            ? { ...m, text: `❌ Erro: ${err.message}`, isError: true }
+            : m
         )
       );
     } finally {
       setLoading(false);
-      setStreamingBotMessageId(null);
     }
   };
 
-  /**
-   * Criar tarefa a partir do resultado da função
-   */
+  // ── Criar tarefa a partir do function result ──────────────────────────────
   const handleCreateTaskFromFunction = async (functionResult) => {
     try {
-      const taskData =
-        chatService.extractTaskDataFromFunctionResult(functionResult);
+      const taskData = chatService.extractTaskDataFromFunctionResult(functionResult);
+      if (!taskData) throw new Error("Não foi possível extrair dados da tarefa");
+      if (onTaskCreated) await onTaskCreated(taskData);
 
-      if (!taskData) {
-        throw new Error("Não foi possível extrair dados da tarefa");
-      }
-
-      // Callback para criar tarefa no Dashboard / backend
-      if (onTaskCreated) {
-        await onTaskCreated(taskData);
-      }
-
-      // Adicionar mensagem de sucesso
-      const successMsg = {
-        id: Date.now() + 2,
-        text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
-        sender: "system",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, successMsg]);
-    } catch (error) {
-      console.error("Error creating task:", error);
-      setBanner({
-        message: `Erro ao criar tarefa: ${error.message}`,
-        type: "error",
-      });
-      const errorMsg = {
-        id: Date.now() + 2,
-        text: `⚠️ Erro ao criar tarefa: ${error.message}`,
-        sender: "system",
-        timestamp: new Date(),
-        isError: true,
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 2,
+          text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
+          sender: "system",
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (err) {
+      console.error("Error creating task:", err);
+      setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
     }
   };
 
   if (!isOpen) return null;
 
+  const groupedConversations = groupConversationsByDate(conversations);
+
   return (
     <>
       {banner && <InfoBanner message={banner.message} type={banner.type} />}
+
+      {/* Overlay mobile */}
       <div
         className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
         onClick={onClose}
       />
 
+      {/* Modal */}
       <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden">
         <ChatHeaderUI onClose={onClose} />
 
-        {/* Lista de Conversas */}
-        {showConversationsList && conversations.length > 0 && (
+        {/* ── Lista de Conversas ── */}
+        {showConversationsList && (
           <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col">
-            <div className="p-4 border-b border-surface">
-              <h3 className="text-lg font-bold text-main">Histórico de Conversas</h3>
-              <p className="text-sm text-muted mt-1">Selecione uma conversa para continuar</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => handleSelectConversation(conv)}
-                  className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors text-sm"
-                >
-                  <p className="font-medium text-main truncate">{conv.title}</p>
-                  <p className="text-xs text-muted mt-1">
-                    {formatConversationDate(conv.created_at)}
-                  </p>
-                </button>
-              ))}
-            </div>
-
-            <div className="p-4 border-t border-surface">
+            {/* Cabeçalho da lista */}
+            <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-main">
+                  Histórico de Conversas
+                </h3>
+                <p className="text-xs text-muted mt-0.5">
+                  {conversations.length} conversa
+                  {conversations.length !== 1 ? "s" : ""}
+                </p>
+              </div>
               <button
-                onClick={() => {
-                  setShowConversationsList(false);
-                  setConversationId(null);
-                  setMessages([
-                    {
-                      id: 1,
-                      text: "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
-                      sender: "bot",
-                      timestamp: new Date(),
-                    },
-                  ]);
-                  setConversationHistory([]);
-                }}
-                className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
+                onClick={handleNewConversation}
+                className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] transition-colors font-medium"
               >
-                + Nova Conversa
+                + Nova
               </button>
+            </div>
+
+            {/* Conversas agrupadas por data, ordenadas desc */}
+            <div className="flex-1 overflow-y-auto">
+              {groupedConversations.map(({ label, convs }) => (
+                <div key={label}>
+                  {/* Header do grupo */}
+                  <div className="px-4 py-1.5 bg-surface sticky top-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                      {label}
+                    </span>
+                  </div>
+
+                  {/* Conversas do grupo */}
+                  {convs.map((conv) => (
+                    <button
+                      key={conv.id}
+                      onClick={() => handleSelectConversation(conv)}
+                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group"
+                    >
+                      <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)] transition-colors">
+                        {conv.title}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {formatDate(conv.created_at)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              ))}
+
+              {conversations.length === 0 && (
+                <div className="flex items-center justify-center h-32 text-muted text-sm">
+                  Nenhuma conversa anterior
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Chat Normal */}
+        {/* ── Chat normal ── */}
         {!showConversationsList && (
           <>
-            <div className="flex-1 overflow-y-auto bg-surface-2 px-6 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
               {messages.map((msg) => (
                 <ChatBubbleUI
                   key={msg.id}
@@ -388,45 +392,13 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
               inputRef={inputRef}
             />
 
-            {/* Botão para voltar ao histórico */}
-            {conversations.length > 0 && !conversationId && (
+            {/* Barra inferior — acesso ao histórico */}
+            {conversations.length > 0 && (
               <button
                 onClick={() => setShowConversationsList(true)}
-                className="p-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
+                className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
               >
-                📋 Ver histórico de conversas
-              </button>
-            )}
-
-            {/* Botão para carregar histórico se tem conversa ativa */}
-            {conversations.length > 0 && conversationId && (
-              <button
-                onClick={() => setShowConversationsList(true)}
-                className="p-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
-              >
-                📋 Mudar conversa
-              </button>
-            )}
-
-            {/* Botão para iniciar nova conversa quando ainda não há histórico */}
-            {conversations.length === 0 && (
-              <button
-                onClick={() => {
-                  setConversationId(null);
-                  setShowConversationsList(false);
-                  setMessages([
-                    {
-                      id: 1,
-                      text: "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
-                      sender: "bot",
-                      timestamp: new Date(),
-                    },
-                  ]);
-                  setConversationHistory([]);
-                }}
-                className="p-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
-              >
-                ➕ Iniciar nova conversa
+                📋 Ver histórico de conversas ({conversations.length})
               </button>
             )}
           </>
