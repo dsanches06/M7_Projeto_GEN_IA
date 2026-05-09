@@ -4,26 +4,23 @@
  * Evita duplicação de código entre chatService, ticketService e notificationService
  */
 
-const rawBackendUrl = import.meta.env.VITE_BACKEND_URL;
-const BACKEND_URL = (() => {
-  if (import.meta.env.DEV) {
-    return rawBackendUrl || "http://localhost:3001";
-  }
+function getBackendUrl() {
+  const rawBackendUrl = import.meta.env.VITE_BACKEND_URL;
+  const isLocalhostUrl = rawBackendUrl
+    ? /^(?:https?:\/\/)(?:localhost|127\.0\.0\.1)(?::\d+)?/.test(rawBackendUrl)
+    : false;
 
-  if (rawBackendUrl) {
-    const hasLocalhostInUrl =
-      rawBackendUrl.startsWith("http://localhost") ||
-      rawBackendUrl.startsWith("https://localhost") ||
-      rawBackendUrl.startsWith("http://127.0.0.1") ||
-      rawBackendUrl.startsWith("https://127.0.0.1");
-    if (hasLocalhostInUrl) {
-      return "/api";
+  if (import.meta.env.PROD) {
+    if (rawBackendUrl && !isLocalhostUrl) {
+      return rawBackendUrl;
     }
-    return rawBackendUrl;
+    return "/api";
   }
 
-  return "/api";
-})();
+  return rawBackendUrl || "http://localhost:3001";
+}
+
+const BACKEND_URL = getBackendUrl();
 
 class BaseService {
   constructor(baseEndpoint) {

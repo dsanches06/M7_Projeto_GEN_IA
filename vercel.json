@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix clickUp install && npm --prefix clickUp run build && npm --prefix backend install && npm --prefix backend run init-db",
+  "buildCommand": "cd clickUp && npm install && npm run build && cd ../backend && npm install && npm run init-db",
   "outputDirectory": "clickUp/dist",
   "functions": {
     "api/index.js": {

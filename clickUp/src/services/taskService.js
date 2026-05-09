@@ -1,5 +1,6 @@
-export const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "/api";
+import { getBackendUrl } from "./BaseService.js";
+
+export const BACKEND_URL = getBackendUrl();
 
 function getPriorityLabel(priorityId) {
   const priorities = {

@@ -22,7 +22,6 @@ README.md
 *~
 .DS_Store
 exemplos/
-clickUp/src/**
 !clickUp/dist/
 backend/.nodemon.json
 !backend/build/
