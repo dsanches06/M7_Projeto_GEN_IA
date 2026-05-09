@@ -18,9 +18,9 @@ class CreateNotificationFunction extends BaseFunction {
 
       properties: {
         user_id: {
-          type: Type.STRING,
+          type: Type.INTEGER,
           description:
-            "ID do usuário",
+            "ID do utilizador",
         },
 
         title: {
