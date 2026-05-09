@@ -7,3 +7,5 @@ clickUp/node_modules/
 .env
 backend/.env
 clickUp/.env
+.vercel
+.env*.local

@@ -18,7 +18,7 @@ const genAI = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const MODEL_NAME = process.env.MODEL_NAME || "gemini-2.5-flash-lite";
+const MODEL_NAME = process.env.MODEL_NAME || "gemini-1.5-flash";
 
 /**
  * Função Genérica para gerar conteúdo
