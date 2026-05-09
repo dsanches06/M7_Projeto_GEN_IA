@@ -1,41 +1,45 @@
 import {
   processChatMessage,
   processChatMessageStream,
-} from "../genAI/task/chat_processor_task.js";
-import { processChatMessage as processSummaryMessage } from "../genAI/summaries/chat_processor_summary.js";
+} from "../genAI/orchestration/chat_processor.js";
+
 import {
   createChatHistory,
   getChatHistoryByConversationId,
 } from "../services/chatHistoryService.js";
+
 import {
   createConversation,
   getConversationById,
 } from "../services/conversationService.js";
-import { createTask } from "../services/taskService.js";
-import { upsertSummary } from "../services/summaryService.js";
 
-const ROLE_USER = 2;
+import { createTask }         from "../services/taskService.js";
+import { createNotification } from "../services/notificationService.js";
+import { createTicket }       from "../services/ticketService.js";
+import { upsertSummary }      from "../services/summaryService.js";
+
+import { processChatMessage as processSummaryMessage } from "../genAI/summaries/chat_processor_summary.js";
+
+const ROLE_USER      = 2;
 const ROLE_ASSISTANT = 3;
 
-const buildConversationHistory = (historyRows) => {
-  return historyRows.map((row) => ({
-    role: row.role_id === ROLE_USER ? "user" : "assistant",
+const buildConversationHistory = (historyRows) =>
+  historyRows.map((row) => ({
+    role:    row.role_id === ROLE_USER ? "user" : "assistant",
     content: row.content,
   }));
-};
 
 /**
- * Gera e persiste automaticamente o resumo da conversa em background.
- * Usa o processador de resumos para chamar set_create_summary_values via IA.
- * Não bloqueia a resposta principal — fire and forget.
+ * Persist an auto-generated summary in the background (fire-and-forget).
+ * Never blocks the SSE response.
  */
 const autoGenerateSummary = async (conversationId) => {
   try {
     const historyRows = await getChatHistoryByConversationId(conversationId);
-    if (!historyRows || historyRows.length < 2) return; // Mínimo 1 troca para resumir
+    if (!historyRows || historyRows.length < 2) return;
 
     const historyText = historyRows
-      .slice(-12) // Últimas 12 mensagens para contexto
+      .slice(-12)
       .map(
         (r) =>
           `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`
@@ -43,82 +47,108 @@ const autoGenerateSummary = async (conversationId) => {
       .join("\n");
 
     const prompt = `Resume esta conversa de forma concisa (conversation_id: ${conversationId}). Histórico:\n${historyText}`;
-
     const result = await processSummaryMessage(prompt, []);
 
     if (result.functionResults?.[0]?.result) {
-      const funcData = result.functionResults[0].result;
+      const fd = result.functionResults[0].result;
       await upsertSummary({
-        conversation_id: funcData.conversation_id || conversationId,
-        original_text: historyText.substring(0, 295),
-        summary:
-          (funcData.summary || result.message || "Resumo indisponível").substring(0, 195),
+        conversation_id: fd.conversation_id || conversationId,
+        original_text:   historyText.substring(0, 295),
+        summary:         (fd.summary || result.message || "Resumo indisponível").substring(0, 195),
       });
     } else if (result.message) {
-      // Fallback: usa a resposta da IA como resumo
       await upsertSummary({
         conversation_id: conversationId,
-        original_text: historyText.substring(0, 295),
-        summary: result.message.substring(0, 195),
+        original_text:   historyText.substring(0, 295),
+        summary:         result.message.substring(0, 195),
       });
     }
   } catch (err) {
-    // Não crítico — não propaga o erro
     console.warn("[AutoSummary] Non-critical error:", err.message);
   }
 };
 
 /**
- * Processa uma mensagem de chat com função genAI em modo stream.
- * Após resposta, dispara geração de resumo em background.
+ * Persist the entity returned by the model's function call.
+ *
+ * Returns { task, notification, ticket } — exactly one field populated,
+ * the other two null.  All three are forwarded in the SSE done event so
+ * the frontend can surface the right UI feedback without hitting the DB again.
+ */
+const persistFunctionResult = async (functionResult) => {
+  let task         = null;
+  let notification = null;
+  let ticket       = null;
+
+  if (!functionResult?.result) return { task, notification, ticket };
+
+  const { functionName, result } = functionResult;
+
+  try {
+    if (functionName === "set_create_task_values") {
+      console.log("📝 Criando tarefa:", result);
+      task = await createTask(result);
+      console.log("✅ Tarefa criada:", task);
+    } else if (functionName === "set_create_notification_values") {
+      console.log("📬 Criando notificação:", result);
+      notification = await createNotification(result);
+      console.log("✅ Notificação criada:", notification);
+    } else if (functionName === "set_create_ticket_values") {
+      console.log("🎟️ Criando ticket:", result);
+      ticket = await createTicket(result);
+      console.log("✅ Ticket criado:", ticket);
+    } else {
+      console.warn("[chatBotController] Função desconhecida:", functionName);
+    }
+  } catch (err) {
+    console.error(`❌ Erro ao persistir ${functionName}:`, err.message);
+  }
+
+  return { task, notification, ticket };
+};
+
+/**
+ * POST /chat/message/stream
+ * Envia uma mensagem e responde em SSE.  Usa o UnifiedChatProcessor para que
+ * a IA possa criar tarefas, notificações e tickets a partir do mesmo endpoint.
  */
 export const sendMessageToBotStream = async (req, res) => {
   try {
     const { message, conversationHistory, conversationId } = req.body;
 
     if (!message || message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Mensagem não pode estar vazia",
-      });
+      return res.status(400).json({ success: false, error: "Mensagem não pode estar vazia" });
     }
 
     const userMessage = message.trim();
-    let actualConversationId = conversationId ? Number(conversationId) : null;
-    let resolvedConversationHistory = conversationHistory || [];
+    let actualConversationId          = conversationId ? Number(conversationId) : null;
+    let resolvedConversationHistory   = conversationHistory || [];
 
     if (actualConversationId) {
       const existingConversation = await getConversationById(actualConversationId);
       if (!existingConversation) {
-        return res.status(404).json({
-          success: false,
-          error: "Conversation não encontrada",
-        });
+        return res.status(404).json({ success: false, error: "Conversation não encontrada" });
       }
-
       if (!resolvedConversationHistory.length) {
         const historyRows = await getChatHistoryByConversationId(actualConversationId);
         resolvedConversationHistory = buildConversationHistory(historyRows);
       }
     } else {
-      // Usa as primeiras 50 letras da mensagem como título da conversa
       const title =
-        userMessage.length > 50
-          ? userMessage.substring(0, 47) + "..."
-          : userMessage;
-      const newConversation = await createConversation({ title });
-      actualConversationId = newConversation.id;
+        userMessage.length > 50 ? userMessage.substring(0, 47) + "..." : userMessage;
+      const newConversation    = await createConversation({ title });
+      actualConversationId     = newConversation.id;
     }
 
     await createChatHistory({
       conversation_id: actualConversationId,
-      role_id: ROLE_USER,
-      content: userMessage,
+      role_id:         ROLE_USER,
+      content:         userMessage,
     });
 
-    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Content-Type",  "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
+    res.setHeader("Connection",    "keep-alive");
     res.flushHeaders();
 
     const sendEvent = (event, data) => {
@@ -127,6 +157,7 @@ export const sendMessageToBotStream = async (req, res) => {
     };
 
     let finalText = "";
+
     const result = await processChatMessageStream(
       userMessage,
       resolvedConversationHistory,
@@ -137,98 +168,90 @@ export const sendMessageToBotStream = async (req, res) => {
     );
 
     const assistantText = result.message || finalText;
-    let createdTask = null;
+
+    let task         = null;
+    let notification = null;
+    let ticket       = null;
 
     if (result.success !== false) {
       await createChatHistory({
         conversation_id: actualConversationId,
-        role_id: ROLE_ASSISTANT,
-        content: assistantText,
+        role_id:         ROLE_ASSISTANT,
+        content:         assistantText,
       });
 
-      const taskFunctionResult = result.functionResults?.[0];
-      if (
-        taskFunctionResult &&
-        taskFunctionResult.functionName === "set_create_task_values" &&
-        taskFunctionResult.result
-      ) {
-        try {
-          console.log("📝 Criando tarefa com dados:", taskFunctionResult.result);
-          createdTask = await createTask(taskFunctionResult.result);
-          console.log("✅ Tarefa criada com sucesso:", createdTask);
-        } catch (taskError) {
-          console.error("❌ Erro ao salvar tarefa no banco:", taskError);
-        }
+      const firstResult = result.functionResults?.[0];
+      if (firstResult) {
+        ({ task, notification, ticket } = await persistFunctionResult(firstResult));
       }
 
-      // Dispara geração de resumo em background (não bloqueia a resposta SSE)
       setImmediate(() => autoGenerateSummary(actualConversationId));
     }
 
     sendEvent("done", {
-      success: true,
-      message: assistantText,
-      conversationId: actualConversationId,
+      success:         true,
+      message:         assistantText,
+      conversationId:  actualConversationId,
       functionResults: result.functionResults || [],
-      task: createdTask,
+      // exactly one of the three will be non-null when a function was called
+      task,
+      notification,
+      ticket,
     });
+
     res.end();
   } catch (error) {
     console.error("Erro no controller stream:", error);
-    res.write(
-      `event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`
-    );
+    res.write(`event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`);
     res.end();
   }
 };
 
 /**
- * Processa uma mensagem em uma conversa específica.
+ * POST /chat/conversation/:conversationId/message
+ * Envia uma mensagem numa conversa específica (modo não-stream).
  */
 export const sendMessageToConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { message } = req.body;
+    const { message }        = req.body;
 
     if (!message || message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Mensagem não pode estar vazia",
-      });
+      return res.status(400).json({ success: false, error: "Mensagem não pode estar vazia" });
     }
 
-    const userMessage = message.trim();
-
-    const chatHistoryRows = await getChatHistoryByConversationId(conversationId);
-    const conversationHistory = buildConversationHistory(chatHistoryRows);
+    const userMessage      = message.trim();
+    const chatHistoryRows  = await getChatHistoryByConversationId(conversationId);
+    const conversationHist = buildConversationHistory(chatHistoryRows);
 
     await createChatHistory({
       conversation_id: conversationId,
-      role_id: ROLE_USER,
-      content: userMessage,
+      role_id:         ROLE_USER,
+      content:         userMessage,
     });
 
-    const result = await processChatMessage(userMessage, conversationHistory);
+    const result = await processChatMessage(userMessage, conversationHist);
 
     if (result.success && result.message) {
       await createChatHistory({
         conversation_id: conversationId,
-        role_id: ROLE_ASSISTANT,
-        content: result.message,
+        role_id:         ROLE_ASSISTANT,
+        content:         result.message,
       });
 
-      // Dispara geração de resumo em background
+      const firstResult = result.functionResults?.[0];
+      if (firstResult) {
+        await persistFunctionResult(firstResult);
+      }
+
       setImmediate(() => autoGenerateSummary(Number(conversationId)));
     }
 
-    res.status(result.success ? 200 : 400).json({
-      ...result,
-      conversationId,
-    });
+    res.status(result.success ? 200 : 400).json({ ...result, conversationId });
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: "Erro ao processar mensagem: " + error.message,
+      error:   "Erro ao processar mensagem: " + error.message,
     });
   }
 };

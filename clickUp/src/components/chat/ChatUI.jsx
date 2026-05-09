@@ -9,44 +9,36 @@ import {
   ChatInputUI,
 } from "@/components/chat";
 
-// ── Agrupa conversas por data (mais recentes primeiro) ──────────────────────
 const groupConversationsByDate = (conversations) => {
   const sorted = [...conversations].sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at)
   );
-
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const now              = new Date();
+  const startOfToday     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfYesterday = new Date(startOfToday);
   startOfYesterday.setDate(startOfYesterday.getDate() - 1);
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfWeek.getDate() - 7);
 
   const groups = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
-
   sorted.forEach((conv) => {
     const d = new Date(conv.created_at);
-    if (d >= startOfToday) groups["Hoje"].push(conv);
+    if      (d >= startOfToday)     groups["Hoje"].push(conv);
     else if (d >= startOfYesterday) groups["Ontem"].push(conv);
-    else if (d >= startOfWeek) groups["Esta Semana"].push(conv);
-    else groups["Anteriores"].push(conv);
+    else if (d >= startOfWeek)      groups["Esta Semana"].push(conv);
+    else                            groups["Anteriores"].push(conv);
   });
-
   return Object.entries(groups)
     .filter(([, convs]) => convs.length > 0)
     .map(([label, convs]) => ({ label, convs }));
 };
 
-// ── Formato de data legível ─────────────────────────────────────────────────
 const formatDate = (dateString) => {
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return "";
     return date.toLocaleString("pt-PT", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
     });
   } catch {
     return "";
@@ -54,58 +46,63 @@ const formatDate = (dateString) => {
 };
 
 const INITIAL_MESSAGE = {
-  id: "welcome",
-  text:
-    "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescreva uma tarefa em linguagem natural e vou criar automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login na próxima semana'\n• 'Tarefa de alta prioridade: corrigir bug do formulário'\n• 'Implementar autenticação com prioridade máxima'",
-  sender: "bot",
+  id:        "welcome",
+  text:      "🤖 Olá! Sou o TaskBot AI com IA Generativa!\n\nDescrevo uma tarefa, notificação ou ticket em linguagem natural e crio automaticamente para você.\n\nExemplos:\n• 'Crie uma tarefa urgente para implementar login'\n• 'Envia uma notificação ao utilizador 2 sobre o prazo'\n• 'Abre um ticket de bug: o formulário não valida o email'",
+  sender:    "bot",
   timestamp: new Date(),
+};
+
+/**
+ * Builds a one-line confirmation string from the done payload.
+ * Returns null when no entity was created (plain conversation turn).
+ */
+const buildConfirmationText = (donePayload) => {
+  if (donePayload?.task)         return `✅ Tarefa "${donePayload.task.title}" criada com sucesso!`;
+  if (donePayload?.notification) return `✅ Notificação "${donePayload.notification.title}" enviada com sucesso!`;
+  if (donePayload?.ticket)       return `✅ Ticket aberto com severidade ${donePayload.ticket.severity ?? "—"}.`;
+  return null;
 };
 
 /**
  * ChatUI — Modal flutuante do TaskBot AI
  *
- * Fluxo de conversas:
- *  1. Envio de mensagem → IA responde em stream → resumo gerado em background
- *  2. Lista de conversas ordenada por data desc, agrupada por período
- *  3. Ao seleccionar conversa → carrega resumo da tabela summaries
+ * O backend usa o UnifiedChatProcessor que reúne as três function declarations
+ * (task, notification, ticket) num único endpoint /chat/message/stream.
+ * A IA decide qual função chamar conforme o pedido do utilizador.
  *
- * FIX: A tarefa é criada UMA única vez — pelo controller no backend.
- *      O evento SSE "done" devolve {task: createdTask} com o registo já
- *      persistido (tem ID). O frontend limita-se a adicioná-lo ao estado
- *      local via onTaskCreated(donePayload.task).
- *      handleCreateTaskFromFunction só é chamada quando o backend NÃO
- *      devolveu uma task (caminho de fallback), evitando a inserção dupla.
+ * O done event devolve { task, notification, ticket } — apenas um estará
+ * preenchido.  O frontend:
+ *   1. Chama onTaskCreated(task) quando task != null (sem tocar na DB)
+ *   2. Mostra uma mensagem de confirmação para os três tipos
+ *   3. Nunca chama handleCreateFromFunctionFallback quando o backend já
+ *      persistiu a entidade — evita o insert duplicado.
  */
 export function ChatUI({ isOpen, onClose, onTaskCreated }) {
-  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState([]);
-  const [conversationId, setConversationId] = useState(null);
-  const [conversations, setConversations] = useState([]);
+  const [messages,              setMessages]              = useState([INITIAL_MESSAGE]);
+  const [input,                 setInput]                 = useState("");
+  const [loading,               setLoading]               = useState(false);
+  const [conversationHistory,   setConversationHistory]   = useState([]);
+  const [conversationId,        setConversationId]        = useState(null);
+  const [conversations,         setConversations]         = useState([]);
   const [showConversationsList, setShowConversationsList] = useState(false);
-  const [banner, setBanner] = useState(null);
+  const [banner,                setBanner]                = useState(null);
   const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const inputRef       = useRef(null);
 
-  // ── Scroll automático ────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Focus no input ao abrir ──────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
-  // ── Limpa o banner após 3 s ──────────────────────────────────────────────
   useEffect(() => {
     if (!banner) return;
     const t = setTimeout(() => setBanner(null), 3000);
     return () => clearTimeout(t);
   }, [banner]);
 
-  // ── Carrega conversas quando o chat abre ─────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     (async () => {
@@ -121,52 +118,40 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     })();
   }, [isOpen]);
 
-  // ── Seleccionar conversa — carrega APENAS o resumo ───────────────────────
   const handleSelectConversation = async (selectedConv) => {
     setConversationId(selectedConv.id);
     setShowConversationsList(false);
-
     try {
       const summary = await summaryService.getSummaryByConversationId(selectedConv.id);
-
-      if (summary && summary.summary) {
-        setMessages([
-          {
-            id: `${selectedConv.id}-summary`,
-            text: `📋 Resumo da conversa anterior:\n\n${summary.summary}`,
-            sender: "bot",
-            timestamp: new Date(summary.created_at || Date.now()),
-          },
-        ]);
-        setConversationHistory([
-          { role: "assistant", content: summary.summary },
-        ]);
+      if (summary?.summary) {
+        setMessages([{
+          id:        `${selectedConv.id}-summary`,
+          text:      `📋 Resumo da conversa anterior:\n\n${summary.summary}`,
+          sender:    "bot",
+          timestamp: new Date(summary.created_at || Date.now()),
+        }]);
+        setConversationHistory([{ role: "assistant", content: summary.summary }]);
       } else {
-        setMessages([
-          {
-            id: `${selectedConv.id}-pending`,
-            text: "⏳ O resumo desta conversa ainda está a ser gerado. Pode continuar a conversa normalmente.",
-            sender: "bot",
-            timestamp: new Date(),
-          },
-        ]);
+        setMessages([{
+          id:        `${selectedConv.id}-pending`,
+          text:      "⏳ O resumo desta conversa ainda está a ser gerado. Pode continuar normalmente.",
+          sender:    "bot",
+          timestamp: new Date(),
+        }]);
         setConversationHistory([]);
       }
     } catch (err) {
       console.error("Erro ao carregar resumo:", err);
-      setMessages([
-        {
-          id: `${selectedConv.id}-error`,
-          text: "Não foi possível carregar o resumo. Pode continuar a conversa normalmente.",
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ]);
+      setMessages([{
+        id:        `${selectedConv.id}-error`,
+        text:      "Não foi possível carregar o resumo. Pode continuar a conversa normalmente.",
+        sender:    "bot",
+        timestamp: new Date(),
+      }]);
       setConversationHistory([]);
     }
   };
 
-  // ── Iniciar nova conversa ─────────────────────────────────────────────────
   const handleNewConversation = () => {
     setConversationId(null);
     setShowConversationsList(false);
@@ -175,52 +160,36 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  // ── Criar tarefa a partir do function result (fallback) ───────────────────
-  // Only called when the backend did NOT return a pre-created task in the
-  // done event. Calling this alongside donePayload.task would produce a
-  // duplicate DB insert.
-  const handleCreateTaskFromFunction = async (functionResult) => {
+  /**
+   * Fallback: only called when the backend did NOT return a pre-persisted entity.
+   * In the normal flow (unified processor + chatBotController) the entity is
+   * always persisted server-side and returned in donePayload.  This function
+   * exists only as a safety net for edge cases (e.g. network retry, old backend).
+   */
+  const handleCreateFromFunctionFallback = async (functionResult) => {
     try {
       const taskData = chatService.extractTaskDataFromFunctionResult(functionResult);
-      if (!taskData) throw new Error("Não foi possível extrair dados da tarefa");
+      if (!taskData) throw new Error("Não foi possível extrair dados da entidade");
       if (onTaskCreated) await onTaskCreated(taskData);
-
       setMessages((prev) => [
         ...prev,
-        {
-          id: Date.now() + 2,
-          text: `✅ Tarefa "${taskData.title}" criada com sucesso!`,
-          sender: "system",
-          timestamp: new Date(),
-        },
+        { id: Date.now() + 2, text: "✅ Entidade criada com sucesso!", sender: "system", timestamp: new Date() },
       ]);
     } catch (err) {
-      console.error("Error creating task:", err);
-      setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
+      console.error("Fallback create error:", err);
+      setBanner({ message: `Erro ao criar entidade: ${err.message}`, type: "error" });
     }
   };
 
-  // ── Enviar mensagem ───────────────────────────────────────────────────────
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
-    const botMsgId = Date.now() + 1;
+    const botMsgId    = Date.now() + 1;
 
-    const userMsg = {
-      id: Date.now(),
-      text: userMessage,
-      sender: "user",
-      timestamp: new Date(),
-    };
-    const botMsg = {
-      id: botMsgId,
-      text: "",
-      sender: "bot",
-      timestamp: new Date(),
-      functionResults: [],
-    };
+    const userMsg = { id: Date.now(), text: userMessage, sender: "user",   timestamp: new Date() };
+    const botMsg  = { id: botMsgId,   text: "",          sender: "bot",    timestamp: new Date(), functionResults: [] };
 
     const updatedHistory = [
       ...conversationHistory,
@@ -236,7 +205,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
       await chatService.sendMessageToBotStream(
         userMessage,
         updatedHistory,
-        // onChunk — stream text into the bot bubble
+
+        // onChunk
         (chunk) => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -244,7 +214,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
             )
           );
         },
-        // onDone — handle final payload
+
+        // onDone
         (donePayload) => {
           if (donePayload?.conversationId) {
             setConversationId(donePayload.conversationId);
@@ -264,7 +235,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
           }
 
           if (donePayload?.functionResults?.length) {
-            // Always surface the raw function data in the bubble
+            // Surface raw function data in the bubble
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === botMsgId
@@ -273,22 +244,32 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
               )
             );
 
-            // FIX: The backend controller already inserted the task into the DB
-            // and returned it as donePayload.task.  Only call
-            // handleCreateTaskFromFunction when that field is absent, i.e. when
-            // the controller did NOT persist the task (fallback path).
-            // Calling it unconditionally was the cause of the duplicate insert.
-            if (!donePayload.task) {
-              handleCreateTaskFromFunction(donePayload.functionResults[0]);
+            // FIX (duplicate insert): backend already persisted the entity when
+            // any of these fields is truthy.  Skip the fallback to avoid a
+            // second DB insert.
+            const backendAlreadyPersisted =
+              donePayload.task || donePayload.notification || donePayload.ticket;
+
+            if (!backendAlreadyPersisted) {
+              handleCreateFromFunctionFallback(donePayload.functionResults[0]);
             }
           }
 
-          // Backend already persisted the task (has a real DB id) — add it to
-          // the local UI state without touching the DB again.
+          // Task: add to dashboard state without a second DB call
           if (donePayload?.task && onTaskCreated) {
             onTaskCreated(donePayload.task);
           }
+
+          // Notification / Ticket: append confirmation bubble
+          const confirmText = buildConfirmationText(donePayload);
+          if (confirmText) {
+            setMessages((prev) => [
+              ...prev,
+              { id: Date.now() + 3, text: confirmText, sender: "system", timestamp: new Date() },
+            ]);
+          }
         },
+
         conversationId
       );
     } catch (err) {
@@ -313,27 +294,21 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
     <>
       {banner && <InfoBanner message={banner.message} type={banner.type} />}
 
-      {/* Overlay mobile */}
       <div
         className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden">
         <ChatHeaderUI onClose={onClose} />
 
-        {/* ── Lista de Conversas ── */}
         {showConversationsList && (
           <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col">
             <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-main">
-                  Histórico de Conversas
-                </h3>
+                <h3 className="text-base font-bold text-main">Histórico de Conversas</h3>
                 <p className="text-xs text-muted mt-0.5">
-                  {conversations.length} conversa
-                  {conversations.length !== 1 ? "s" : ""}
+                  {conversations.length} conversa{conversations.length !== 1 ? "s" : ""}
                 </p>
               </div>
               <button
@@ -343,7 +318,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                 + Nova
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto">
               {groupedConversations.map(({ label, convs }) => (
                 <div key={label}>
@@ -352,7 +326,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                       {label}
                     </span>
                   </div>
-
                   {convs.map((conv) => (
                     <button
                       key={conv.id}
@@ -362,14 +335,11 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                       <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)] transition-colors">
                         {conv.title}
                       </p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {formatDate(conv.created_at)}
-                      </p>
+                      <p className="text-xs text-muted mt-0.5">{formatDate(conv.created_at)}</p>
                     </button>
                   ))}
                 </div>
               ))}
-
               {conversations.length === 0 && (
                 <div className="flex items-center justify-center h-32 text-muted text-sm">
                   Nenhuma conversa anterior
@@ -379,7 +349,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
           </div>
         )}
 
-        {/* ── Chat normal ── */}
         {!showConversationsList && (
           <>
             <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
@@ -392,9 +361,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated }) {
                   isError={msg.isError}
                 />
               ))}
-
               {loading && <ChatLoadingUI />}
-
               <div ref={messagesEndRef} />
             </div>
 

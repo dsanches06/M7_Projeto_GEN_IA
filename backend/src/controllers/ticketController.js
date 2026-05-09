@@ -1,12 +1,6 @@
-// Corrigido: Agora importa o serviço correto de tiquetes
 import * as ticketService from "../services/ticketService.js";
-// Adicionado: Necessário para a função removeTicketFromAllTasks no delete
-import * as taskService from "../services/taskService.js";
-// Adicionado: Para processar mensagens com genAI para tickets
-import { processChatMessageStream } from "../genAI/tickets/chat_processor_ticket.js";
-import { createTicket as createTicketService } from "../services/ticketService.js";
+import * as taskService   from "../services/taskService.js";
 
-/* Função para buscar tiquetes */
 export const getTickets = async (req, res) => {
   try {
     const tickets = await ticketService.getAllTickets();
@@ -26,86 +20,12 @@ export const getTicketById = async (req, res) => {
   }
 };
 
-/**
- * Processa uma mensagem para criação de ticket com IA
- * Executa function calls automaticamente e retorna o resultado em stream
- */
-export const sendMessageToBotStream = async (req, res) => {
-  try {
-    const { message, conversationHistory = [], ticketId } = req.body;
-
-    if (!message || message.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Mensagem não pode estar vazia",
-      });
-    }
-
-    const userMessage = message.trim();
-    const resolvedHistory = conversationHistory || [];
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
-
-    const sendEvent = (event, data) => {
-      res.write(`event: ${event}\n`);
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    };
-
-    let finalText = "";
-    const result = await processChatMessageStream(
-      userMessage,
-      resolvedHistory,
-      (chunkText) => {
-        finalText += chunkText;
-        sendEvent("message", { text: chunkText });
-      },
-    );
-
-    const assistantText = result.message || finalText;
-    let createdTicket = null;
-
-    if (result.success !== false) {
-      const ticketFunctionResult = result.functionResults?.[0];
-      if (
-        ticketFunctionResult &&
-        ticketFunctionResult.functionName === "set_create_ticket_values" &&
-        ticketFunctionResult.result
-      ) {
-        try {
-          console.log("🎟️ Criando ticket com dados:", ticketFunctionResult.result);
-          createdTicket = await createTicketService(ticketFunctionResult.result);
-          console.log("✅ Ticket criado com sucesso:", createdTicket);
-        } catch (ticketError) {
-          console.error("❌ Erro ao salvar ticket no banco:", ticketError);
-        }
-      }
-    }
-
-    sendEvent("done", {
-      success: true,
-      message: assistantText,
-      functionResults: result.functionResults || [],
-      ticket: createdTicket,
-    });
-    res.end();
-  } catch (error) {
-    console.error("Erro no controller stream de tickets:", error);
-    res.write(
-      `event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`,
-    );
-    res.end();
-  }
-};
-
 export const createTicket = async (req, res) => {
   try {
     const { user_report, error_type } = req.body;
-    if (!user_report || !error_type) {
+    if (!user_report || !error_type)
       return res.status(400).json({ message: "Campos obrigatórios em falta" });
-    }
+
     const ticket = await ticketService.createTicket(req.body);
     res.status(201).json(ticket);
   } catch (error) {
@@ -127,7 +47,6 @@ export const deleteTicket = async (req, res) => {
   try {
     const id = Number(req.params.id);
     await ticketService.deleteTicket(id);
-    // Agora o taskService está importado e isto não vai falhar
     await taskService.removeTicketFromAllTasks(id);
     res.status(200).json({ message: "Tiquete deletado com sucesso" });
   } catch (error) {
