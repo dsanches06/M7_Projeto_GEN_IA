@@ -4,7 +4,7 @@ import { Dashboard, ChatUI, PageSection } from "@/components";
 import MainLayout from "@/components/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import * as taskService from "@/services/taskService";
-import { InfoBanner } from "./components/ui/InfoBanner";
+import UsersPage from "@/components/users/UsersPage";
 
 function App() {
   const [showChat, setShowChat] = useState(false);
@@ -30,7 +30,6 @@ function App() {
 
   const handleTaskCreated = async (taskData) => {
     try {
-      // Se já é um objeto completo com ID (vindo do backend), adiciona direto
       if (taskData.id) {
         const transformedTask = taskService.transformTaskForDisplay(taskData);
         setTasks((prev) => [transformedTask, ...prev]);
@@ -38,16 +37,13 @@ function App() {
           message: "✅ Nova tarefa criada com sucesso!",
           type: "success",
         });
-        console.log("✅ Nova tarefa adicionada ao dashboard:", transformedTask);
       } else {
-        // Se é dados parciais, cria no backend (compatibilidade)
         const createdTask = await taskService.createTask(taskData);
         setTasks((prev) => [createdTask, ...prev]);
         setBanner({
           message: "✅ Nova tarefa criada no backend!",
           type: "success",
         });
-        console.log("✅ Nova tarefa criada no backend:", createdTask);
       }
     } catch (error) {
       console.error("Erro criando tarefa no backend:", error);
@@ -60,7 +56,6 @@ function App() {
 
   return (
     <ThemeProvider>
-      {/* Configuração das Future Flags para evitar avisos da v7 */}
       <BrowserRouter
         future={{
           v7_startTransition: true,
@@ -84,16 +79,10 @@ function App() {
               }
             />
 
+            {/* ── Utilizadores ── */}
+            <Route path="utilizadores" element={<UsersPage />} />
+
             <Route
-              path="utilizadores"
-              element={
-                <PageSection
-                  title="Utilizadores"
-                  description="Administre usuários e permissões."
-                />
-              }
-            />
-              <Route
               path="tickets"
               element={
                 <PageSection
@@ -114,7 +103,7 @@ function App() {
           </Route>
         </Routes>
 
-        {/* Botão flutuante do ChatBot */}
+        {/* Floating ChatBot button */}
         {!showChat && (
           <button
             onClick={() => setShowChat(true)}
@@ -125,7 +114,6 @@ function App() {
           </button>
         )}
 
-        {/* ChatBot Modal */}
         <ChatUI
           isOpen={showChat}
           onClose={() => setShowChat(false)}
