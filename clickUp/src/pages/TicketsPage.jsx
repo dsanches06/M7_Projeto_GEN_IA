@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "@/services/BaseService.js";
-import { TicketCard } from "@/components/ticket/TicketCard.jsx";
+import TicketCard from "@/components/ticket/TicketCard.jsx";
 import { STATUS_CONFIG } from "@/utils/ticketUtils.js";
 
 const BACKEND_URL = getBackendUrl();
@@ -78,6 +78,22 @@ export default function TicketsPage() {
     return matchSearch && matchStatus && matchSev;
   });
 
+  const statusLabel =
+    filterStatus === "all"
+      ? "Todos os estados"
+      : STATUS_CONFIG[filterStatus]?.label || filterStatus;
+
+  const severityLabel =
+    filterSev === "all"
+      ? "Toda severidade"
+      : filterSev === "critical"
+      ? "Crítica (8-10)"
+      : filterSev === "high"
+      ? "Alta (5-7)"
+      : filterSev === "medium"
+      ? "Média (3-4)"
+      : "Baixa (1-2)";
+
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
       {/* ── Title ── */}
@@ -88,71 +104,78 @@ export default function TicketsPage() {
         </p>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {stats.map(({ label, value, color, bg }) => (
-          <div
-            key={label}
-            className="rounded-2xl p-5 shadow-sm border border-transparent"
-            style={{ backgroundColor: bg }}
-          >
-            <p
-              className="text-[11px] uppercase tracking-wide mb-1"
-              style={{ color }}
+      {/* ── Toolbar ── */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {stats.map(({ label, value, color, bg }) => (
+            <div
+              key={label}
+              className="rounded-2xl p-5 shadow-sm border border-transparent"
+              style={{ backgroundColor: bg }}
             >
-              {label}
-            </p>
-            <p className="text-3xl font-bold" style={{ color }}>
-              {value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Filters ── */}
-      <div className="flex flex-wrap gap-2 mb-5 items-center">
-        <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 shadow-sm flex-1 min-w-[180px]">
-          <span className="text-gray-400 text-sm">⌕</span>
-          <input
-            className="bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none flex-1"
-            placeholder="Pesquisar ticket..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+              <p
+                className="text-[11px] uppercase tracking-wide mb-1"
+                style={{ color }}
+              >
+                {label}
+              </p>
+              <p className="text-3xl font-bold" style={{ color }}>
+                {value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        <select
-          className="h-9 bg-white border border-gray-200 rounded-lg px-2.5 text-sm text-gray-600 focus:outline-none shadow-sm"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="all">Todos os estados</option>
-          {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-2 items-center flex-1">
+            <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 shadow-sm flex-1 min-w-[180px]">
+              <span className="text-gray-400 text-sm">⌕</span>
+              <input
+                className="bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none flex-1"
+                placeholder="Pesquisar ticket..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
 
-        <select
-          className="h-9 bg-white border border-gray-200 rounded-lg px-2.5 text-sm text-gray-600 focus:outline-none shadow-sm"
-          value={filterSev}
-          onChange={(e) => setFilterSev(e.target.value)}
-        >
-          <option value="all">Toda severidade</option>
-          <option value="critical">Crítica (8-10)</option>
-          <option value="high">Alta (5-7)</option>
-          <option value="medium">Média (3-4)</option>
-          <option value="low">Baixa (1-2)</option>
-        </select>
+            <select
+              className="h-9 bg-white border border-gray-200 rounded-lg px-2.5 text-sm text-gray-600 focus:outline-none shadow-sm"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">Todos os estados</option>
+              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
 
-        <button
-          onClick={load}
-          className="h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors shadow-sm"
-          title="Recarregar"
-        >
-          ↺
-        </button>
+            <select
+              className="h-9 bg-white border border-gray-200 rounded-lg px-2.5 text-sm text-gray-600 focus:outline-none shadow-sm"
+              value={filterSev}
+              onChange={(e) => setFilterSev(e.target.value)}
+            >
+              <option value="all">Toda severidade</option>
+              <option value="critical">Crítica (8-10)</option>
+              <option value="high">Alta (5-7)</option>
+              <option value="medium">Média (3-4)</option>
+              <option value="low">Baixa (1-2)</option>
+            </select>
+
+            <button
+              onClick={load}
+              className="h-9 px-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors shadow-sm"
+              title="Recarregar"
+            >
+              ↺
+            </button>
+          </div>
+
+          <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2 hidden sm:inline-flex">
+            Filtro: {statusLabel} · {severityLabel}
+          </span>
+        </div>
       </div>
 
       {/* ── Content ── */}

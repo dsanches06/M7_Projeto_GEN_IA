@@ -99,29 +99,35 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {}, tasksLoading =
       )}
 
       <div className="grid gap-6">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
-          {statCards.map(({ label, value, icon, filter }, index) => {
-            const isSelected = statusFilter === filter;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setStatusFilter(filter)}
-                className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors focus:outline-none animate-fadeIn ${
-                  isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
-                }`}
-                style={{ animationDelay: `${index * 80}ms` }}
-              >
-                <img src={icon} alt={label} className="w-8 h-8 object-contain" />
-                <div className="min-w-0">
-                  <p className="text-[10px] text-muted uppercase tracking-[0.08em]">
-                    {label}
-                  </p>
-                  <p className="text-base font-semibold text-main">{value}</p>
-                </div>
-              </button>
-            );
-          })}
+        {/* Toolbar */}
+        <div className="flex flex-col gap-4 mb-6 flex-wrap lg:flex-row lg:items-center">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full">
+            {statCards.map(({ label, value, icon, filter }, index) => {
+              const isSelected = statusFilter === filter;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setStatusFilter(filter)}
+                  className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors focus:outline-none animate-fadeIn ${
+                    isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
+                  }`}
+                  style={{ animationDelay: `${index * 80}ms` }}
+                >
+                  <img src={icon} alt={label} className="w-8 h-8 object-contain" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-muted uppercase tracking-[0.08em]">
+                      {label}
+                    </p>
+                    <p className="text-base font-semibold text-main">{value}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2 lg:ml-auto">
+            Filtro: {filterLabel}
+          </span>
         </div>
 
         <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
