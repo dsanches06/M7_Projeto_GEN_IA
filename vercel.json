@@ -1,7 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix clickUp install && npm --prefix clickUp run build && npm --prefix backend install && npm --prefix backend run init-db",
+  "buildCommand": "npm install && npm --prefix clickUp install && npm --prefix clickUp run build && npm run init-db",
   "outputDirectory": "clickUp/dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
