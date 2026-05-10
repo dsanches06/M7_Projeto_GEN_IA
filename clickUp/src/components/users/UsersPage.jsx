@@ -192,7 +192,7 @@ export default function UsersPage() {
                 key={label}
                 type="button"
                 onClick={() => filter && setStatusFilterMode(filter)}
-                className={`flex items-center gap-4 rounded-3xl border p-2 text-left transition-colors ${buttonClasses} ${
+                  className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors ${buttonClasses} ${
                   isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
                 }`}
               >

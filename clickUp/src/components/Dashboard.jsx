@@ -81,29 +81,29 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
       </div>
 
       <div className="grid gap-6">
-        <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {statCards.map(({ label, value, icon, filter }) => {
-              const isSelected = statusFilter === filter;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setStatusFilter(filter)}
-                  className={`flex items-center gap-4 rounded-3xl p-5 text-left transition-colors min-h-[150px] ${
-                    isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
-                  }`}
-                >
-                  <img src={icon} alt={label} className="w-10 h-10 object-contain" />
-                  <div className="min-w-0">
-                    <p className="text-muted text-sm mb-1">{label}</p>
-                    <p className="text-3xl font-semibold text-main">{value}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
+          {statCards.map(({ label, value, icon, filter }) => {
+            const isSelected = statusFilter === filter;
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setStatusFilter(filter)}
+                className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors focus:outline-none ${
+                  isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
+                }`}
+              >
+                <img src={icon} alt={label} className="w-8 h-8 object-contain" />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted uppercase tracking-[0.08em]">
+                    {label}
+                  </p>
+                  <p className="text-base font-semibold text-main">{value}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
         <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
