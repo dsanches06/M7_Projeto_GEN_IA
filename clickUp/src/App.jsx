@@ -7,37 +7,38 @@ import * as taskService from "@/services/taskService";
 import { InfoBanner } from "./components/ui/InfoBanner";
 import TrophySpin from "./components/ui/TrophySpin";
 
-const Dashboard = lazy(() => import("@/pages/Dashboard").then((module) => ({ default: module.Dashboard })));
-const UsersPage = lazy(() => import("@/components/users/UsersPage"));
+const Dashboard  = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const UsersPage  = lazy(() => import("@/components/users/UsersPage"));
 const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
-// ── Inner app: inside BrowserRouter so useNavigate works ────────────────────
 function AppContent() {
   const navigate = useNavigate();
-  const [showChat,   setShowChat]   = useState(false);
-  const [tasks,        setTasks]        = useState([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [tasksError,   setTasksError]   = useState(null);
-  const [banner,       setBanner]       = useState(null);
+  const [showChat,      setShowChat]      = useState(false);
+  const [tasks,         setTasks]         = useState([]);
+  const [tasksLoading,  setTasksLoading]  = useState(true);
+  const [tasksError,    setTasksError]    = useState(null);
+  const [banner,        setBanner]        = useState(null);
+
+  useEffect(() => {
+    if (!banner) return;
+    const timer = setTimeout(() => setBanner(null), 3000);
+    return () => clearTimeout(timer);
+  }, [banner]);
 
   const loadTasks = async () => {
     try {
       setTasksLoading(true);
       setTasksError(null);
-
       const data = await taskService.fetchTasks();
       setTasks(data);
     } catch (err) {
-      const message = err?.message || "Erro ao carregar tarefas";
-      setTasksError(message);
+      setTasksError(err?.message || "Erro ao carregar tarefas");
     } finally {
       setTasksLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  useEffect(() => { loadTasks(); }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -45,13 +46,14 @@ function AppContent() {
     try {
       if (taskData.id) {
         const t = taskService.transformTaskForDisplay(taskData);
-        setTasks(prev => [t, ...prev]);
+        setTasks((prev) => [t, ...prev]);
         setBanner({ message: "✅ Tarefa criada com sucesso!", type: "success" });
       } else {
         const t = await taskService.createTask(taskData);
-        setTasks(prev => [taskService.transformTaskForDisplay(t), ...prev]);
+        setTasks((prev) => [taskService.transformTaskForDisplay(t), ...prev]);
         setBanner({ message: "✅ Tarefa criada no backend!", type: "success" });
       }
+      navigate("/dashboard");
     } catch (err) {
       setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
     }
@@ -65,15 +67,16 @@ function AppContent() {
       prev.map((t) => (t.id === updatedTask.id ? { ...t, ...transformed } : t))
     );
     const statusLabel = transformed.status || updatedTask.status_name || "novo estado";
-    setBanner({ message: `🔄 Tarefa #${updatedTask.id} movida para "${statusLabel}"`, type: "success" });
+    setBanner({
+      message: `🔄 Tarefa #${updatedTask.id} movida para "${statusLabel}"`,
+      type:    "success",
+    });
   };
 
-  /**
-   * Called by ChatUI when the bot successfully creates a ticket.
-   * Closes the chat panel and navigates to /tickets.
-   */
+  /** Closes chat and navigates to tickets page after ticket creation */
   const handleTicketCreated = () => {
     setShowChat(false);
+    setBanner({ message: "✅ Ticket criado com sucesso!", type: "success" });
     navigate("/tickets");
   };
 
@@ -153,14 +156,13 @@ function AppContent() {
   );
 }
 
-// ── Root app ─────────────────────────────────────────────────────────────────
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter
         future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
+          v7_startTransition:    true,
+          v7_relativeSplatPath:  true,
         }}
       >
         <AppContent />

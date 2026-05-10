@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { chatService } from "@/services/chatService";
 import { summaryService } from "@/services/summaryService";
 import { InfoBanner } from "@/components/ui/InfoBanner";
@@ -12,25 +12,32 @@ import {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const groupConversationsByDate = (conversations) => {
-  const sorted = [...conversations].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const now = new Date();
+  const sorted = [...conversations].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
+  const now       = new Date();
   const today     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
   const week      = new Date(today); week.setDate(week.getDate() - 7);
-  const groups = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
-  sorted.forEach(conv => {
+  const groups    = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
+  sorted.forEach((conv) => {
     const d = new Date(conv.created_at);
     if      (d >= today)     groups["Hoje"].push(conv);
     else if (d >= yesterday) groups["Ontem"].push(conv);
     else if (d >= week)      groups["Esta Semana"].push(conv);
     else                     groups["Anteriores"].push(conv);
   });
-  return Object.entries(groups).filter(([, c]) => c.length > 0).map(([label, convs]) => ({ label, convs }));
+  return Object.entries(groups)
+    .filter(([, c]) => c.length > 0)
+    .map(([label, convs]) => ({ label, convs }));
 };
 
 const formatDate = (s) => {
-  try { return new Date(s).toLocaleString("pt-PT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
-  catch { return ""; }
+  try {
+    return new Date(s).toLocaleString("pt-PT", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    });
+  } catch { return ""; }
 };
 
 // ── Preview cards ─────────────────────────────────────────────────────────────
@@ -44,6 +51,38 @@ function TaskCreatedPreview({ task }) {
       </div>
       <p className="text-xs font-semibold text-gray-800 truncate">{task.title}</p>
       <p className="text-[10px] text-gray-400 mt-0.5">ID #{task.id}</p>
+    </div>
+  );
+}
+
+function TaskStatusPreview({ taskUpdated }) {
+  const STATUS_COLORS = {
+    CREATED:     "#EAB308",
+    ASSIGNED:    "#3B82F6",
+    IN_PROGRESS: "#8B5CF6",
+    BLOCKED:     "#EF4444",
+    COMPLETED:   "#22C55E",
+    ARCHIVED:    "#9CA3AF",
+  };
+  const statusName = taskUpdated.status_name || "UNKNOWN";
+  const color      = STATUS_COLORS[statusName] || "#6B7280";
+  return (
+    <div
+      className="rounded-xl p-3 shadow-sm"
+      style={{ border: `1px solid ${color}40`, background: `${color}12` }}
+    >
+      <div className="flex items-center gap-2 mb-1.5">
+        <span>🔄</span>
+        <span className="text-xs font-bold" style={{ color }}>Estado atualizado</span>
+      </div>
+      <p className="text-xs font-semibold text-gray-800 truncate">
+        {taskUpdated.title || `Tarefa #${taskUpdated.id}`}
+      </p>
+      <div className="flex items-center gap-1.5 mt-1">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+        <span className="text-[11px] font-bold" style={{ color }}>{statusName}</span>
+        <span className="text-[10px] text-gray-400 ml-auto">ID #{taskUpdated.id}</span>
+      </div>
     </div>
   );
 }
@@ -76,7 +115,9 @@ function AssignmentPreview({ assignment }) {
             <p className="text-xs font-semibold text-gray-800 truncate">
               {assignment.user_name || `Utilizador #${assignment.user_id}`}
             </p>
-            <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">#{assignment.user_id}</span>
+            <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">
+              #{assignment.user_id}
+            </span>
           </div>
         </div>
       </div>
@@ -86,18 +127,14 @@ function AssignmentPreview({ assignment }) {
 
 function TagAssignmentPreview({ tagAssignment }) {
   const { task_id, task_title, added = [], skipped = [] } = tagAssignment;
-
   return (
     <div className="rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] p-3 shadow-sm">
-      {/* Header */}
       <div className="flex items-center gap-2 mb-2.5">
         <span>🏷️</span>
         <span className="text-xs font-bold text-[#7C3AED]">
           Etiqueta{added.length !== 1 ? "s" : ""} adicionada{added.length !== 1 ? "s" : ""}
         </span>
       </div>
-
-      {/* Task */}
       <div className="flex items-start gap-2 mb-2.5">
         <span className="text-[10px] text-gray-400 w-12 flex-shrink-0 pt-0.5">Tarefa</span>
         <div className="flex-1 min-w-0">
@@ -107,45 +144,34 @@ function TagAssignmentPreview({ tagAssignment }) {
           <p className="text-[10px] text-gray-400">ID #{task_id}</p>
         </div>
       </div>
-
       <div className="border-t border-[#E9D5FF] mb-2" />
-
-      {/* Tags added */}
       {added.length > 0 && (
         <div className="mb-1.5">
           <p className="text-[10px] text-gray-400 mb-1.5">Adicionadas</p>
           <div className="flex flex-wrap gap-1.5">
-            {added.map(tag => (
+            {added.map((tag) => (
               <span
                 key={tag.tag_id}
                 className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                 style={{
                   backgroundColor: `${tag.tag_color}18`,
-                  color: tag.tag_color,
-                  border: `1px solid ${tag.tag_color}40`,
+                  color:           tag.tag_color,
+                  border:          `1px solid ${tag.tag_color}40`,
                 }}
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: tag.tag_color }}
-                />
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag.tag_color }} />
                 {tag.tag_name}
               </span>
             ))}
           </div>
         </div>
       )}
-
-      {/* Tags skipped (already existed) */}
       {skipped.length > 0 && (
         <div>
           <p className="text-[10px] text-gray-400 mb-1.5">Já existiam</p>
           <div className="flex flex-wrap gap-1.5">
-            {skipped.map(tag => (
-              <span
-                key={tag.tag_id}
-                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200"
-              >
+            {skipped.map((tag) => (
+              <span key={tag.tag_id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200">
                 {tag.tag_name}
               </span>
             ))}
@@ -157,13 +183,17 @@ function TagAssignmentPreview({ tagAssignment }) {
 }
 
 function TicketPreview({ ticket, onNavigate }) {
-  const sev = ticket.severity || 5;
-  const color = sev >= 8 ? "#DC2626" : sev >= 5 ? "#D97706" : sev >= 3 ? "#2563EB" : "#16A34A";
+  const sev   = ticket.severity || 5;
+  const color =
+    sev >= 8 ? "#DC2626" :
+    sev >= 5 ? "#D97706" :
+    sev >= 3 ? "#2563EB" : "#16A34A";
   return (
     <div className="rounded-xl border bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-mono text-gray-400">Ticket #{ticket.id}</span>
-        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${color}18`, color }}>
+        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+          style={{ background: `${color}18`, color }}>
           Sev. {sev}/10
         </span>
       </div>
@@ -181,9 +211,9 @@ function TicketPreview({ ticket, onNavigate }) {
 // ── Welcome message ───────────────────────────────────────────────────────────
 
 const INITIAL_MESSAGE = {
-  id: "welcome",
-  text: "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar tarefas, atribuí-las, notificações e tickets.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Atribui a tarefa 5 ao Bruno'",
-  sender: "bot",
+  id:        "welcome",
+  text:      "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar tarefas, atribuí-las, alterar estados, notificações e tickets.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Move a tarefa 1 para em progresso'\n• 'Marca a tarefa 3 como concluída'\n• 'Bloqueia a tarefa 7'",
+  sender:    "bot",
   timestamp: new Date(),
 };
 
@@ -201,8 +231,14 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-  useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
+
   useEffect(() => {
     if (!banner) return;
     const t = setTimeout(() => setBanner(null), 3000);
@@ -212,7 +248,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
   useEffect(() => {
     if (!isOpen) return;
     chatService.getConversations()
-      .then(all => { if (all?.length) { setConversations(all); setShowHistory(true); } })
+      .then((all) => { if (all?.length) { setConversations(all); setShowHistory(true); } })
       .catch(() => {});
   }, [isOpen]);
 
@@ -223,11 +259,13 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
     setShowHistory(false);
     try {
       const summary = await summaryService.getSummaryByConversationId(conv.id);
-      const text = summary?.summary
+      const text    = summary?.summary
         ? `📋 Resumo:\n\n${summary.summary}`
         : "⏳ Resumo ainda a ser gerado.";
       setMessages([{ id: `${conv.id}-s`, text, sender: "bot", timestamp: new Date() }]);
-      setConversationHistory(summary?.summary ? [{ role: "assistant", content: summary.summary }] : []);
+      setConversationHistory(
+        summary?.summary ? [{ role: "assistant", content: summary.summary }] : []
+      );
     } catch {
       setMessages([{ id: `${conv.id}-e`, text: "Não foi possível carregar o resumo.", sender: "bot", timestamp: new Date() }]);
       setConversationHistory([]);
@@ -246,7 +284,9 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
     try {
       const d = chatService.extractTaskDataFromFunctionResult(fr);
       if (d && onTaskCreated) await onTaskCreated(d);
-    } catch (e) { setBanner({ message: `Erro: ${e.message}`, type: "error" }); }
+    } catch (e) {
+      setBanner({ message: `Erro: ${e.message}`, type: "error" });
+    }
   };
 
   // ── Send ──────────────────────────────────────────────────────────────────
@@ -259,16 +299,24 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
     const botMsgId    = Date.now() + 1;
 
     const botMsg = {
-      id: botMsgId, text: "", sender: "bot", timestamp: new Date(),
+      id:              botMsgId,
+      text:            "",
+      sender:          "bot",
+      timestamp:       new Date(),
       functionResults: [],
       taskData:        null,
       assignmentData:  null,
       tagData:         null,
       ticketData:      null,
+      taskUpdatedData: null,   // ← NEW
     };
 
-    const updatedHistory = [...conversationHistory, { role: "user", content: userMessage }];
-    setMessages(p => [
+    const updatedHistory = [
+      ...conversationHistory,
+      { role: "user", content: userMessage },
+    ];
+
+    setMessages((p) => [
       ...p,
       { id: Date.now(), text: userMessage, sender: "user", timestamp: new Date() },
       botMsg,
@@ -284,7 +332,9 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
 
         // onChunk
         (chunk) => {
-          setMessages(p => p.map(m => m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m));
+          setMessages((p) =>
+            p.map((m) => m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m)
+          );
         },
 
         // onDone
@@ -294,48 +344,76 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
             chatService.getConversations().then(setConversations).catch(() => {});
           }
           if (done?.message) {
-            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, text: done.message } : m));
-            setConversationHistory(p => [...p, { role: "assistant", content: done.message }]);
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, text: done.message } : m)
+            );
+            setConversationHistory((p) => [...p, { role: "assistant", content: done.message }]);
           }
           if (done?.functionResults?.length) {
-            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, functionResults: done.functionResults } : m));
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, functionResults: done.functionResults } : m)
+            );
           }
 
-          const persisted = done?.task || done?.notification || done?.ticket || done?.assignment || done?.tagAssignment;
+          const persisted = done?.task || done?.notification || done?.ticket ||
+                            done?.assignment || done?.tagAssignment || done?.taskUpdated;
           if (!persisted && done?.functionResults?.[0]) handleFallback(done.functionResults[0]);
 
-          // Task
+          // Task created
           if (done?.task) {
             if (onTaskCreated) onTaskCreated(done.task);
-            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, taskData: done.task } : m));
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, taskData: done.task } : m)
+            );
+          }
+          // Task status updated  ← NEW
+          if (done?.taskUpdated) {
+            if (onTaskUpdated) onTaskUpdated(done.taskUpdated);
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, taskUpdatedData: done.taskUpdated } : m)
+            );
           }
           // Assignment
           if (done?.assignment) {
-            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, assignmentData: done.assignment } : m));
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, assignmentData: done.assignment } : m)
+            );
           }
           // Tag assignment
-          if (done?.tagAssignment) {
-            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, tagData: done.tagAssignment } : m));
+          if (done?.tags) {
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, tagData: done.tags } : m)
+            );
           }
           // Ticket
           if (done?.ticket) {
-            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, ticketData: done.ticket } : m));
+            if (onTicketCreated) onTicketCreated();
+            setMessages((p) =>
+              p.map((m) => m.id === botMsgId ? { ...m, ticketData: done.ticket } : m)
+            );
           }
           // Notification
           if (done?.notification) {
-            setMessages(p => [...p, {
-              id: Date.now() + 3,
-              text: `✅ Notificação "${done.notification.title}" enviada!`,
-              sender: "system",
-              timestamp: new Date(),
-            }] );
+            setMessages((p) => [
+              ...p,
+              {
+                id:        Date.now() + 3,
+                text:      `✅ Notificação "${done.notification.title}" enviada!`,
+                sender:    "system",
+                timestamp: new Date(),
+              },
+            ]);
           }
         },
 
         conversationId,
       );
     } catch (err) {
-      setMessages(p => p.map(m => m.id === botMsgId ? { ...m, text: `❌ Erro: ${err.message}`, isError: true } : m));
+      setMessages((p) =>
+        p.map((m) =>
+          m.id === botMsgId ? { ...m, text: `❌ Erro: ${err.message}`, isError: true } : m
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -374,22 +452,28 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
               {grouped.map(({ label, convs }) => (
                 <div key={label}>
                   <div className="px-4 py-1.5 bg-surface sticky top-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                      {label}
+                    </span>
                   </div>
-                  {convs.map(conv => (
+                  {convs.map((conv) => (
                     <button
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv)}
                       className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group"
                     >
-                      <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">{conv.title}</p>
+                      <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">
+                        {conv.title}
+                      </p>
                       <p className="text-xs text-muted mt-0.5">{formatDate(conv.created_at)}</p>
                     </button>
                   ))}
                 </div>
               ))}
               {conversations.length === 0 && (
-                <div className="flex items-center justify-center h-32 text-muted text-sm">Nenhuma conversa</div>
+                <div className="flex items-center justify-center h-32 text-muted text-sm">
+                  Nenhuma conversa
+                </div>
               )}
             </div>
           </div>
@@ -399,7 +483,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
         {!showHistory && (
           <>
             <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
-              {messages.map(msg => (
+              {messages.map((msg) => (
                 <div key={msg.id}>
                   <ChatBubbleUI
                     message={msg}
@@ -408,31 +492,34 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                     isError={msg.isError}
                   />
 
-                  {/* Preview cards stacked below the bubble */}
-                  {(msg.taskData || msg.assignmentData || msg.tagData || msg.ticketData) && (
+                  {/* Preview cards */}
+                  {(msg.taskData || msg.taskUpdatedData || msg.assignmentData || msg.tagData || msg.ticketData) && (
                     <div className="flex justify-start mt-2">
                       <div className="max-w-[260px] w-full space-y-2">
 
-                        {/* Task created */}
                         {msg.taskData && (
                           <TaskCreatedPreview task={msg.taskData} />
                         )}
 
-                        {/* Assignment preview */}
+                        {msg.taskUpdatedData && (
+                          <TaskStatusPreview taskUpdated={msg.taskUpdatedData} />
+                        )}
+
                         {msg.assignmentData && (
                           <AssignmentPreview assignment={msg.assignmentData} />
                         )}
 
-                        {/* Tag assignment */}
                         {msg.tagData && (
                           <TagAssignmentPreview tagAssignment={msg.tagData} />
                         )}
 
-                        {/* Ticket preview */}
                         {msg.ticketData && (
                           <TicketPreview
                             ticket={msg.ticketData}
-                            onNavigate={() => { onClose(); if (onTicketCreated) onTicketCreated(); }}
+                            onNavigate={() => {
+                              onClose();
+                              if (onTicketCreated) onTicketCreated();
+                            }}
                           />
                         )}
                       </div>
@@ -446,7 +533,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
 
             <ChatInputUI
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={(e) => setInput(e.target.value)}
               onSubmit={handleSend}
               disabled={loading}
               inputRef={inputRef}

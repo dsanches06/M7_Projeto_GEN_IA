@@ -1,7 +1,3 @@
-// ======================================================
-// FILE: patch_status_task.js
-// ======================================================
-
 import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/CRUD/BaseFunction.js";
 

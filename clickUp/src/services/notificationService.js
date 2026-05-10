@@ -1,73 +1,35 @@
 import BaseService from "../services/BaseService.js";
 import Notification from "../models/Notification.js";
 
-/**
- * NotificationService - Serviço de Notificações
- * Herda de BaseService para reutilizar lógica de streaming e comunicação
- */
 class NotificationService extends BaseService {
   constructor() {
     super("/notifications");
   }
 
-  /**
-   * Busca notificações não lidas de um usuário
-   */
   async getUnreadNotifications(userId) {
     try {
       if (userId) {
-        const data = await this.fetchData(
-          `/users/${userId}/notifications/unread`,
-        );
+        const data = await this.fetchData(`/users/${userId}/notifications/unread`);
         return data.map(
-          (notif) =>
-            new Notification(
-              notif.id,
-              notif.title,
-              notif.message,
-              notif.is_read,
-              notif.sent_at,
-            ),
+          (n) => new Notification(n.id, n.title, n.message, n.is_read, n.sent_at)
         );
       }
-
       const data = await this.fetchData(`/notifications`);
       return data
-        .filter((notif) => !notif.is_read)
-        .map(
-          (notif) =>
-            new Notification(
-              notif.id,
-              notif.title,
-              notif.message,
-              notif.is_read,
-              notif.sent_at,
-            ),
-        );
+        .filter((n) => !n.is_read)
+        .map((n) => new Notification(n.id, n.title, n.message, n.is_read, n.sent_at));
     } catch (error) {
       console.error("Error fetching unread notifications:", error);
       throw error;
     }
   }
 
-  /**
-   * Busca todas as notificações ou notificaçãos de um usuário específico
-   */
   async getNotificationsByUser(userId) {
     try {
-      const endpoint = userId
-        ? `/users/${userId}/notifications`
-        : `/notifications`;
+      const endpoint = userId ? `/users/${userId}/notifications` : `/notifications`;
       const data = await this.fetchData(endpoint);
       return data.map(
-        (notif) =>
-          new Notification(
-            notif.id,
-            notif.title,
-            notif.message,
-            notif.is_read,
-            notif.sent_at,
-          ),
+        (n) => new Notification(n.id, n.title, n.message, n.is_read, n.sent_at)
       );
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -75,31 +37,16 @@ class NotificationService extends BaseService {
     }
   }
 
-  /**
-   * Busca notificações do usuário ou, em modo de teste, todas as não lidas
-   */
   async getNotifications(userId) {
-    if (userId) {
-      return this.getNotificationsByUser(userId);
-    }
+    if (userId) return this.getNotificationsByUser(userId);
     return this.getUnreadNotifications();
   }
 
-  /**
-   * Busca todas as notificações sem filtro de usuário
-   */
   async getAllNotifications() {
     try {
       const data = await this.fetchData(`/notifications`);
       return data.map(
-        (notif) =>
-          new Notification(
-            notif.id,
-            notif.title,
-            notif.message,
-            notif.is_read,
-            notif.sent_at,
-          ),
+        (n) => new Notification(n.id, n.title, n.message, n.is_read, n.sent_at)
       );
     } catch (error) {
       console.error("Error fetching all notifications:", error);
@@ -108,46 +55,33 @@ class NotificationService extends BaseService {
   }
 
   /**
-   * Envia mensagem para criar notificação com streaming
+   * Marca uma notificação como lida pelo seu ID.
+   * Chamado pelo NotificationItem directamente (sem userId).
    */
-  async sendMessageToBotStream(
-    message,
-    conversationHistory = [],
-    onChunk,
-    onDone,
-    userId = null,
-  ) {
-    const payload = {
-      message,
-      conversationHistory,
-      userId,
-    };
-    return this.sendStreamMessage(
-      "/notifications/message/stream",
-      payload,
-      onChunk,
-      onDone,
+  async markAsRead(notificationId) {
+    const res = await fetch(
+      `${this.BACKEND_URL}/notifications/${notificationId}`,
+      {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ is_read: true }),
+      }
     );
+    if (!res.ok) throw new Error(`Failed to mark as read: ${res.status}`);
+    return res.json();
   }
 
-  /**
-   * Marca notificação como lida
-   */
   async markNotificationAsRead(userId, notificationId) {
     try {
       const endpoint = userId
         ? `${this.BACKEND_URL}/users/${userId}/notifications/${notificationId}`
         : `${this.BACKEND_URL}/notifications/${notificationId}`;
       const response = await fetch(endpoint, {
-        method: userId ? "PATCH" : "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ is_read: true }),
+        method:  userId ? "PATCH" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ is_read: true }),
       });
-      if (!response.ok) {
-        throw new Error("Failed to mark notification as read");
-      }
+      if (!response.ok) throw new Error("Failed to mark notification as read");
       return await response.json();
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -155,26 +89,17 @@ class NotificationService extends BaseService {
     }
   }
 
-  /**
-   * Atualiza uma notificação genérica
-   */
   async updateNotification(notificationId, updateData) {
     try {
       const response = await fetch(
         `${this.BACKEND_URL}/notifications/${notificationId}`,
         {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        },
+          method:  "PUT",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify(updateData),
+        }
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to update notification");
-      }
-
+      if (!response.ok) throw new Error("Failed to update notification");
       return await response.json();
     } catch (error) {
       console.error("Error updating notification:", error);
@@ -182,18 +107,12 @@ class NotificationService extends BaseService {
     }
   }
 
-  /**
-   * Cria notificação
-   */
   async createNotification(notificationData) {
     try {
       const response = await this.sendMessage("/notifications", notificationData);
       return new Notification(
-        response.id,
-        response.title,
-        response.message,
-        response.is_read,
-        response.sent_at,
+        response.id, response.title, response.message,
+        response.is_read, response.sent_at
       );
     } catch (error) {
       console.error("Error creating notification:", error);
@@ -201,17 +120,11 @@ class NotificationService extends BaseService {
     }
   }
 
-  /**
-   * Extrai dados de notificação do function result
-   */
   extractNotificationDataFromFunctionResult(functionResult) {
-    if (!functionResult || !functionResult.result) {
-      return null;
-    }
-
+    if (!functionResult?.result) return null;
     const data = functionResult.result;
     return {
-      title: data.title,
+      title:   data.title,
       message: data.message,
       is_read: data.is_read || false,
       sent_at: data.sent_at || new Date().toISOString(),
@@ -220,5 +133,4 @@ class NotificationService extends BaseService {
   }
 }
 
-// Exporta instância singleton
 export const notificationService = new NotificationService();

@@ -10,8 +10,14 @@ function getPriorityLabel(priorityId) {
 
 function getStatusLabel(statusId) {
   return (
-    { 1: "criada", 2: "atribuída", 3: "em progresso", 4: "bloqueada", 5: "concluída", 6: "arquivada" }[statusId] ||
-    "criada"
+    {
+      1: "criada",
+      2: "atribuída",
+      3: "em progresso",
+      4: "bloqueada",
+      5: "concluída",
+      6: "arquivada",
+    }[statusId] || "criada"
   );
 }
 
@@ -25,7 +31,7 @@ export const STATUS_ID_TO_NAME = {
   6: "ARCHIVED",
 };
 
-// ── Payload normaliser (for task creation) ────────────────────────────────────
+// ── Payload normaliser ────────────────────────────────────────────────────────
 function normalizeTaskPayload(taskData) {
   const task = Task.fromObject(taskData);
   return task ? task.toPayload() : Task.fromObject({}).toPayload();
@@ -41,7 +47,6 @@ export function transformTaskForDisplay(task) {
     dueDate:      task.due_date
       ? new Date(task.due_date).toLocaleDateString("pt-PT")
       : "N/A",
-    // preserve existing enrichment if already set
     assigneeName: task.assigneeName ?? null,
     tags:         task.tags         ?? [],
   };
@@ -92,11 +97,9 @@ export async function fetchTasks() {
 export async function createTask(taskData) {
   const payload = normalizeTaskPayload(taskData);
   const response = await fetch(`${BACKEND_URL}/tasks`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(payload),
   });
 
   if (!response.ok) {

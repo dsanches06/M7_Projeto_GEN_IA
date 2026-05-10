@@ -1,6 +1,5 @@
 import { getPriorityBadgeStyle, getStatusBadgeStyle } from '@/utils/utils';
 
-// Map tag color names (from DB) to display colours
 const TAG_COLOR_HEX = {
   Red:    { bg: '#FEE2E2', text: '#DC2626' },
   Green:  { bg: '#DCFCE7', text: '#16A34A' },

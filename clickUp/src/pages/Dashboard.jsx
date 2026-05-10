@@ -1,77 +1,82 @@
 import { useState } from "react";
-import { TaskCard } from '@/components/tasks/TaskCard';
-import totalIcon from "../assets/tarefa.png";
-import progressIcon from "../assets/projeto_on_going.png";
+import { TaskCard } from "@/components/tasks/TaskCard";
+import totalIcon     from "../assets/tarefa.png";
+import progressIcon  from "../assets/projeto_on_going.png";
 import completedIcon from "../assets/tarefa-concluida.png";
-import todoIcon from "../assets/filtrar-tarefas.png";
+import todoIcon      from "../assets/filtrar-tarefas.png";
+import filterIcon    from "../assets/filtrar-tarefas.png";
 
-export function Dashboard({ tasks = [], onTasksUpdate = () => {}, tasksLoading = false, tasksError = null, onRetryLoadTasks = () => {} }) {
-  const allTasks = tasks || [];
+export function Dashboard({
+  tasks          = [],
+  onTasksUpdate  = () => {},
+  tasksLoading   = false,
+  tasksError     = null,
+  onRetryLoadTasks = () => {},
+}) {
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [search,       setSearch]       = useState("");
+  const [showSearch,   setShowSearch]   = useState(false);
+  const [sortDir,      setSortDir]      = useState("NONE"); // NONE | ASC | DESC (by priority)
 
-  const sortedTasks = [...allTasks].sort((a, b) => {
-    const aDate = new Date(a.created_at || a.createdAt || 0).getTime();
-    const bDate = new Date(b.created_at || b.createdAt || 0).getTime();
-
-    if (aDate && bDate) {
-      return bDate - aDate;
-    }
-
-    return (b.id ?? 0) - (a.id ?? 0);
-  });
-
-  const stats = {
-    total: sortedTasks.length,
-    inProgress: sortedTasks.filter(t => t.status === 'em progresso').length,
-    completed: sortedTasks.filter(t => t.status === 'concluída').length,
-    todo: sortedTasks.filter(t => t.status === 'a fazer').length,
-  };
+  /* ── Derived counts ── */
+  const allTasks   = tasks || [];
+  const inProgress = allTasks.filter((t) => t.status === "em progresso").length;
+  const completed  = allTasks.filter((t) => t.status === "concluída").length;
+  const todo       = allTasks.filter((t) => t.status === "a fazer").length;
 
   const statCards = [
-    {
-      label: "Tarefas Totais",
-      value: stats.total,
-      icon: totalIcon,
-      filter: "ALL",
-    },
-    {
-      label: "Em Progresso",
-      value: stats.inProgress,
-      icon: progressIcon,
-      filter: "IN_PROGRESS",
-    },
-    {
-      label: "Concluídas",
-      value: stats.completed,
-      icon: completedIcon,
-      filter: "COMPLETED",
-    },
-    {
-      label: "A Fazer",
-      value: stats.todo,
-      icon: todoIcon,
-      filter: "TODO",
-    },
+    { label: "Tarefas Totais", value: allTasks.length,  icon: totalIcon,     filter: "ALL" },
+    { label: "Em Progresso",   value: inProgress,        icon: progressIcon,  filter: "IN_PROGRESS" },
+    { label: "Concluídas",     value: completed,          icon: completedIcon, filter: "COMPLETED" },
+    { label: "A Fazer",        value: todo,               icon: todoIcon,      filter: "TODO" },
+    { label: "Filtradas",      value: 0,                  icon: filterIcon,    filter: null }, // filled below
   ];
 
-  const filteredTasks =
-    statusFilter === "ALL"
-      ? sortedTasks
-      : sortedTasks.filter((task) => {
-          if (statusFilter === "IN_PROGRESS") return task.status === "em progresso";
-          if (statusFilter === "COMPLETED") return task.status === "concluída";
-          if (statusFilter === "TODO") return task.status === "a fazer";
-          return true;
-        });
+  /* ── Filter by status ── */
+  const byStatus = statusFilter === "ALL"
+    ? allTasks
+    : allTasks.filter((t) => {
+        if (statusFilter === "IN_PROGRESS") return t.status === "em progresso";
+        if (statusFilter === "COMPLETED")   return t.status === "concluída";
+        if (statusFilter === "TODO")        return t.status === "a fazer";
+        return true;
+      });
+
+  /* ── Filter by search ── */
+  const bySearch = search.trim()
+    ? byStatus.filter(
+        (t) =>
+          (t.title       || "").toLowerCase().includes(search.toLowerCase()) ||
+          (t.description || "").toLowerCase().includes(search.toLowerCase()),
+      )
+    : byStatus;
+
+  /* ── Sort by priority ── */
+  const PRIORITY_ORDER = { alta: 3, média: 2, baixa: 1 };
+  const sorted = [...bySearch].sort((a, b) => {
+    if (sortDir === "ASC")
+      return (PRIORITY_ORDER[a.priority] || 0) - (PRIORITY_ORDER[b.priority] || 0);
+    if (sortDir === "DESC")
+      return (PRIORITY_ORDER[b.priority] || 0) - (PRIORITY_ORDER[a.priority] || 0);
+    /* default: newest first */
+    const aDate = new Date(a.created_at || a.createdAt || 0).getTime();
+    const bDate = new Date(b.created_at || b.createdAt || 0).getTime();
+    return bDate - aDate || (b.id ?? 0) - (a.id ?? 0);
+  });
+
+  /* ── Update "filtradas" count ── */
+  statCards[4].value = sorted.length;
+
+  /* ── Cycle sort ── */
+  function cycleSortDir() {
+    setSortDir((d) => (d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE"));
+  }
 
   const filterLabel =
-    statusFilter === "ALL"
-      ? "Todas"
-      : statusFilter === "IN_PROGRESS"
-      ? "Em Progresso"
-      : statusFilter === "COMPLETED"
-      ? "Concluídas"
-      : "A Fazer";
+    statusFilter === "IN_PROGRESS" ? "Em Progresso"
+    : statusFilter === "COMPLETED" ? "Concluídas"
+    : statusFilter === "TODO"      ? "A Fazer"
+    : "Todas";
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
@@ -80,12 +85,15 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {}, tasksLoading =
         <p className="text-muted">Bem-vindo ao seu espaço de trabalho</p>
       </div>
 
+      {/* ── Backend error ── */}
       {tasksError && (
         <div className="mb-6 rounded-3xl border border-red-500/20 bg-red-600/10 p-5 text-red-100">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-base font-semibold">Servidor indisponível</p>
-              <p className="text-sm text-red-100/90">Erro ao carregar tarefas: {tasksError}</p>
+              <p className="text-sm text-red-100/90">
+                Erro ao carregar tarefas: {tasksError}
+              </p>
             </div>
             <button
               type="button"
@@ -98,64 +106,117 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {}, tasksLoading =
         </div>
       )}
 
-      <div className="grid gap-6">
-        {/* Toolbar */}
-        <div className="flex flex-col gap-4 mb-6 flex-wrap lg:flex-row lg:items-center">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full">
-            {statCards.map(({ label, value, icon, filter }, index) => {
-              const isSelected = statusFilter === filter;
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => setStatusFilter(filter)}
-                  className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors focus:outline-none animate-fadeIn ${
-                    isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
-                  }`}
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
-                  <img src={icon} alt={label} className="w-8 h-8 object-contain" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-muted uppercase tracking-[0.08em]">
-                      {label}
-                    </p>
-                    <p className="text-base font-semibold text-main">{value}</p>
-                  </div>
-                </button>
-              );
-            })}
+      {/* ── Toolbar ── */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {statCards.map(({ label, value, icon, filter }, index) => {
+            const isSelected = filter && statusFilter === filter;
+            const buttonClass = filter
+              ? "cursor-pointer hover:bg-surface-2"
+              : "cursor-default";
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => filter && setStatusFilter(filter)}
+                className={`flex items-center gap-3 rounded-3xl p-2 text-left transition-colors animate-fadeIn ${buttonClass} ${
+                  isSelected
+                    ? "bg-surface-2 border border-surface"
+                    : "bg-surface"
+                }`}
+                style={{ animationDelay: `${index * 70}ms` }}
+              >
+                <img
+                  src={icon}
+                  alt={label}
+                  className="w-8 h-8 object-contain flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-[10px] text-muted uppercase tracking-[0.08em] leading-tight">
+                    {label}
+                  </p>
+                  <p className="text-base font-semibold text-main">{value}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filter controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="ml-auto flex items-center gap-2">
+            {showSearch && (
+              <input
+                autoFocus
+                className="h-8 bg-surface border border-surface rounded-lg px-3 text-sm text-main placeholder:text-muted focus:outline-none focus:border-[var(--primary)] w-48 transition-all"
+                placeholder="Pesquisar tarefa..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            )}
+
+            <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2 hidden sm:inline-flex">
+              Filtro: {filterLabel}
+            </span>
+
+            <button
+              title="Pesquisar"
+              onClick={() => {
+                setShowSearch((s) => !s);
+                setSearch("");
+              }}
+              className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 transition-colors cursor-pointer text-base"
+            >
+              ⌕
+            </button>
+
+            <button
+              title="Ordenar por prioridade"
+              onClick={cycleSortDir}
+              className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 transition-colors cursor-pointer"
+            >
+              {sortDir === "ASC" ? "⬆" : sortDir === "DESC" ? "⬇" : "⇅"}
+            </button>
           </div>
-          <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2 lg:ml-auto">
+        </div>
+      </div>
+
+      {/* ── Tasks section ── */}
+      <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-main">Minhas Tarefas</h3>
+            <p className="text-muted mt-1 max-w-2xl text-sm">
+              Use o ChatBot 🤖 ao lado para criar novas tarefas utilizando
+              inteligência artificial.
+            </p>
+          </div>
+          <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-3 whitespace-nowrap">
             Filtro: {filterLabel}
           </span>
         </div>
 
-        <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
-            <div>
-              <h3 className="text-xl font-bold text-main">Minhas Tarefas</h3>
-              <p className="text-muted mt-2 max-w-2xl">
-                Use o ChatBot 🤖 ao lado para criar novas tarefas utilizando inteligência artificial.
-              </p>
-            </div>
-            <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-3">
-              Filtro: {filterLabel}
-            </span>
+        {tasksLoading ? (
+          <div className="text-center py-12 text-muted text-sm">
+            A carregar tarefas…
           </div>
-
-          {filteredTasks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {filteredTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-surface-3 border border-surface rounded-2xl p-8 text-center">
-              <p className="text-muted">Nenhuma tarefa ainda. Use o ChatBot para criar uma! 🤖</p>
-            </div>
-          )}
-        </section>
-      </div>
-      </div>
+        ) : sorted.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {sorted.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-surface-3 border border-surface rounded-2xl p-8 text-center">
+            <p className="text-muted text-sm">
+              {allTasks.length === 0
+                ? "Nenhuma tarefa ainda. Use o ChatBot para criar uma! 🤖"
+                : "Nenhuma tarefa corresponde aos filtros."}
+            </p>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

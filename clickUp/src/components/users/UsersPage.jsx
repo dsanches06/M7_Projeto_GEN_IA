@@ -4,34 +4,33 @@ import { STATUS_ID_TO_NAME } from "@/services/taskService.js";
 import UserCard from "./UserCard.jsx";
 import UserDashboard from "./UserDashboard.jsx";
 import ModalConfirm from "../ui/ModalConfirm.jsx";
-import usersIcon from "../../assets/users.png";
-import activeIcon from "../../assets/active.png";
+import usersIcon   from "../../assets/users.png";
+import activeIcon  from "../../assets/active.png";
 import inactiveIcon from "../../assets/inactive.png";
-import filterIcon from "../../assets/filter.png";
+import filterIcon  from "../../assets/filter.png";
 import percentIcon from "../../assets/percentagem.png";
 
 const BACKEND_URL = getBackendUrl();
 
-/** Enrich a raw API user with display fields + tasks array */
 function enrichUser(raw, tasksForUser = []) {
   return {
     ...raw,
-    role: raw.role_id === 1 ? "Admin" : raw.role_id === 2 ? "Member" : "Viewer",
+    role:   raw.role_id === 1 ? "Admin" : raw.role_id === 2 ? "Member" : "Viewer",
     active: raw.active === true || raw.active === 1,
-    tasks: tasksForUser,
+    tasks:  tasksForUser,
   };
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [search, setSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [sortDirection, setSortDirection] = useState("NONE");
-  const [activeDash, setActiveDash] = useState(null);
-  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
+  const [users,              setUsers]              = useState([]);
+  const [loading,            setLoading]            = useState(true);
+  const [error,              setError]              = useState(null);
+  const [search,             setSearch]             = useState("");
+  const [showSearch,         setShowSearch]         = useState(false);
+  const [statusFilter,       setStatusFilter]       = useState("ALL");
+  const [sortDirection,      setSortDirection]      = useState("NONE");
+  const [activeDash,         setActiveDash]         = useState(null);
+  const [confirmDeleteUserId,setConfirmDeleteUserId]= useState(null);
 
   const loadUsers = async () => {
     try {
@@ -48,14 +47,12 @@ export default function UsersPage() {
       const rawUsers = await usersRes.json();
       const allTasks = tasksRes.ok ? await tasksRes.json() : [];
 
-      // Map tasks to their assigned user, enriching with string status
       const userTasksMap = {};
       allTasks.forEach((task) => {
         if (!task.assigned_to) return;
         if (!userTasksMap[task.assigned_to]) userTasksMap[task.assigned_to] = [];
         userTasksMap[task.assigned_to].push({
           ...task,
-          // UserDashboard kanban filters by task.status (string)
           status: STATUS_ID_TO_NAME[task.status_id] || "CREATED",
         });
       });
@@ -69,87 +66,54 @@ export default function UsersPage() {
     }
   };
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  useEffect(() => { loadUsers(); }, []);
 
   const filtered = users.filter((u) => {
-    const lowerSearch = search.toLowerCase();
+    const lower = search.toLowerCase();
     const matchesText =
-      u.name.toLowerCase().includes(lowerSearch) ||
-      u.email.toLowerCase().includes(lowerSearch);
-
+      u.name.toLowerCase().includes(lower) ||
+      u.email.toLowerCase().includes(lower);
     const matchesStatus =
       statusFilter === "ALL" ||
-      (statusFilter === "ACTIVE" && u.active) ||
+      (statusFilter === "ACTIVE"   && u.active) ||
       (statusFilter === "INACTIVE" && !u.active);
-
     return matchesText && matchesStatus;
   });
 
   const sortedUsers = [...filtered].sort((a, b) => {
-    if (sortDirection === "ASC") return a.name.localeCompare(b.name);
+    if (sortDirection === "ASC")  return a.name.localeCompare(b.name);
     if (sortDirection === "DESC") return b.name.localeCompare(a.name);
     return 0;
   });
 
   const cycleSortDirection = () => {
-    setSortDirection((current) => {
-      if (current === "NONE") return "ASC";
-      if (current === "ASC") return "DESC";
-      return "NONE";
-    });
+    setSortDirection((c) => c === "NONE" ? "ASC" : c === "ASC" ? "DESC" : "NONE");
   };
 
   function toggleActive(id) {
     setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u)),
+      prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u))
     );
-    // Optimistically patch backend
     const user = users.find((u) => u.id === id);
     if (user) {
       fetch(`${BACKEND_URL}/users/${id}`, {
-        method: "PATCH",
+        method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: !user.active }),
+        body:    JSON.stringify({ active: !user.active }),
       }).catch(console.error);
     }
   }
 
-  function requestDeleteUser(id) {
-    setConfirmDeleteUserId(id);
-  }
-
-  function cancelDelete() {
-    setConfirmDeleteUserId(null);
-  }
+  function requestDeleteUser(id) { setConfirmDeleteUserId(id); }
+  function cancelDelete()         { setConfirmDeleteUserId(null); }
 
   function deleteUser(id) {
     setUsers((prev) => prev.filter((u) => u.id !== id));
-    fetch(`${BACKEND_URL}/users/${id}`, { method: "DELETE" }).catch(
-      console.error,
-    );
+    fetch(`${BACKEND_URL}/users/${id}`, { method: "DELETE" }).catch(console.error);
     setConfirmDeleteUserId(null);
   }
 
-  const filterLabel =
-    statusFilter === "ALL"
-      ? "Todos"
-      : statusFilter === "ACTIVE"
-        ? "Ativos"
-        : "Inativos";
-
-  const activePercentage =
-    users.length > 0
-      ? ((users.filter((u) => u.active).length / users.length) * 100).toFixed(2)
-      : "0.00";
-
-  const confirmDeleteUser =
-    confirmDeleteUserId !== null
-      ? users.find((u) => u.id === confirmDeleteUserId)
-      : null;
-
-  // ── Handle task status change from UserDashboard ──────────────────────────
+  /** Propagate kanban status change back to the users array */
   function handleTaskStatusChange(taskId, newStatus) {
     setUsers((prev) =>
       prev.map((u) => ({
@@ -159,7 +123,6 @@ export default function UsersPage() {
         ),
       }))
     );
-    // Also update activeDash so kanban re-renders immediately
     if (activeDash) {
       setActiveDash((prev) => ({
         ...prev,
@@ -170,9 +133,28 @@ export default function UsersPage() {
     }
   }
 
-  function setStatusFilterMode(filter) {
-    setStatusFilter(filter);
-  }
+  // ── Stats ───────────────────────────────────────────────────────────────
+  const activePercentage =
+    users.length > 0
+      ? ((users.filter((u) => u.active).length / users.length) * 100).toFixed(2)
+      : "0.00";
+
+  const statCards = [
+    { label: "Utilizadores", value: users.length,                          icon: usersIcon,    filter: "ALL"      },
+    { label: "Ativos",        value: users.filter((u) => u.active).length,  icon: activeIcon,   filter: "ACTIVE"   },
+    { label: "Inativos",      value: users.filter((u) => !u.active).length, icon: inactiveIcon, filter: "INACTIVE" },
+    { label: "Filtrados",     value: filtered.length,                        icon: filterIcon,   filter: null       },
+    { label: "Ativos %",      value: `${activePercentage}%`,                 icon: percentIcon,  filter: null       },
+  ];
+
+  const filterLabel =
+    statusFilter === "ALL"      ? "Todos" :
+    statusFilter === "ACTIVE"   ? "Ativos" : "Inativos";
+
+  const confirmDeleteUser =
+    confirmDeleteUserId !== null
+      ? users.find((u) => u.id === confirmDeleteUserId)
+      : null;
 
   // ── Dashboard view ──────────────────────────────────────────────────────
   if (activeDash) {
@@ -186,72 +168,29 @@ export default function UsersPage() {
     );
   }
 
-  // ── Stats ───────────────────────────────────────────────────────────────
-  const statCards = [
-    {
-      label: "Utilizadores",
-      value: users.length,
-      icon: usersIcon,
-      filter: "ALL",
-    },
-    {
-      label: "Ativos",
-      value: users.filter((u) => u.active).length,
-      icon: activeIcon,
-      filter: "ACTIVE",
-    },
-    {
-      label: "Inativos",
-      value: users.filter((u) => !u.active).length,
-      icon: inactiveIcon,
-      filter: "INACTIVE",
-    },
-    {
-      label: "Filtrados",
-      value: filtered.length,
-      icon: filterIcon,
-      filter: null,
-    },
-    {
-      label: "Ativos %",
-      value: `${activePercentage}%`,
-      icon: percentIcon,
-      filter: null,
-    },
-  ];
-
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
       <h2 className="text-3xl font-bold text-main mb-6">Gestão de Utilizadores</h2>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
+      <div className="flex flex-col gap-4 mb-5">
         {/* Stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {statCards.map(({ label, value, icon, filter }) => {
             const isSelected = filter && statusFilter === filter;
-            const buttonClasses = filter
-              ? "cursor-pointer hover:bg-surface/60"
-              : "cursor-default";
-
+            const btnClass = filter ? "cursor-pointer hover:bg-surface/60" : "cursor-default";
             return (
               <button
                 key={label}
                 type="button"
-                onClick={() => filter && setStatusFilterMode(filter)}
-                  className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors ${buttonClasses} ${
+                onClick={() => filter && setStatusFilter(filter)}
+                className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors ${btnClass} ${
                   isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
                 }`}
               >
-                <img
-                  src={icon}
-                  alt={label}
-                  className="w-8 h-8 object-contain"
-                />
+                <img src={icon} alt={label} className="w-8 h-8 object-contain" />
                 <div className="min-w-0">
-                  <p className="text-[10px] text-muted uppercase tracking-[0.08em]">
-                    {label}
-                  </p>
+                  <p className="text-[10px] text-muted uppercase tracking-[0.08em]">{label}</p>
                   <p className="text-base font-semibold text-main">{value}</p>
                 </div>
               </button>
@@ -259,7 +198,7 @@ export default function UsersPage() {
           })}
         </div>
 
-{       /* Filters and search */}
+        {/* Filter controls */}
         <div className="ml-auto flex items-center gap-2">
           {showSearch && (
             <input
@@ -275,10 +214,7 @@ export default function UsersPage() {
           </span>
           <button
             title="Pesquisar"
-            onClick={() => {
-              setShowSearch((s) => !s);
-              setSearch("");
-            }}
+            onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
             className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 transition-colors cursor-pointer"
           >
             ⌕
@@ -288,37 +224,26 @@ export default function UsersPage() {
             onClick={cycleSortDirection}
             className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 transition-colors cursor-pointer"
           >
-            {sortDirection === "ASC"
-              ? "⬆"
-              : sortDirection === "DESC"
-                ? "⬇"
-                : "⇅"}
+            {sortDirection === "ASC" ? "⬆" : sortDirection === "DESC" ? "⬇" : "⇅"}
           </button>
         </div>
       </div>
 
       {/* Loading / Error / Grid */}
       {loading && (
-        <div className="text-center py-16 text-muted text-sm">
-          A carregar utilizadores…
-        </div>
+        <div className="text-center py-16 text-muted text-sm">A carregar utilizadores…</div>
       )}
 
       {error && !loading && (
         <div className="text-center py-10">
           <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-red-600/20 bg-red-600/5 p-8 mx-auto max-w-xl">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600/10 text-red-600 animate-pulse text-2xl">
-              ⚠️
-            </div>
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600/10 text-red-600 animate-pulse text-2xl">⚠️</div>
             <div>
               <p className="text-lg font-semibold text-red-100">Servidor indisponível</p>
               <p className="mt-1 text-sm text-red-200">Erro ao carregar utilizadores: {error}</p>
             </div>
-            <button
-              type="button"
-              onClick={loadUsers}
-              className="rounded-full border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
-            >
+            <button type="button" onClick={loadUsers}
+              className="rounded-full border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20">
               Recarregar
             </button>
           </div>

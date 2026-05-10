@@ -15,9 +15,8 @@ const NotificationButton = ({ user }) => {
   const badgeBorder = theme === "dark" ? "#0d0d0d" : "#f8fafc";
 
   const updateBadgeCount = useCallback(async () => {
-    if (!user?.id) return;
     try {
-      const list = await notificationService.getUnreadNotifications(user.id);
+      const list = await notificationService.getUnreadNotifications(user?.id);
       const notificationsArray = Array.isArray(list) ? list : [];
       
       // Corrigido: Verifica todas as variações de nomes de campos comuns

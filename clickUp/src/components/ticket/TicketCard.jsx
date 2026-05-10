@@ -6,10 +6,10 @@ import {
   STATUS_CONFIG,
 } from "@/utils/ticketUtils";
 
-// Componente de cartão de ticket
 export default function TicketCard({ ticket, onSelect, delay = 0 }) {
-  const sevStyle = getSeverityStyle(ticket.severity || 5);
-  const errCfg =
+  const sev     = ticket.severity || 1;
+  const sevStyle = getSeverityStyle(sev);
+  const errCfg  =
     ERROR_TYPE_CONFIG[(ticket.error_type || "").toLowerCase()] ||
     ERROR_TYPE_CONFIG.other;
   const statCfg =
@@ -18,13 +18,18 @@ export default function TicketCard({ ticket, onSelect, delay = 0 }) {
 
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100 p-5 cursor-pointer group transition-all animate-fadeIn"
+      className="rounded-2xl p-5 cursor-pointer group transition-all animate-fadeIn"
       style={{
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        background:     sevStyle.bg,
+        border:         `1px solid ${sevStyle.color}30`,
+        borderLeft:     `4px solid ${sevStyle.color}`,
+        borderRadius:   "1rem",
+        boxShadow:      "0 1px 4px rgba(0,0,0,0.06)",
         animationDelay: `${delay}ms`,
+        transition:     "transform 0.18s, box-shadow 0.18s",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.10)";
+        e.currentTarget.style.boxShadow = `0 6px 20px ${sevStyle.color}28`;
         e.currentTarget.style.transform = "translateY(-2px)";
       }}
       onMouseLeave={(e) => {
@@ -33,9 +38,14 @@ export default function TicketCard({ ticket, onSelect, delay = 0 }) {
       }}
       onClick={() => onSelect(ticket)}
     >
-      {/* Top row */}
+      {/* ── Top row ── */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="text-xs font-mono text-gray-400">#{ticket.id}</span>
+        <span
+          className="text-xs font-mono font-semibold"
+          style={{ color: sevStyle.color }}
+        >
+          #{ticket.id}
+        </span>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
           <span
             className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
@@ -52,44 +62,61 @@ export default function TicketCard({ ticket, onSelect, delay = 0 }) {
         </div>
       </div>
 
-      {/* Report */}
-      <p className="text-sm font-medium text-gray-800 leading-snug mb-3 line-clamp-3">
+      {/* ── Report text ── */}
+      <p
+        className="text-sm font-medium leading-snug mb-3 line-clamp-3"
+        style={{ color: "#1a1a1a" }}
+      >
         {ticket.user_report || "(sem descrição)"}
       </p>
 
-      {/* Severity bar */}
+      {/* ── Severity bar ── */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+          <span
+            className="text-[10px] uppercase tracking-wide"
+            style={{ color: sevStyle.color }}
+          >
             Severidade
           </span>
           <span
             className="text-[11px] font-bold"
             style={{ color: sevStyle.color }}
           >
-            {ticket.severity || 0}/10 · {sevStyle.label}
+            {sev}/10 · {sevStyle.label}
           </span>
         </div>
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-1.5 rounded-full overflow-hidden"
+          style={{ background: `${sevStyle.color}22` }}
+        >
           <div
-            className="h-full rounded-full transition-all"
+            className="h-full rounded-full"
             style={{
-              width: `${((ticket.severity || 0) / 10) * 100}%`,
+              width:           `${(sev / 10) * 100}%`,
               backgroundColor: sevStyle.color,
+              transition:      "width 0.4s ease",
             }}
           />
         </div>
       </div>
 
-      {/* Fix suggestion preview */}
+      {/* ── Fix suggestion ── */}
       {ticket.fix_suggestion && (
-        <p className="text-[11px] text-gray-400 italic line-clamp-2 mb-3 border-l-2 border-gray-200 pl-2">
+        <p
+          className="text-[11px] italic line-clamp-2 mb-3 pl-2"
+          style={{
+            color:       `${sevStyle.color}bb`,
+            borderLeft:  `2px solid ${sevStyle.color}44`,
+            borderRadius: 0,
+          }}
+        >
           {ticket.fix_suggestion}
         </p>
       )}
 
-      {/* Date */}
-      <p className="text-[10px] text-gray-400">
+      {/* ── Date ── */}
+      <p className="text-[10px]" style={{ color: `${sevStyle.color}99` }}>
         {formatDate(ticket.created_at)}
       </p>
     </div>
