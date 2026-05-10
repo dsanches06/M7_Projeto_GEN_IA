@@ -71,25 +71,19 @@ const autoGenerateSummary = async (conversationId) => {
   }
 };
 
-// ── Upsert assignment (create or replace) ────────────────────────────────────
-/**
- * Tenta criar uma nova atribuição.
- * Se a tarefa já estiver atribuída, remove a antiga e cria uma nova.
- * Retorna o resultado enriquecido com nomes para exibição no frontend.
- */
+// ── Upsert assignment ─────────────────────────────────────────────────────────
 const upsertAssignment = async (task_id, user_id) => {
   const taskIdNum = Number(task_id);
   const userIdNum = Number(user_id);
 
   if (!taskIdNum || !userIdNum) {
-    throw new Error(`IDs inválidos para atribuição: task_id=${task_id}, user_id=${user_id}`);
+    throw new Error(`IDs inválidos: task_id=${task_id}, user_id=${user_id}`);
   }
 
   let assignment;
   try {
     assignment = await createTaskAssignee({ task_id: taskIdNum, user_id: userIdNum });
   } catch (err) {
-    // Tarefa já atribuída → substituir
     if (err.message?.includes("já está atribuída")) {
       const { db } = await import("../db.js");
       await db.query("DELETE FROM task_assignees WHERE task_id = ?", [taskIdNum]);
@@ -99,7 +93,6 @@ const upsertAssignment = async (task_id, user_id) => {
     }
   }
 
-  // Enriquecer com nomes para o frontend
   try {
     const [user, task] = await Promise.all([
       getUserById(userIdNum),
@@ -116,42 +109,34 @@ const upsertAssignment = async (task_id, user_id) => {
 };
 
 // ── Persist function result ───────────────────────────────────────────────────
-/**
- * Persiste a entidade devolvida pela function call do modelo.
- * Devolve { task, notification, ticket, assignment, tags, taskUpdated } — apenas um preenchido.
- */
 const persistFunctionResult = async (functionResult) => {
   let task         = null;
   let notification = null;
   let ticket       = null;
   let assignment   = null;
-  let tags         = null;
+  let tagAssignment = null;
   let taskUpdated  = null;
 
-  if (!functionResult?.result) return { task, notification, ticket, assignment, tags, taskUpdated };
+  if (!functionResult?.result) return { task, notification, ticket, assignment, tagAssignment, taskUpdated };
 
   const { functionName, result } = functionResult;
 
   try {
-    // ── Criar tarefa ─────────────────────────────────────────────────────
+    // ── Criar tarefa ──────────────────────────────────────────────────────
     if (functionName === "set_create_task_values") {
       console.log("📝 Criando tarefa:", result);
       task = await createTask(result);
       console.log("✅ Tarefa criada:", task);
 
-      // Atribuição automática quando user_id foi passado junto com a criação
       if (result.user_id && task?.id) {
-        console.log(`🔗 Auto-atribuindo tarefa #${task.id} ao utilizador #${result.user_id}`);
         try {
           assignment = await upsertAssignment(task.id, result.user_id);
-          console.log("✅ Atribuição automática criada:", assignment);
         } catch (assignErr) {
-          // Não bloqueia — tarefa já foi criada com sucesso
           console.warn("[chatBotController] Auto-atribuição falhou:", assignErr.message);
         }
       }
 
-    // ── Atribuir tarefa existente ────────────────────────────────────────
+    // ── Atribuir tarefa existente ─────────────────────────────────────────
     } else if (functionName === "set_assign_task_values") {
       console.log("🔗 Atribuindo tarefa:", result);
       assignment = await upsertAssignment(result.task_id, result.user_id);
@@ -175,13 +160,16 @@ const persistFunctionResult = async (functionResult) => {
       }
       console.log("✅ Status atualizado:", taskUpdated);
 
-    // ── Adicionar etiquetas a tarefa existente ─────────────────────────────
+    // ── Adicionar etiquetas ───────────────────────────────────────────────
     } else if (functionName === "set_tag_task_values") {
       console.log("🏷️ Adicionando etiquetas:", result);
+
+      let rawTags = [];
       if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0) {
-        tags = await createTagTasks(result);
+        rawTags = await createTagTasks(result);
       } else if (result.tag_id) {
-        tags = [await createTagTask(result)];
+        const t = await createTagTask(result);
+        rawTags = [t];
       }
 
       // Enrich with tag details for the preview card
@@ -193,10 +181,10 @@ const persistFunctionResult = async (functionResult) => {
       const tagMap = Object.fromEntries(allTags.map(t => [t.id, t]));
       const taskDetails = await getTaskById(result.task_id).catch(() => null);
 
-      tags = {
+      tagAssignment = {
         task_id:    result.task_id,
         task_title: taskDetails?.title || `Tarefa #${result.task_id}`,
-        added: (tags || []).map(rt => {
+        added: rawTags.map(rt => {
           const tag = tagMap[rt.tag_id] || {};
           return {
             tag_id:    rt.tag_id,
@@ -206,15 +194,15 @@ const persistFunctionResult = async (functionResult) => {
         }),
         skipped: [],
       };
-      console.log("✅ Etiquetas adicionadas:", tags);
+      console.log("✅ Etiquetas adicionadas:", tagAssignment);
 
-    // ── Criar notificação ────────────────────────────────────────────────
+    // ── Criar notificação ─────────────────────────────────────────────────
     } else if (functionName === "set_create_notification_values") {
       console.log("📬 Criando notificação:", result);
       notification = await createNotification(result);
       console.log("✅ Notificação criada:", notification);
 
-    // ── Criar ticket ─────────────────────────────────────────────────────
+    // ── Criar ticket ──────────────────────────────────────────────────────
     } else if (functionName === "set_create_ticket_values") {
       console.log("🎟️ Criando ticket:", result);
       ticket = await createTicket(result);
@@ -227,13 +215,10 @@ const persistFunctionResult = async (functionResult) => {
     console.error(`❌ Erro ao persistir ${functionName}:`, err.message);
   }
 
-  return { task, notification, ticket, assignment, tags, taskUpdated };
+  return { task, notification, ticket, assignment, tagAssignment, taskUpdated };
 };
 
 // ── Stream endpoint ───────────────────────────────────────────────────────────
-/**
- * POST /chat/message/stream
- */
 export const sendMessageToBotStream = async (req, res) => {
   try {
     const { message, conversationHistory, conversationId } = req.body;
@@ -294,7 +279,7 @@ export const sendMessageToBotStream = async (req, res) => {
     let notification = null;
     let ticket       = null;
     let assignment   = null;
-    let tags         = null;
+    let tagAssignment = null;
     let taskUpdated  = null;
 
     if (result.success !== false) {
@@ -306,7 +291,8 @@ export const sendMessageToBotStream = async (req, res) => {
 
       const firstResult = result.functionResults?.[0];
       if (firstResult) {
-        ({ task, notification, ticket, assignment, tags, taskUpdated } = await persistFunctionResult(firstResult));
+        ({ task, notification, ticket, assignment, tagAssignment, taskUpdated } =
+          await persistFunctionResult(firstResult));
       }
 
       setImmediate(() => autoGenerateSummary(actualConversationId));
@@ -321,7 +307,7 @@ export const sendMessageToBotStream = async (req, res) => {
       notification,
       ticket,
       assignment,
-      tags,
+      tagAssignment,
       taskUpdated,
     });
 
@@ -334,9 +320,6 @@ export const sendMessageToBotStream = async (req, res) => {
 };
 
 // ── Non-stream endpoint ───────────────────────────────────────────────────────
-/**
- * POST /chat/conversation/:conversationId/message
- */
 export const sendMessageToConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
@@ -372,9 +355,10 @@ export const sendMessageToConversation = async (req, res) => {
       }
 
       setImmediate(() => autoGenerateSummary(Number(conversationId)));
+      return res.status(200).json({ ...result, conversationId, ...persisted });
     }
 
-    res.status(result.success ? 200 : 400).json({ ...result, conversationId, ...persisted });
+    res.status(result.success ? 200 : 400).json({ ...result, conversationId });
   } catch (error) {
     res.status(500).json({
       success: false,

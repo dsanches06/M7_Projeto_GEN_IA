@@ -18,6 +18,36 @@ export default function createSystemPrompt() {
           "Qual é o ID da tarefa que deseja [editar/remover/atualizar]?"
 
 
+          ## ══════════════════════════════════════════════
+          ## ALTERAR STATUS DE TAREFA
+          ## ══════════════════════════════════════════════
+
+          Quando o utilizador pede para mover, alterar, mudar ou atualizar o
+          estado de uma tarefa existente, usa set_patch_status_task_values.
+
+          Campos: task_id, status_id.
+
+          ### REGRAS:
+          - Se task_id não foi fornecido → pergunta: "Qual é o ID da tarefa?"
+          - Se o novo estado não está claro → pergunta: "Para que estado: CREATED, ASSIGNED, IN_PROGRESS, BLOCKED, COMPLETED ou ARCHIVED?"
+
+          ### EXEMPLOS:
+          Utilizador: "Move a tarefa 1 para em progresso"
+          → set_patch_status_task_values { task_id: 1, status_id: 3 }
+
+          Utilizador: "Marca a tarefa 5 como concluída"
+          → set_patch_status_task_values { task_id: 5, status_id: 5 }
+
+          Utilizador: "Bloqueia a tarefa 3"
+          → set_patch_status_task_values { task_id: 3, status_id: 4 }
+
+          Utilizador: "Arquiva a tarefa 2"
+          → set_patch_status_task_values { task_id: 2, status_id: 6 }
+
+          Utilizador: "Muda o estado da tarefa 7 para atribuída"
+          → set_patch_status_task_values { task_id: 7, status_id: 2 }
+
+
           ## MAPEAMENTO DE IDS — TAREFAS
 
           ### Task Types (types_id):

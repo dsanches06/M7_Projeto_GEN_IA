@@ -1,55 +1,52 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { ChatUI, PageSection } from "@/components";
-import MainLayout from "@/pages/MainLayout";
+import MainLayout from "@/components/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import * as taskService from "@/services/taskService";
 import { InfoBanner } from "./components/ui/InfoBanner";
 import TrophySpin from "./components/ui/TrophySpin";
 
-const Dashboard = lazy(() => import("@/pages/Dashboard").then((module) => ({ default: module.Dashboard })));
-const UsersPage = lazy(() => import("@/components/users/UsersPage"));
-const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
+const Dashboard    = lazy(() => import("@/components/Dashboard").then((m) => ({ default: m.Dashboard })));
+const UsersPage    = lazy(() => import("@/components/users/UsersPage"));
+const TicketsPage  = lazy(() => import("@/pages/TicketsPage"));
 
-// ── Inner app: inside BrowserRouter so useNavigate works ────────────────────
+// ── Inner app ─────────────────────────────────────────────────────────────────
 function AppContent() {
   const navigate = useNavigate();
-  const [showChat,   setShowChat]   = useState(false);
-  const [tasks,        setTasks]        = useState([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [tasksError,   setTasksError]   = useState(null);
-  const [banner,       setBanner]       = useState(null);
+  const [showChat,      setShowChat]      = useState(false);
+  const [tasks,         setTasks]         = useState([]);
+  const [tasksLoading,  setTasksLoading]  = useState(true);
+  const [tasksError,    setTasksError]    = useState(null);
+  const [banner,        setBanner]        = useState(null);
 
   const loadTasks = async () => {
     try {
       setTasksLoading(true);
       setTasksError(null);
-
       const data = await taskService.fetchTasks();
       setTasks(data);
     } catch (err) {
-      const message = err?.message || "Erro ao carregar tarefas";
-      setTasksError(message);
+      setTasksError(err?.message || "Erro ao carregar tarefas");
     } finally {
       setTasksLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  useEffect(() => { loadTasks(); }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  /** Called when bot creates a new task */
   const handleTaskCreated = async (taskData) => {
     try {
       if (taskData.id) {
         const t = taskService.transformTaskForDisplay(taskData);
-        setTasks(prev => [t, ...prev]);
+        setTasks((prev) => [t, ...prev]);
         setBanner({ message: "✅ Tarefa criada com sucesso!", type: "success" });
       } else {
         const t = await taskService.createTask(taskData);
-        setTasks(prev => [taskService.transformTaskForDisplay(t), ...prev]);
+        setTasks((prev) => [taskService.transformTaskForDisplay(t), ...prev]);
         setBanner({ message: "✅ Tarefa criada no backend!", type: "success" });
       }
     } catch (err) {
@@ -68,10 +65,7 @@ function AppContent() {
     setBanner({ message: `🔄 Tarefa #${updatedTask.id} movida para "${statusLabel}"`, type: "success" });
   };
 
-  /**
-   * Called by ChatUI when the bot successfully creates a ticket.
-   * Closes the chat panel and navigates to /tickets.
-   */
+  /** Called by bot when it creates a ticket – navigate to tickets page */
   const handleTicketCreated = () => {
     setShowChat(false);
     navigate("/tickets");
@@ -87,8 +81,7 @@ function AppContent() {
               <p className="text-sm text-red-100/90">{tasksError}</p>
             </div>
             <button
-              type="button"
-              onClick={loadTasks}
+              type="button" onClick={loadTasks}
               className="inline-flex items-center justify-center rounded-full border border-red-200/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
             >
               Recarregar tarefas
@@ -115,7 +108,7 @@ function AppContent() {
             />
             <Route
               path="projetos"
-              element={<PageSection title="Projetos" description="Gerencie seus projetos e mantenha o trabalho organizado." />}
+              element={<PageSection title="Projetos" description="Gerencie seus projetos." />}
             />
             <Route path="utilizadores" element={<UsersPage />} />
             <Route path="tickets"      element={<TicketsPage />} />
@@ -153,15 +146,12 @@ function AppContent() {
   );
 }
 
-// ── Root app ─────────────────────────────────────────────────────────────────
+// ── Root app ──────────────────────────────────────────────────────────────────
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
         <AppContent />
       </BrowserRouter>

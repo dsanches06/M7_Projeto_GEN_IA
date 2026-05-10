@@ -89,14 +89,13 @@ export async function fetchTasks() {
   }));
 }
 
+// ── Create task ───────────────────────────────────────────────────────────────
 export async function createTask(taskData) {
   const payload = normalizeTaskPayload(taskData);
   const response = await fetch(`${BACKEND_URL}/tasks`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(payload),
   });
 
   if (!response.ok) {
