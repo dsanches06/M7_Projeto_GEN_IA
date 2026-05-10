@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
+
 const { Pool } = pkg;
 dotenv.config();
 
@@ -31,6 +32,17 @@ async function runSQLFile(filePath) {
   }
 }
 
+async function resetNeonSchema() {
+  console.log('🧹 Resetando schema public no Neon...');
+  try {
+    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;');
+    console.log('✅ Schema public resetado com sucesso');
+  } catch (error) {
+    console.error('❌ Erro ao resetar schema public:', error.message);
+    throw error;
+  }
+}
+
 async function initDatabase() {
   console.log('🔍 Verificando DATABASE_URL...');
   if (!process.env.DATABASE_URL) {
@@ -43,6 +55,9 @@ async function initDatabase() {
     console.log('⏳ Fazendo query de teste...');
     await pool.query('SELECT NOW()');
     console.log('✅ Conectado ao Neon com sucesso!');
+
+    console.log('🧹 Resetando o banco Neon antes de aplicar o schema...');
+    await resetNeonSchema();
 
     console.log('📄 Preparando para executar schema...');
     await runSQLFile(join(__dirname, 'database-init-postgres.sql'));
