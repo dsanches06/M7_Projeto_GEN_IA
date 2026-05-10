@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import NotificationButton from "./notifications/NotificationButton.jsx";
-import NotificationBox from "./notifications/NotificationBox.jsx";
+import { ThemeToggle } from "@/components/ui/ThemeToggle.jsx";
+import NotificationButton from "../notifications/NotificationButton.jsx";
+import NotificationBox from "../notifications/NotificationBox.jsx";
 import { useState } from "react";
 
 export function Header({ onChatOpen }) {

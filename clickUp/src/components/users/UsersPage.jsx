@@ -215,6 +215,7 @@ export default function UsersPage() {
           })}
         </div>
 
+{       /* Filters and search */}
         <div className="ml-auto flex items-center gap-2">
           {showSearch && (
             <input

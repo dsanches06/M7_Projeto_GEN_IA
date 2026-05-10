@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useTheme } from "../../../context/ThemeContext.jsx";
-import { notificationService } from "../../../services/notificationService.js";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import { notificationService } from "../../services/notificationService.js";
 
 const NotificationItem = ({ notification, onRefreshBadge }) => {
   const { theme } = useTheme();

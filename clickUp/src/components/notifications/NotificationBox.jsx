@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import NotificationItem from './NotificationItem.jsx';
-import { notificationService } from '../../../services/notificationService.js';
-import { useTheme } from "../../../context/ThemeContext.jsx";
+import { notificationService } from '../../services/notificationService.js';
+import { useTheme } from "../../context/ThemeContext.jsx";
 
 const NotificationBox = ({ user, isOpen, onClose, onRefreshBadge }) => {
   const [notifications, setNotifications] = useState([]);

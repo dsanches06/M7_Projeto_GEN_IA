@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TaskCard } from '@/components/TaskCard';
+import { TaskCard } from '@/components/tasks/TaskCard';
 import totalIcon from "../assets/tarefa.png";
 import progressIcon from "../assets/projeto_on_going.png";
 import completedIcon from "../assets/tarefa-concluida.png";

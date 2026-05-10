@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { notificationService } from "../../../services/notificationService.js";
-import { useTheme } from "../../../context/ThemeContext.jsx";
+import { notificationService } from "../../services/notificationService.js";
+import { useTheme } from "../../context/ThemeContext.jsx";
 import NotificationBox from "./NotificationBox.jsx";
 
 const NotificationButton = ({ user }) => {

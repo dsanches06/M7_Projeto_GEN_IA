@@ -1,13 +1,13 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { ChatUI, PageSection } from "@/components";
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "@/pages/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import * as taskService from "@/services/taskService";
 import { InfoBanner } from "./components/ui/InfoBanner";
 import TrophySpin from "./components/ui/TrophySpin";
 
-const Dashboard = lazy(() => import("@/components/Dashboard").then((module) => ({ default: module.Dashboard })));
+const Dashboard = lazy(() => import("@/pages/Dashboard").then((module) => ({ default: module.Dashboard })));
 const UsersPage = lazy(() => import("@/components/users/UsersPage"));
 const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
