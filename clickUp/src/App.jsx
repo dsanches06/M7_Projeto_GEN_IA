@@ -1,24 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { Dashboard, ChatUI, PageSection } from "@/components";
+import { ChatUI, PageSection } from "@/components";
 import MainLayout from "@/components/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import * as taskService from "@/services/taskService";
 import { InfoBanner } from "./components/ui/InfoBanner";
-import UsersPage from "@/components/users/UsersPage";
-import TicketsPage from "@/pages/TicketsPage";
+import TrophySpin from "./components/ui/TrophySpin";
+
+const Dashboard = lazy(() => import("@/components/Dashboard").then((module) => ({ default: module.Dashboard })));
+const UsersPage = lazy(() => import("@/components/users/UsersPage"));
+const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
 // ── Inner app: inside BrowserRouter so useNavigate works ────────────────────
 function AppContent() {
   const navigate = useNavigate();
-  const [showChat,  setShowChat]  = useState(false);
-  const [tasks,     setTasks]     = useState([]);
-  const [banner,    setBanner]    = useState(null);
+  const [showChat,   setShowChat]   = useState(false);
+  const [tasks,        setTasks]        = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError,   setTasksError]   = useState(null);
+  const [banner,       setBanner]       = useState(null);
+
+  const loadTasks = async () => {
+    try {
+      setTasksLoading(true);
+      setTasksError(null);
+
+      const data = await taskService.fetchTasks();
+      setTasks(data);
+    } catch (err) {
+      const message = err?.message || "Erro ao carregar tarefas";
+      setTasksError(message);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
 
   useEffect(() => {
-    taskService.fetchTasks()
-      .then(setTasks)
-      .catch(() => setBanner({ message: "Erro ao carregar tarefas", type: "error" }));
+    loadTasks();
   }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -50,25 +68,53 @@ function AppContent() {
 
   return (
     <>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route
-            path="dashboard"
-            element={<Dashboard tasks={tasks} onTasksUpdate={setTasks} />}
-          />
-          <Route
-            path="projetos"
-            element={<PageSection title="Projetos" description="Gerencie seus projetos e mantenha o trabalho organizado." />}
-          />
-          <Route path="utilizadores" element={<UsersPage />} />
-          <Route path="tickets"      element={<TicketsPage />} />
-          <Route
-            path="*"
-            element={<PageSection title="Página não encontrada" description="Use o menu para voltar ao dashboard." />}
-          />
-        </Route>
-      </Routes>
+      {tasksError && (
+        <div className="mx-auto mb-5 max-w-6xl rounded-3xl border border-red-500/20 bg-red-600/10 p-4 text-red-100 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <strong className="block text-sm font-semibold">Erro ao carregar o dashboard</strong>
+              <p className="text-sm text-red-100/90">{tasksError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={loadTasks}
+              className="inline-flex items-center justify-center rounded-full border border-red-200/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
+            >
+              Recarregar tarefas
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Suspense fallback={<TrophySpin message="Carregando a página..." />}>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route
+              path="dashboard"
+              element={
+                <Dashboard
+                  tasks={tasks}
+                  onTasksUpdate={setTasks}
+                  tasksLoading={tasksLoading}
+                  tasksError={tasksError}
+                  onRetryLoadTasks={loadTasks}
+                />
+              }
+            />
+            <Route
+              path="projetos"
+              element={<PageSection title="Projetos" description="Gerencie seus projetos e mantenha o trabalho organizado." />}
+            />
+            <Route path="utilizadores" element={<UsersPage />} />
+            <Route path="tickets"      element={<TicketsPage />} />
+            <Route
+              path="*"
+              element={<PageSection title="Página não encontrada" description="Use o menu para voltar ao dashboard." />}
+            />
+          </Route>
+        </Routes>
+      </Suspense>
 
       {/* Banner */}
       {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
