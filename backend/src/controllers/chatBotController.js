@@ -13,10 +13,13 @@ import {
   getConversationById,
 } from "../services/conversationService.js";
 
-import { createTask }         from "../services/taskService.js";
-import { createNotification } from "../services/notificationService.js";
-import { createTicket }       from "../services/ticketService.js";
-import { upsertSummary }      from "../services/summaryService.js";
+import { createTask }           from "../services/taskService.js";
+import { createNotification }   from "../services/notificationService.js";
+import { createTicket }         from "../services/ticketService.js";
+import { upsertSummary }        from "../services/summaryService.js";
+import { getUserById }          from "../services/userService.js";
+import { getTaskById }          from "../services/taskService.js";
+import { createTaskAssignee }   from "../services/taskAssigneesService.js";
 
 import { processChatMessage as processSummaryMessage } from "../genAI/summaries/chat_processor_summary.js";
 
@@ -29,10 +32,7 @@ const buildConversationHistory = (historyRows) =>
     content: row.content,
   }));
 
-/**
- * Persist an auto-generated summary in the background (fire-and-forget).
- * Never blocks the SSE response.
- */
+// ── Auto-summary (fire-and-forget) ───────────────────────────────────────────
 const autoGenerateSummary = async (conversationId) => {
   try {
     const historyRows = await getChatHistoryByConversationId(conversationId);
@@ -40,10 +40,7 @@ const autoGenerateSummary = async (conversationId) => {
 
     const historyText = historyRows
       .slice(-12)
-      .map(
-        (r) =>
-          `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`
-      )
+      .map((r) => `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`)
       .join("\n");
 
     const prompt = `Resume esta conversa de forma concisa (conversation_id: ${conversationId}). Histórico:\n${historyText}`;
@@ -68,35 +65,102 @@ const autoGenerateSummary = async (conversationId) => {
   }
 };
 
+// ── Upsert assignment (create or replace) ────────────────────────────────────
 /**
- * Persist the entity returned by the model's function call.
- *
- * Returns { task, notification, ticket } — exactly one field populated,
- * the other two null.  All three are forwarded in the SSE done event so
- * the frontend can surface the right UI feedback without hitting the DB again.
+ * Tenta criar uma nova atribuição.
+ * Se a tarefa já estiver atribuída, remove a antiga e cria uma nova.
+ * Retorna o resultado enriquecido com nomes para exibição no frontend.
+ */
+const upsertAssignment = async (task_id, user_id) => {
+  const taskIdNum = Number(task_id);
+  const userIdNum = Number(user_id);
+
+  if (!taskIdNum || !userIdNum) {
+    throw new Error(`IDs inválidos para atribuição: task_id=${task_id}, user_id=${user_id}`);
+  }
+
+  let assignment;
+  try {
+    assignment = await createTaskAssignee({ task_id: taskIdNum, user_id: userIdNum });
+  } catch (err) {
+    // Tarefa já atribuída → substituir
+    if (err.message?.includes("já está atribuída")) {
+      const { db } = await import("../db.js");
+      await db.query("DELETE FROM task_assignees WHERE task_id = ?", [taskIdNum]);
+      assignment = await createTaskAssignee({ task_id: taskIdNum, user_id: userIdNum });
+    } else {
+      throw err;
+    }
+  }
+
+  // Enriquecer com nomes para o frontend
+  try {
+    const [user, task] = await Promise.all([
+      getUserById(userIdNum),
+      getTaskById(taskIdNum),
+    ]);
+    return {
+      ...assignment,
+      user_name:  user?.name  || `Utilizador #${userIdNum}`,
+      task_title: task?.title || `Tarefa #${taskIdNum}`,
+    };
+  } catch {
+    return assignment;
+  }
+};
+
+// ── Persist function result ───────────────────────────────────────────────────
+/**
+ * Persiste a entidade devolvida pela function call do modelo.
+ * Devolve { task, notification, ticket, assignment } — apenas um preenchido.
  */
 const persistFunctionResult = async (functionResult) => {
   let task         = null;
   let notification = null;
   let ticket       = null;
+  let assignment   = null;
 
-  if (!functionResult?.result) return { task, notification, ticket };
+  if (!functionResult?.result) return { task, notification, ticket, assignment };
 
   const { functionName, result } = functionResult;
 
   try {
+    // ── Criar tarefa ─────────────────────────────────────────────────────
     if (functionName === "set_create_task_values") {
       console.log("📝 Criando tarefa:", result);
       task = await createTask(result);
       console.log("✅ Tarefa criada:", task);
+
+      // Atribuição automática quando user_id foi passado junto com a criação
+      if (result.user_id && task?.id) {
+        console.log(`🔗 Auto-atribuindo tarefa #${task.id} ao utilizador #${result.user_id}`);
+        try {
+          assignment = await upsertAssignment(task.id, result.user_id);
+          console.log("✅ Atribuição automática criada:", assignment);
+        } catch (assignErr) {
+          // Não bloqueia — tarefa já foi criada com sucesso
+          console.warn("[chatBotController] Auto-atribuição falhou:", assignErr.message);
+        }
+      }
+
+    // ── Atribuir tarefa existente ────────────────────────────────────────
+    } else if (functionName === "set_assign_task_values") {
+      console.log("🔗 Atribuindo tarefa:", result);
+      assignment = await upsertAssignment(result.task_id, result.user_id);
+      console.log("✅ Atribuição criada:", assignment);
+
+    // ── Criar notificação ────────────────────────────────────────────────
     } else if (functionName === "set_create_notification_values") {
       console.log("📬 Criando notificação:", result);
       notification = await createNotification(result);
       console.log("✅ Notificação criada:", notification);
+
+    // ── Criar ticket ─────────────────────────────────────────────────────
     } else if (functionName === "set_create_ticket_values") {
       console.log("🎟️ Criando ticket:", result);
       ticket = await createTicket(result);
       console.log("✅ Ticket criado:", ticket);
+
     } else {
       console.warn("[chatBotController] Função desconhecida:", functionName);
     }
@@ -104,13 +168,12 @@ const persistFunctionResult = async (functionResult) => {
     console.error(`❌ Erro ao persistir ${functionName}:`, err.message);
   }
 
-  return { task, notification, ticket };
+  return { task, notification, ticket, assignment };
 };
 
+// ── Stream endpoint ───────────────────────────────────────────────────────────
 /**
  * POST /chat/message/stream
- * Envia uma mensagem e responde em SSE.  Usa o UnifiedChatProcessor para que
- * a IA possa criar tarefas, notificações e tickets a partir do mesmo endpoint.
  */
 export const sendMessageToBotStream = async (req, res) => {
   try {
@@ -121,12 +184,12 @@ export const sendMessageToBotStream = async (req, res) => {
     }
 
     const userMessage = message.trim();
-    let actualConversationId          = conversationId ? Number(conversationId) : null;
-    let resolvedConversationHistory   = conversationHistory || [];
+    let actualConversationId        = conversationId ? Number(conversationId) : null;
+    let resolvedConversationHistory = conversationHistory || [];
 
     if (actualConversationId) {
-      const existingConversation = await getConversationById(actualConversationId);
-      if (!existingConversation) {
+      const existing = await getConversationById(actualConversationId);
+      if (!existing) {
         return res.status(404).json({ success: false, error: "Conversation não encontrada" });
       }
       if (!resolvedConversationHistory.length) {
@@ -134,10 +197,9 @@ export const sendMessageToBotStream = async (req, res) => {
         resolvedConversationHistory = buildConversationHistory(historyRows);
       }
     } else {
-      const title =
-        userMessage.length > 50 ? userMessage.substring(0, 47) + "..." : userMessage;
-      const newConversation    = await createConversation({ title });
-      actualConversationId     = newConversation.id;
+      const title = userMessage.length > 50 ? userMessage.substring(0, 47) + "..." : userMessage;
+      const newConv = await createConversation({ title });
+      actualConversationId = newConv.id;
     }
 
     await createChatHistory({
@@ -172,6 +234,7 @@ export const sendMessageToBotStream = async (req, res) => {
     let task         = null;
     let notification = null;
     let ticket       = null;
+    let assignment   = null;
 
     if (result.success !== false) {
       await createChatHistory({
@@ -182,7 +245,7 @@ export const sendMessageToBotStream = async (req, res) => {
 
       const firstResult = result.functionResults?.[0];
       if (firstResult) {
-        ({ task, notification, ticket } = await persistFunctionResult(firstResult));
+        ({ task, notification, ticket, assignment } = await persistFunctionResult(firstResult));
       }
 
       setImmediate(() => autoGenerateSummary(actualConversationId));
@@ -193,10 +256,10 @@ export const sendMessageToBotStream = async (req, res) => {
       message:         assistantText,
       conversationId:  actualConversationId,
       functionResults: result.functionResults || [],
-      // exactly one of the three will be non-null when a function was called
       task,
       notification,
       ticket,
+      assignment,       // ← novo
     });
 
     res.end();
@@ -207,9 +270,9 @@ export const sendMessageToBotStream = async (req, res) => {
   }
 };
 
+// ── Non-stream endpoint ───────────────────────────────────────────────────────
 /**
  * POST /chat/conversation/:conversationId/message
- * Envia uma mensagem numa conversa específica (modo não-stream).
  */
 export const sendMessageToConversation = async (req, res) => {
   try {

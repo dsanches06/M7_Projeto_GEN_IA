@@ -6,6 +6,11 @@ import {
 } from "../../functions/tasks/create_task.js";
 
 import {
+  functionDeclarations as assignDeclarations,
+  setAssignTaskValues,
+} from "../../functions/tasks/assign_task.js";
+
+import {
   functionDeclarations as notificationDeclarations,
   setCreateNotificationValues,
 } from "../../functions/notifications/create_notification.js";
@@ -18,27 +23,31 @@ import {
 /**
  * UnifiedChatProcessor
  *
- * Combines all three function declaration sets so the model can decide,
- * based on user intent, which entity to create:
- *   - set_create_task_values        → persisted as a task row
- *   - set_create_notification_values → persisted as a notification row
- *   - set_create_ticket_values       → persisted as a ticket row
+ * Reúne todas as function declarations para que o modelo possa decidir,
+ * com base na intenção do utilizador, qual entidade criar ou operar:
  *
- * The controller (chatBotController.js) inspects result.functionResults[0].functionName
- * and routes to the correct service method.
+ *   - set_create_task_values        → cria tarefa (+ atribuição automática se user_id presente)
+ *   - set_assign_task_values        → atribui tarefa existente a utilizador
+ *   - set_create_notification_values → cria notificação
+ *   - set_create_ticket_values       → cria ticket
+ *
+ * O controller (chatBotController.js) inspecciona result.functionResults[0].functionName
+ * e encaminha para o service correcto.
  */
 class ChatProcessor extends BaseChatProcessor {
   constructor() {
     super({
       toolConfig: [
         ...taskDeclarations,
+        ...assignDeclarations,
         ...notificationDeclarations,
         ...ticketDeclarations,
       ],
       functionHandlers: {
-        set_create_task_values: setCreateTaskValues,
+        set_create_task_values:         setCreateTaskValues,
+        set_assign_task_values:         setAssignTaskValues,
         set_create_notification_values: setCreateNotificationValues,
-        set_create_ticket_values: setCreateTicketValues,
+        set_create_ticket_values:       setCreateTicketValues,
       },
     });
   }

@@ -5,7 +5,6 @@
 import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/CRUD/BaseFunction.js";
 
-// Define a função em que o modelo pode chamar para controlar as tarefas
 class CreateTaskFunction extends BaseFunction {
   constructor() {
     super({
@@ -18,59 +17,56 @@ class CreateTaskFunction extends BaseFunction {
           type: Type.STRING,
           description: "Título da tarefa",
         },
-
         description: {
           type: Type.STRING,
           description: "Descrição detalhada da tarefa",
         },
-
         types_id: {
           type: Type.INTEGER,
           description: "ID do tipo da tarefa",
         },
-
         status_id: {
           type: Type.INTEGER,
           description: "ID do status da tarefa",
         },
-
         priority_id: {
           type: Type.INTEGER,
           description: "ID da prioridade",
         },
-
         category_id: {
           type: Type.INTEGER,
           description: "ID da categoria",
         },
-
         project_id: {
           type: Type.INTEGER,
           description: "ID do projeto",
         },
-
         created_at: {
           type: Type.STRING,
           format: "date-time",
           description: "Data de criação",
         },
-
         due_date: {
           type: Type.STRING,
           format: "date-time",
           description: "Data limite",
         },
-
         completed_at: {
           type: Type.STRING,
           format: "date-time",
           description: "Data de conclusão",
         },
-
         estimated_hours: {
           type: Type.NUMBER,
           format: "decimal",
           description: "Horas estimadas",
+        },
+        // ── Atribuição opcional ─────────────────────────────────────────
+        user_id: {
+          type: Type.INTEGER,
+          description:
+            "ID do utilizador a quem atribuir a tarefa imediatamente após a criação. " +
+            "Opcional — usa apenas quando o utilizador pede criação E atribuição na mesma mensagem.",
         },
       },
     });
@@ -80,7 +76,6 @@ class CreateTaskFunction extends BaseFunction {
   // POLIMORFISMO
   // ======================================================
 
-  // Mapeia os argumentos recebidos para os campos esperados pela função
   mapValues(args = {}) {
     const {
       title,
@@ -94,64 +89,47 @@ class CreateTaskFunction extends BaseFunction {
       due_date,
       completed_at,
       estimated_hours,
+      user_id,
     } = args;
 
-    // Retorna um objeto com os valores mapeados, 
-    // usando métodos auxiliares para garantir o formato correto
+    // user_id: preserva null se não fornecido (não usa parseNumber que retorna 0)
+    const resolvedUserId =
+      user_id != null
+        ? this.parseNumber(user_id, null)
+        : args.userId != null
+        ? this.parseNumber(args.userId, null)
+        : null;
+
     return {
       title: this.parseString(title),
-
       description: this.parseString(description),
 
       types_id: this.parseNumber(
         types_id,
-        this.parseNumber(args.type_id, this.parseNumber(args.typeId, 1)),
+        this.parseNumber(args.type_id, this.parseNumber(args.typeId, 1))
       ),
-
-      status_id: this.parseNumber(
-        status_id,
-        this.parseNumber(args.statusId, 1),
-      ),
-
-      priority_id: this.parseNumber(
-        priority_id,
-        this.parseNumber(args.priorityId, 1),
-      ),
-
-      category_id: this.parseNumber(
-        category_id,
-        this.parseNumber(args.categoryId, 1),
-      ),
-
-      project_id: this.parseNumber(
-        project_id,
-        this.parseNumber(args.projectId, 1),
-      ),
+      status_id: this.parseNumber(status_id, this.parseNumber(args.statusId, 1)),
+      priority_id: this.parseNumber(priority_id, this.parseNumber(args.priorityId, 1)),
+      category_id: this.parseNumber(category_id, this.parseNumber(args.categoryId, 1)),
+      project_id: this.parseNumber(project_id, this.parseNumber(args.projectId, 1)),
 
       created_at: created_at || args.createdAt || this.currentDate(),
-
       due_date: due_date || args.dueDate || null,
-
       completed_at: completed_at || args.completedAt || null,
 
       estimated_hours: this.parseNumber(
         estimated_hours,
-        this.parseNumber(args.estimatedHours, 0),
+        this.parseNumber(args.estimatedHours, 0)
       ),
+
+      // Passado para o controller tratar automaticamente a atribuição
+      user_id: resolvedUserId,
     };
   }
 }
 
-//singleton para exportar a função e evitar múltiplas instâncias
 const createTaskFunction = new CreateTaskFunction();
 
-// Exporta a declaração da função para que o modelo possa chamá-la, e a função de execução para ser usada na lógica de criação da tarefa
-export const setTaskValuesFunctionDeclaration =
-  createTaskFunction.getDeclaration();
-
-// Lista de declarações de funções disponíveis para o modelo
+export const setTaskValuesFunctionDeclaration = createTaskFunction.getDeclaration();
 export const functionDeclarations = [setTaskValuesFunctionDeclaration];
-
-// Função que será chamada pelo modelo para criar a tarefa, recebe os valores definidos na função acima e retorna um objeto com esses valores
-export const setCreateTaskValues =
-  createTaskFunction.execute.bind(createTaskFunction);
+export const setCreateTaskValues = createTaskFunction.execute.bind(createTaskFunction);
