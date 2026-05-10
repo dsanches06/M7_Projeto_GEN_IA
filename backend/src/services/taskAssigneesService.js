@@ -27,11 +27,11 @@ export const createTaskAssignee = async (data) => {
   }
 
   const [result] = await db.query(
-    "INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)",
+    "INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?) RETURNING id",
     [data.task_id, data.user_id]
   );
 
-  return mapTaskAssigneeDTOResponse({ id: result.insertId, ...data });
+  return mapTaskAssigneeDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...data });
 };
 
 export const updateTaskAssignee = async (id, data) => {

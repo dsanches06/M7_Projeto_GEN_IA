@@ -21,10 +21,10 @@ export const roleNameExists = async (name, excludeId = null) => {
 
 export const createRole = async (data) => {
   const [result] = await db.query(
-    "INSERT INTO roles (name, flow_order) VALUES (?, ?)",
+    "INSERT INTO roles (name, flow_order) VALUES (?, ?) RETURNING id",
     [data.name, data.flow_order ?? 0],
   );
-  return { id: result.insertId, name: data.name, flow_order: data.flow_order ?? 0 };
+  return { id: result.insertId ?? result?.[0]?.id ?? null, name: data.name, flow_order: data.flow_order ?? 0 };
 };
 
 export const updateRole = async (id, data) => {

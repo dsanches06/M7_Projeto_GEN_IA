@@ -13,10 +13,10 @@ export const getTagTaskById = async (tagTaskId) => {
 
 export const createTagTask = async (data) => {
   const [result] = await db.query(
-    "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?)",
+    "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?) RETURNING id",
     [data.task_id, data.tag_id]
   );
-  return mapTagTaskDTOResponse({ id: result.insertId, ...data });
+  return mapTagTaskDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...data });
 };
 
 export const createTagTasks = async (data) => {
@@ -29,13 +29,25 @@ export const createTagTasks = async (data) => {
     throw new Error("task_id e tag_ids são obrigatórios para adicionar etiquetas");
   }
 
-  const values = tag_ids.map((tagId) => [task_id, tagId]);
-  await db.query(
-    "INSERT IGNORE INTO tags_task (task_id, tag_id) VALUES ?",
-    [values]
-  );
+  const inserted = [];
+  for (const tagId of tag_ids) {
+    const [existing] = await db.query(
+      "SELECT 1 FROM tags_task WHERE task_id = ? AND tag_id = ?",
+      [task_id, tagId]
+    );
 
-  return tag_ids.map((tagId) => ({ task_id, tag_id: tagId }));
+    if (existing.length > 0) {
+      continue;
+    }
+
+    const [result] = await db.query(
+      "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?) RETURNING id",
+      [task_id, tagId]
+    );
+    inserted.push({ task_id, tag_id: tagId, id: result.insertId ?? result?.[0]?.id ?? null });
+  }
+
+  return inserted.length > 0 ? inserted : tag_ids.map((tag_id) => ({ task_id, tag_id }));
 };
 
 export const updateTagTask = async (id, data) => {

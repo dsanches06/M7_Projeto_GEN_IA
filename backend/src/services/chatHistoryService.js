@@ -13,11 +13,11 @@ export const createChatHistory = async (data) => {
   }
 
   const [result] = await db.query(
-    "INSERT INTO chat_history (conversation_id, role_id, content) VALUES (?, ?, ?)",
+    "INSERT INTO chat_history (conversation_id, role_id, content) VALUES (?, ?, ?) RETURNING id",
     [data.conversation_id, data.role_id, data.content]
   );
 
-  return mapChatHistoryDTOResponse({ id: result.insertId, ...data, sent_at: new Date() });
+  return mapChatHistoryDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...data, sent_at: new Date() });
 };
 export const updateChatHistory = async (id, data) => {
   const keys = Object.keys(data), vals = Object.values(data);

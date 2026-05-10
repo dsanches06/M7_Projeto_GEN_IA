@@ -25,9 +25,9 @@ export const createTask = async (data) => {
     due_date: toD(data.due_date ?? data.dueDate), completed_at: toD(data.completed_at ?? data.completedAt),
   };
   const [result] = await db.query(
-    "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
     [d.title, d.description, d.types_id, d.status_id, d.priority_id, d.category_id, d.project_id, d.estimated_hours, d.due_date, d.completed_at]);
-  return mapTaskDTOResponse({ id: result.insertId, ...d });
+  return mapTaskDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...d });
 };
 export const updateStatus = async (taskId, data) => { const [, r] = await db.query("UPDATE task SET status_id = ? WHERE id = ?", [data.status_id, taskId]); return r.affectedRows; };
 export const updateTask = async (taskId, data) => {
@@ -57,8 +57,8 @@ export const addTagToTask = async (taskId, tagId) => {
   const task = await getTaskById(taskId); if (!task) throw new Error(`Tarefa ${taskId} não encontrada`);
   const [ex] = await db.query("SELECT * FROM tags_task WHERE task_id = ? AND tag_id = ?", [taskId, tagId]);
   if (ex?.length > 0) throw new Error("Etiqueta já associada");
-  const [r] = await db.query("INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?)", [taskId, tagId]);
-  return { taskId, tagId, relationId: r.insertId };
+  const [r] = await db.query("INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?) RETURNING id", [taskId, tagId]);
+  return { taskId, tagId, relationId: r.insertId ?? r?.[0]?.id ?? null };
 };
 export const removeTagFromTask = async (taskId, tagId) => { const [, r] = await db.query("DELETE FROM tags_task WHERE task_id = ? AND tag_id = ?", [taskId, tagId]); return r.affectedRows; };
 export const getTagsByTaskId = async (taskId) => { const [r] = await db.query("SELECT * FROM tags_task WHERE task_id = ?", [taskId]); return r; };
