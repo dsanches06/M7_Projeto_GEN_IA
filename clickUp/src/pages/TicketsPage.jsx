@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "@/services/BaseService.js";
 import TicketCard from "@/components/ticket/TicketCard.jsx";
-import TrophySpin from "@/components/ui/TrophySpin";
 import { STATUS_CONFIG } from "@/utils/ticketUtils.js";
 
 const BACKEND_URL = getBackendUrl();
@@ -9,52 +8,84 @@ const BACKEND_URL = getBackendUrl();
 /* ── inline SVG icon helpers ── */
 function IconTicket() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-      <path d="M15 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-4-4z"/>
-      <polyline points="15 5 15 9 19 9"/>
-      <line x1="9" y1="13" x2="15" y2="13"/>
-      <line x1="9" y1="17" x2="12" y2="17"/>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="28"
+      height="28"
+    >
+      <path d="M15 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-4-4z" />
+      <polyline points="15 5 15 9 19 9" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="12" y2="17" />
     </svg>
   );
 }
 function IconOpen() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="8" x2="12" y2="12"/>
-      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="28"
+      height="28"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   );
 }
 function IconHigh() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="28"
+      height="28"
+    >
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
     </svg>
   );
 }
 function IconDone() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-      <polyline points="20 6 9 17 4 12"/>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="28"
+      height="28"
+    >
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
 
 export default function TicketsPage() {
-  const [tickets,      setTickets]      = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
-  const [search,       setSearch]       = useState("");
-  const [showSearch,   setShowSearch]   = useState(false);
-  const [sortDir,      setSortDir]      = useState("NONE"); // NONE | ASC | DESC
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [sortDir, setSortDir] = useState("NONE"); // NONE | ASC | DESC
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterSev,    setFilterSev]    = useState("all");
-  const [selected,     setSelected]     = useState(null); // eslint-disable-line no-unused-vars
+  const [filterSev, setFilterSev] = useState("all");
+  const [selected, setSelected] = useState(null); // eslint-disable-line no-unused-vars
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,76 +101,76 @@ export default function TicketsPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  if (loading) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-main mb-2">Tickets</h2>
-          <p className="text-muted">Gerencie seus tickets e monitore ocorrências.</p>
-        </div>
-        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 text-center w-full max-w-md mx-auto">
-          <TrophySpin message="A carregar tickets..." />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-main mb-2">Tickets</h2>
-          <p className="text-muted">Gerencie seus tickets e monitore ocorrências.</p>
-        </div>
-        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 text-center w-full max-w-md mx-auto">
-          <TrophySpin message="Servidor indisponível" />
-          <div>
-            <p className="text-lg font-semibold text-main">Falha ao carregar tickets</p>
-            <p className="text-sm text-muted">Toque em recarregar para tentar novamente.</p>
-          </div>
-          <button
-            type="button"
-            onClick={load}
-            className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-          >
-            ↺ Recarregar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
   /* ── Stats ── */
-  const total      = tickets.length;
-  const openCount  = tickets.filter((t) => t.status === "open").length;
-  const highCount  = tickets.filter((t) => (t.severity || 0) >= 7).length;
-  const doneCount  = tickets.filter((t) => t.status === "resolved").length;
+  const total = tickets.length;
+  const openCount = tickets.filter((t) => t.status === "open").length;
+  const highCount = tickets.filter((t) => (t.severity || 0) >= 7).length;
+  const doneCount = tickets.filter((t) => t.status === "resolved").length;
 
   const statCards = [
-    { label: "Total",          value: total,     icon: <IconTicket />, filter: "all-status",   color: "#2563EB" },
-    { label: "Abertos",        value: openCount,  icon: <IconOpen />,   filter: "open",        color: "#EF4444" },
-    { label: "Alta severidade",value: highCount,  icon: <IconHigh />,   filter: "high-sev",    color: "#D97706" },
-    { label: "Resolvidos",     value: doneCount,  icon: <IconDone />,   filter: "resolved",    color: "#16A34A" },
+    {
+      label: "Total",
+      value: total,
+      icon: <IconTicket />,
+      filter: "all-status",
+      color: "#2563EB",
+    },
+    {
+      label: "Abertos",
+      value: openCount,
+      icon: <IconOpen />,
+      filter: "open",
+      color: "#EF4444",
+    },
+    {
+      label: "Alta severidade",
+      value: highCount,
+      icon: <IconHigh />,
+      filter: "high-sev",
+      color: "#D97706",
+    },
+    {
+      label: "Resolvidos",
+      value: doneCount,
+      icon: <IconDone />,
+      filter: "resolved",
+      color: "#16A34A",
+    },
   ];
 
   /* active card = which filter is selected */
   const activeCard =
-    filterStatus === "open"     ? "open"     :
-    filterStatus === "resolved" ? "resolved" :
-    filterSev    === "high"     ? "high-sev" : "all-status";
+    filterStatus === "open"
+      ? "open"
+      : filterStatus === "resolved"
+        ? "resolved"
+        : filterSev === "high"
+          ? "high-sev"
+          : "all-status";
 
   function handleStatClick(filter) {
-    if (filter === "all-status") { setFilterStatus("all"); setFilterSev("all"); }
-    else if (filter === "open")     { setFilterStatus("open");     setFilterSev("all"); }
-    else if (filter === "resolved") { setFilterStatus("resolved"); setFilterSev("all"); }
-    else if (filter === "high-sev") { setFilterSev("high");        setFilterStatus("all"); }
+    if (filter === "all-status") {
+      setFilterStatus("all");
+      setFilterSev("all");
+    } else if (filter === "open") {
+      setFilterStatus("open");
+      setFilterSev("all");
+    } else if (filter === "resolved") {
+      setFilterStatus("resolved");
+      setFilterSev("all");
+    } else if (filter === "high-sev") {
+      setFilterSev("high");
+      setFilterStatus("all");
+    }
   }
 
   /* ── Cycle sort ── */
   function cycleSortDir() {
-    setSortDir((d) => d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE");
+    setSortDir((d) => (d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE"));
   }
 
   /* ── Filter + sort ── */
@@ -148,21 +179,20 @@ export default function TicketsPage() {
     const matchSearch =
       !q ||
       (t.user_report || "").toLowerCase().includes(q) ||
-      (t.error_type  || "").toLowerCase().includes(q);
-    const matchStatus =
-      filterStatus === "all" || t.status === filterStatus;
+      (t.error_type || "").toLowerCase().includes(q);
+    const matchStatus = filterStatus === "all" || t.status === filterStatus;
     const s = t.severity || 0;
     const matchSev =
-      filterSev === "all"      ||
-      (filterSev === "critical" && s >= 8)             ||
-      (filterSev === "high"     && s >= 5 && s < 8)    ||
-      (filterSev === "medium"   && s >= 3 && s < 5)    ||
-      (filterSev === "low"      && s < 3);
+      filterSev === "all" ||
+      (filterSev === "critical" && s >= 8) ||
+      (filterSev === "high" && s >= 5 && s < 8) ||
+      (filterSev === "medium" && s >= 3 && s < 5) ||
+      (filterSev === "low" && s < 3);
     return matchSearch && matchStatus && matchSev;
   });
 
   const sorted = [...filtered].sort((a, b) => {
-    if (sortDir === "ASC")  return (a.severity || 0) - (b.severity || 0);
+    if (sortDir === "ASC") return (a.severity || 0) - (b.severity || 0);
     if (sortDir === "DESC") return (b.severity || 0) - (a.severity || 0);
     return 0;
   });
@@ -172,15 +202,17 @@ export default function TicketsPage() {
     filterStatus !== "all"
       ? STATUS_CONFIG[filterStatus]?.label || filterStatus
       : filterSev !== "all"
-        ? filterSev === "critical" ? "Crítica (8-10)"
-          : filterSev === "high"   ? "Alta (5-7)"
-          : filterSev === "medium" ? "Média (3-4)"
-          : "Baixa (1-2)"
-      : "Todos";
+        ? filterSev === "critical"
+          ? "Crítica (8-10)"
+          : filterSev === "high"
+            ? "Alta (5-7)"
+            : filterSev === "medium"
+              ? "Média (3-4)"
+              : "Baixa (1-2)"
+        : "Todos";
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
-
       {/* ── Page title ── */}
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-main">Tickets</h2>
@@ -201,7 +233,9 @@ export default function TicketsPage() {
                 type="button"
                 onClick={() => handleStatClick(filter)}
                 className={`flex items-center gap-3 rounded-3xl p-2 text-left transition-colors cursor-pointer hover:bg-surface-2 ${
-                  isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
+                  isSelected
+                    ? "bg-surface-2 border border-surface"
+                    : "bg-surface"
                 }`}
               >
                 <span
@@ -244,7 +278,9 @@ export default function TicketsPage() {
           >
             <option value="all">Todos os estados</option>
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-              <option key={k} value={k}>{v.label}</option>
+              <option key={k} value={k}>
+                {v.label}
+              </option>
             ))}
           </select>
 
@@ -267,7 +303,10 @@ export default function TicketsPage() {
 
             <button
               title="Pesquisar"
-              onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
+              onClick={() => {
+                setShowSearch((s) => !s);
+                setSearch("");
+              }}
               className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 transition-colors cursor-pointer text-base"
             >
               ⌕
@@ -294,25 +333,31 @@ export default function TicketsPage() {
 
       {/* ── Content ── */}
       {loading && (
-        <div className="py-16">
-          <TrophySpin message="A carregar tickets..." />
+        <div className="text-center py-16 text-muted text-sm">
+          A carregar tickets…
         </div>
       )}
 
       {error && !loading && (
-        <div className="text-center py-16">
-          <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 mx-auto w-full max-w-md">
-            <TrophySpin message="Servidor indisponível" />
+        <div className="text-center py-10">
+          <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-red-600/20 bg-red-600/5 p-8 mx-auto max-w-xl">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600/10 text-red-600 animate-pulse text-2xl">
+              ⚠️
+            </div>
             <div>
-              <p className="text-lg font-semibold text-main">Falha ao carregar tickets</p>
-              <p className="mt-1 text-sm text-muted">Toque em recarregar para tentar novamente.</p>
+              <p className="text-lg font-semibold text-red-100">
+                Servidor indisponível
+              </p>
+              <p className="mt-1 text-sm text-red-200">
+                Erro ao carregar tickets: {error}
+              </p>
             </div>
             <button
               type="button"
               onClick={load}
-              className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="rounded-full border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
             >
-              ↺ Recarregar
+              Recarregar
             </button>
           </div>
         </div>
@@ -334,16 +379,32 @@ export default function TicketsPage() {
           <p className="text-xs text-muted mb-3">
             {sorted.length} ticket{sorted.length !== 1 ? "s" : ""}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sorted.map((ticket, index) => (
-              <TicketCard
-                key={ticket.id}
-                ticket={ticket}
-                onSelect={setSelected}
-                delay={index * 60}
-              />
-            ))}
-          </div>
+
+          <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-main">Tickets</h3>
+                <p className="text-muted mt-1 max-w-2xl text-sm">
+                  Use o ChatBot 🤖 ao lado para criar novos tickets utilizando
+                  inteligência artificial.
+                </p>
+              </div>
+              <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-3 whitespace-nowrap">
+                Filtro: {filterLabel}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {sorted.map((ticket, index) => (
+                <TicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  onSelect={setSelected}
+                  delay={index * 60}
+                />
+              ))}
+            </div>
+          </section>
         </>
       )}
     </div>
