@@ -270,12 +270,12 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
       {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
       <div className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" onClick={onClose} />
 
-      <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden">
+      <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden animate-fadeInUp">
         <ChatHeaderUI onClose={onClose} />
 
         {/* History overlay */}
         {showHistory && (
-          <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col">
+          <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col animate-fadeInUp">
             <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-main">Histórico</h3>
@@ -308,7 +308,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
         {/* Chat view */}
         {!showHistory && (
           <>
-            <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4 animate-fadeIn">
               {messages.map(msg => (
                 <div key={msg.id}>
                   <ChatBubbleUI message={msg} sender={msg.sender} functionResults={msg.functionResults} isError={msg.isError} />

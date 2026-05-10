@@ -1,7 +1,7 @@
 export default function ModalConfirm({ title, message, cancel, confirm }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-2xl border border-surface-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 animate-fadeIn">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-2xl border border-surface-2 animate-fadeInUp">
         <h3 className="text-lg font-semibold text-main mb-2">{title}</h3>
         <p className="text-sm text-muted mb-6">{message}</p>
         <div className="flex gap-3 justify-end">
