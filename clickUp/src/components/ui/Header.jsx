@@ -15,7 +15,6 @@ export function Header({ onChatOpen }) {
 
   const menuItems = [
     { id: "dashboard", path: "/dashboard", label: "Dashboard" },
-    { id: "projetos", path: "/projetos", label: "Projetos" },
     { id: "utilizadores", path: "/utilizadores", label: "Utilizadores" },
     { id: "tickets", path: "/tickets", label: "Tickets" },
   ];

@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { TaskCard } from '@/components/TaskCard';
+import totalIcon from "../assets/tarefa.png";
+import progressIcon from "../assets/projeto_on_going.png";
+import completedIcon from "../assets/tarefa-concluida.png";
+import todoIcon from "../assets/filtrar-tarefas.png";
 
 export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
   const allTasks = tasks || [];
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const sortedTasks = [...allTasks].sort((a, b) => {
     const aDate = new Date(a.created_at || a.createdAt || 0).getTime();
@@ -14,13 +20,58 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
     return (b.id ?? 0) - (a.id ?? 0);
   });
 
-  // Estatísticas
   const stats = {
     total: sortedTasks.length,
     inProgress: sortedTasks.filter(t => t.status === 'em progresso').length,
     completed: sortedTasks.filter(t => t.status === 'concluída').length,
-    todo: sortedTasks.filter(t => t.status === 'a fazer').length
+    todo: sortedTasks.filter(t => t.status === 'a fazer').length,
   };
+
+  const statCards = [
+    {
+      label: "Tarefas Totais",
+      value: stats.total,
+      icon: totalIcon,
+      filter: "ALL",
+    },
+    {
+      label: "Em Progresso",
+      value: stats.inProgress,
+      icon: progressIcon,
+      filter: "IN_PROGRESS",
+    },
+    {
+      label: "Concluídas",
+      value: stats.completed,
+      icon: completedIcon,
+      filter: "COMPLETED",
+    },
+    {
+      label: "A Fazer",
+      value: stats.todo,
+      icon: todoIcon,
+      filter: "TODO",
+    },
+  ];
+
+  const filteredTasks =
+    statusFilter === "ALL"
+      ? sortedTasks
+      : sortedTasks.filter((task) => {
+          if (statusFilter === "IN_PROGRESS") return task.status === "em progresso";
+          if (statusFilter === "COMPLETED") return task.status === "concluída";
+          if (statusFilter === "TODO") return task.status === "a fazer";
+          return true;
+        });
+
+  const filterLabel =
+    statusFilter === "ALL"
+      ? "Todas"
+      : statusFilter === "IN_PROGRESS"
+      ? "Em Progresso"
+      : statusFilter === "COMPLETED"
+      ? "Concluídas"
+      : "A Fazer";
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6">
@@ -32,22 +83,25 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
       <div className="grid gap-6">
         <section className="bg-surface-2 border border-surface rounded-3xl p-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">Tarefas Totais</p>
-              <p className="text-3xl font-bold text-main">{stats.total}</p>
-            </div>
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">Em Progresso</p>
-              <p className="text-3xl font-bold text-blue-400">{stats.inProgress}</p>
-            </div>
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">Concluídas</p>
-              <p className="text-3xl font-bold text-green-400">{stats.completed}</p>
-            </div>
-            <div className="bg-surface-3 border border-surface rounded-2xl p-5">
-              <p className="text-muted text-sm mb-3">A Fazer</p>
-              <p className="text-3xl font-bold text-muted">{stats.todo}</p>
-            </div>
+            {statCards.map(({ label, value, icon, filter }) => {
+              const isSelected = statusFilter === filter;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setStatusFilter(filter)}
+                  className={`flex items-center gap-4 rounded-3xl p-5 text-left transition-colors min-h-[150px] ${
+                    isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
+                  }`}
+                >
+                  <img src={icon} alt={label} className="w-10 h-10 object-contain" />
+                  <div className="min-w-0">
+                    <p className="text-muted text-sm mb-1">{label}</p>
+                    <p className="text-3xl font-semibold text-main">{value}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -59,11 +113,14 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
                 Use o ChatBot 🤖 ao lado para criar novas tarefas utilizando inteligência artificial.
               </p>
             </div>
+            <span className="text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-3">
+              Filtro: {filterLabel}
+            </span>
           </div>
 
-          {sortedTasks.length > 0 ? (
+          {filteredTasks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              {sortedTasks.map(task => (
+              {filteredTasks.map((task) => (
                 <TaskCard key={task.id} task={task} />
               ))}
             </div>

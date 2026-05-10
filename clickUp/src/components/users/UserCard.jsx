@@ -1,74 +1,114 @@
-import { useState } from 'react';
-import { getPalette, getInitials } from '../../utils/userUtils.js';
+import { useState } from "react";
+import { getPalette, getInitials } from "../../utils/userUtils.js";
+import man1 from "../../assets/man-1.png";
+import man2 from "../../assets/man-2.png";
+import man3 from "../../assets/man-3.png";
+import man4 from "../../assets/man-4.png";
+import woman1 from "../../assets/woman-1.png";
+import woman2 from "../../assets/woman-2.png";
+import woman3 from "../../assets/woman-3.png";
+import woman4 from "../../assets/woman-4.png";
+
+const AVATARS = [man1, woman1, man2, woman2, man3, woman3, man4, woman4];
 
 export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
   const [flipped, setFlipped] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const c = getPalette(user.id);
+  const avatar = user.avatar || AVATARS[(user.id - 1) % AVATARS.length];
   const pending = (user.tasks || []).filter(
-    (t) => t.status !== 'COMPLETED' && t.status !== 'ARCHIVED'
+    (t) => t.status !== "COMPLETED" && t.status !== "ARCHIVED",
   ).length;
 
   return (
     <div
       className="relative w-full"
-      style={{ height: 260, perspective: 900, cursor: 'pointer' }}
+      style={{
+        height: 220,
+        perspective: 900,
+        cursor: "pointer",
+        transform: hovered ? "scale(1.02)" : "scale(1)",
+        transition: "transform 0.25s ease, box-shadow 0.25s ease",
+        boxShadow: hovered
+          ? "0 20px 40px rgba(0,0,0,0.18)"
+          : "0 14px 30px rgba(0,0,0,0.12)",
+      }}
       onClick={() => setFlipped((f) => !f)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div
         style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          transition: 'transform 0.55s cubic-bezier(0.4,0,0.2,1)',
-          transformStyle: 'preserve-3d',
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          transition: "transform 0.55s cubic-bezier(0.4,0,0.2,1)",
+          transformStyle: "preserve-3d",
+          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
         }}
       >
         {/* ── FRONT ── */}
         <div
-          style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-          className="absolute inset-0 rounded-xl border border-surface bg-surface-2 flex flex-col items-center justify-center gap-3 px-5 py-6 overflow-hidden"
+          style={{
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            backgroundColor: c.bg,
+            color: c.tx,
+            boxShadow: "0 18px 50px rgba(0,0,0,0.08)",
+          }}
+          className="absolute inset-0 rounded-xl border border-surface flex flex-col items-center justify-center gap-2 px-4 py-4 overflow-hidden"
         >
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-medium flex-shrink-0"
-            style={{ background: c.bg, color: c.tx }}
-          >
-            {getInitials(user.name)}
+          <div className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 border border-white/20 bg-white/10 shadow-lg">
+            <img
+              src={avatar}
+              alt={user.name}
+              className="w-full h-full object-contain opacity-40"
+              style={{ filter: "brightness(0.9)" }}
+            />
           </div>
 
           <div className="text-center">
-            <p className="text-sm font-semibold text-main leading-tight">{user.name}</p>
-            <p className="text-xs text-muted mt-0.5">{user.role}</p>
+            <p
+              className="text-sm font-semibold leading-tight"
+              style={{ color: c.tx }}
+            >
+              {user.name}
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: c.tx }}>
+              {user.role}
+            </p>
           </div>
 
           <span
             className={`inline-flex items-center gap-1 text-xs px-3 py-0.5 rounded-full font-medium ${
               user.active
-                ? 'bg-[#EAF3DE] text-[#3B6D11]'
-                : 'bg-[#FCEBEB] text-[#A32D2D]'
+                ? "bg-[#EAF3DE] text-[#3B6D11]"
+                : "bg-[#FCEBEB] text-[#A32D2D]"
             }`}
           >
-            ● {user.active ? 'Ativo' : 'Inativo'}
+            ● {user.active ? "Ativo" : "Inativo"}
           </span>
 
           {pending > 0 && (
             <p className="text-xs text-muted">
-              {pending} tarefa{pending !== 1 ? 's' : ''} pendente{pending !== 1 ? 's' : ''}
+              {pending} tarefa{pending !== 1 ? "s" : ""} pendente
+              {pending !== 1 ? "s" : ""}
             </p>
           )}
 
-          <p className="text-[10px] text-muted/60 mt-auto">↻ clique para detalhes</p>
+          <p className="text-[10px] text-muted/60 mt-auto">
+            ↻ clique para detalhes
+          </p>
         </div>
 
         {/* ── BACK ── */}
         <div
           style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
           }}
-          className="absolute inset-0 rounded-xl border border-surface bg-surface-2 flex flex-col gap-1.5 p-4 overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
+          className="absolute inset-0 rounded-xl border border-surface bg-surface-2 flex flex-col gap-1 p-3 overflow-hidden"
         >
           {/* Back header */}
           <div className="flex items-center gap-2 mb-1">
@@ -79,7 +119,9 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
               {getInitials(user.name)}
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-medium text-main truncate">{user.name}</p>
+              <p className="text-[13px] font-medium text-main truncate">
+                {user.name}
+              </p>
               <p className="text-[10px] text-muted truncate">{user.email}</p>
             </div>
           </div>
@@ -87,12 +129,15 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
           {/* Details */}
           <ul className="flex flex-col gap-1 text-xs">
             {[
-              { label: 'ID',       value: `#${user.id}` },
-              { label: 'Telemóvel', value: user.phone },
-              { label: 'Papel',    value: user.role },
-              { label: 'Tarefas',  value: (user.tasks || []).length },
+              { label: "ID", value: `#${user.id}` },
+              { label: "Telemóvel", value: user.phone },
+              { label: "Papel", value: user.role },
+              { label: "Tarefas", value: (user.tasks || []).length },
             ].map(({ label, value }) => (
-              <li key={label} className="flex items-center justify-between text-muted">
+              <li
+                key={label}
+                className="flex items-center justify-between text-muted"
+              >
                 <span>{label}</span>
                 <strong className="text-main font-medium">{value}</strong>
               </li>
@@ -102,11 +147,11 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
               <span
                 className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
                   user.active
-                    ? 'bg-[#EAF3DE] text-[#3B6D11]'
-                    : 'bg-[#FCEBEB] text-[#A32D2D]'
+                    ? "bg-[#EAF3DE] text-[#3B6D11]"
+                    : "bg-[#FCEBEB] text-[#A32D2D]"
                 }`}
               >
-                {user.active ? 'Ativo' : 'Inativo'}
+                {user.active ? "Ativo" : "Inativo"}
               </span>
             </li>
           </ul>
@@ -115,39 +160,43 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
           <div className="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-surface">
             {[
               {
-                icon: '⊞', title: 'Ver dashboard', colorHover: 'hover:bg-[#E6F1FB] hover:text-[#185FA5]',
+                iconClass: "fas fa-tachometer-alt",
+                title: "Ver dashboard",
+                colorHover: "hover:bg-[#E6F1FB] hover:text-[#185FA5]",
+                iconColor: "currentColor",
                 onClick: () => onDashboard && onDashboard(user),
               },
               {
-                icon: '✎', title: 'Editar', colorHover: 'hover:bg-[#E6F1FB] hover:text-[#185FA5]',
-                onClick: () => {},
-              },
-              {
-                icon: '◉', title: 'Detalhes', colorHover: 'hover:bg-surface-3',
-                onClick: () => {},
-              },
-              {
-                icon: '＋', title: 'Atribuir tarefa', colorHover: 'hover:bg-[#EAF3DE] hover:text-[#3B6D11]',
-                onClick: () => {},
-              },
-              {
-                icon: user.active ? '⏻' : '⏼',
-                title: user.active ? 'Desativar' : 'Ativar',
-                colorHover: 'hover:bg-[#FAEEDA] hover:text-[#854F0B]',
+                iconClass: user.active
+                  ? "fas fa-toggle-on"
+                  : "fas fa-toggle-off",
+                title: user.active ? "Desativar" : "Ativar",
+                colorHover: "hover:bg-[#FAEEDA] hover:text-[#854F0B]",
+                iconColor: c.tx,
                 onClick: () => onToggle && onToggle(user.id),
               },
               {
-                icon: '✕', title: 'Remover', colorHover: 'hover:bg-[#FCEBEB] hover:text-[#A32D2D]',
+                iconClass: "fas fa-trash",
+                title: "Remover",
+                colorHover: "hover:bg-[#FCEBEB] hover:text-[#A32D2D]",
+                iconColor: "#A32D2D",
                 onClick: () => onDelete && onDelete(user.id),
               },
-            ].map(({ icon, title, colorHover, onClick }) => (
+            ].map(({ iconClass, title, colorHover, iconColor, onClick }) => (
               <button
                 key={title}
                 title={title}
                 className={`w-8 h-8 rounded-md border border-surface bg-surface flex items-center justify-center text-sm text-muted transition-colors ${colorHover}`}
-                onClick={(e) => { e.stopPropagation(); onClick(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
               >
-                {icon}
+                <i
+                  className={iconClass}
+                  aria-hidden="true"
+                  style={{ color: iconColor }}
+                />
               </button>
             ))}
           </div>

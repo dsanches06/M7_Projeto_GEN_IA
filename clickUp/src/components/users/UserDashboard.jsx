@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { STATUS_COLUMNS, STATUS_COLOR, getPalette, getInitials } from '../../utils/userUtils.js';
+import taskIcon from '../../assets/tarefa.png';
+import pendingIcon from '../../assets/pendente.png';
+import completedIcon from '../../assets/tarefa-concluida.png';
 
 export default function UserDashboard({ user, onBack }) {
   const [search, setSearch] = useState('');
@@ -13,15 +16,16 @@ export default function UserDashboard({ user, onBack }) {
   );
 
   const stats = [
-    { label: 'Total',     value: (user.tasks || []).length },
+    { label: 'Total',     value: (user.tasks || []).length, icon: taskIcon },
     {
       label: 'Pendentes',
       value: (user.tasks || []).filter(
         (t) => t.status !== 'COMPLETED' && t.status !== 'ARCHIVED'
       ).length,
+      icon: pendingIcon,
     },
-    { label: 'Concluídas', value: (user.tasks || []).filter((t) => t.status === 'COMPLETED').length },
-    { label: 'Bloqueadas', value: (user.tasks || []).filter((t) => t.status === 'BLOCKED').length },
+    { label: 'Concluídas', value: (user.tasks || []).filter((t) => t.status === 'COMPLETED').length, icon: completedIcon },
+    { label: 'Bloqueadas', value: (user.tasks || []).filter((t) => t.status === 'BLOCKED').length, icon: taskIcon },
   ];
 
   const c = getPalette(user.id);
@@ -63,9 +67,10 @@ export default function UserDashboard({ user, onBack }) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        {stats.map(({ label, value }) => (
-          <div key={label} className="bg-surface-2 rounded-xl p-4 border border-surface">
-            <p className="text-xs text-muted mb-1">{label}</p>
+        {stats.map(({ label, value, icon }) => (
+          <div key={label} className="bg-surface-2 rounded-xl p-4 border border-surface flex flex-col items-center gap-3 text-center">
+            {icon && <img src={icon} alt={label} className="w-10 h-10 object-contain" />}
+            <p className="text-xs text-muted uppercase tracking-[0.08em]">{label}</p>
             <p className="text-2xl font-semibold text-main">{value}</p>
           </div>
         ))}

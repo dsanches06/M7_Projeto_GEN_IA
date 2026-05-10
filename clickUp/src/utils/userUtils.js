@@ -1,12 +1,3 @@
-export const PALETTE = [
-  { bg: '#EEEDFE', tx: '#3C3489' },
-  { bg: '#E1F5EE', tx: '#085041' },
-  { bg: '#FAECE7', tx: '#712B13' },
-  { bg: '#E6F1FB', tx: '#0C447C' },
-  { bg: '#EAF3DE', tx: '#27500A' },
-  { bg: '#FAEEDA', tx: '#633806' },
-];
-
 export const STATUS_COLUMNS = [
   'CREATED',
   'ASSIGNED',
@@ -25,8 +16,30 @@ export const STATUS_COLOR = {
   ARCHIVED:    '#5F5E5A',
 };
 
+function seedFromValue(value) {
+  const str = `${value}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function toHSL(seed) {
+  const hue = Math.floor((seed * 137.508) % 360);
+  const saturation = 55 + ((seed >> 4) % 30); // 55-84%
+  const lightness = 48 + ((seed >> 10) % 22); // 48-69%
+  return { hue, saturation, lightness };
+}
+
 export function getPalette(id) {
-  return PALETTE[(id - 1) % PALETTE.length];
+  const seed = seedFromValue(`${id}`);
+  const { hue, saturation, lightness } = toHSL(seed);
+  const bg = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const tx = lightness > 58 ? '#111827' : '#F8FAFC';
+
+  return { bg, tx };
 }
 
 export function getInitials(name = '') {

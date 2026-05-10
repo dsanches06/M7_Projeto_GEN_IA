@@ -69,15 +69,6 @@ function App() {
               path="dashboard"
               element={<Dashboard tasks={tasks} onTasksUpdate={setTasks} />}
             />
-            <Route
-              path="projetos"
-              element={
-                <PageSection
-                  title="Projetos"
-                  description="Gerencie seus projetos e mantenha o trabalho organizado."
-                />
-              }
-            />
 
             {/* ── Utilizadores ── */}
             <Route path="utilizadores" element={<UsersPage />} />
