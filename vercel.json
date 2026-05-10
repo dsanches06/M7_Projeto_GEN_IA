@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "cd clickUp && npm install && npm run build && cd ../backend && npm install && npm run init-db",
+  "buildCommand": "npm --prefix clickUp install && npm --prefix clickUp run build && npm --prefix backend install && npm --prefix backend run init-db",
   "outputDirectory": "clickUp/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
