@@ -8,7 +8,15 @@ export const getChatHistoryByConversationId = async (conversationId) => {
   return r.map(mapChatHistoryDTOResponse);
 };
 export const createChatHistory = async (data) => {
-  const [result] = await db.query("INSERT INTO chat_history (conversation_id, role_id, content) VALUES (?, ?, ?)", [data.conversation_id, data.role_id, data.content]);
+  if (!data.conversation_id) {
+    throw new Error("conversation_id é obrigatório para criar histórico de chat");
+  }
+
+  const [result] = await db.query(
+    "INSERT INTO chat_history (conversation_id, role_id, content) VALUES (?, ?, ?)",
+    [data.conversation_id, data.role_id, data.content]
+  );
+
   return mapChatHistoryDTOResponse({ id: result.insertId, ...data, sent_at: new Date() });
 };
 export const updateChatHistory = async (id, data) => {

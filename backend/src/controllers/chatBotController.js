@@ -319,11 +319,20 @@ export const sendMessageToBotStream = async (req, res) => {
 // ── Non-stream endpoint ───────────────────────────────────────────────────────
 export const sendMessageToConversation = async (req, res) => {
   try {
-    const { conversationId } = req.params;
-    const { message }        = req.body;
+    const conversationId = Number(req.params.conversationId);
+    const { message }    = req.body;
 
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ success: false, error: "Mensagem não pode estar vazia" });
+    }
+
+    if (!conversationId) {
+      return res.status(400).json({ success: false, error: "conversationId inválido" });
+    }
+
+    const existingConversation = await getConversationById(conversationId);
+    if (!existingConversation) {
+      return res.status(404).json({ success: false, error: "Conversation não encontrada" });
     }
 
     const userMessage      = message.trim();

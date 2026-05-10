@@ -35,15 +35,19 @@ export const getChatHistoryByConversationId = async (req, res) => {
 export const createChatHistory = async (req, res) => {
   try {
     const { conversation_id, role_id, content } = req.body;
+    const conversationIdNum = Number(conversation_id);
 
-    if (!conversation_id || !role_id || !content || content.trim().length === 0) {
-      return res.status(400).json({ message: "conversation_id, role_id e content são obrigatórios" });
+    if (!conversationIdNum || !role_id || !content || content.trim().length === 0) {
+      return res.status(400).json({ message: "conversation_id, role_id e content são obrigatórios e conversation_id deve ser válido" });
     }
 
-    const chatMessage = await chatHistoryService.createChatHistory(req.body);
+    const chatMessage = await chatHistoryService.createChatHistory({
+      ...req.body,
+      conversation_id: conversationIdNum,
+    });
     res.status(201).json(chatMessage);
   } catch (error) {
-    res.status(400).json({ message: "Erro ao criar mensagem de chat" });
+    res.status(400).json({ message: "Erro ao criar mensagem de chat", detail: error.message });
   }
 };
 
