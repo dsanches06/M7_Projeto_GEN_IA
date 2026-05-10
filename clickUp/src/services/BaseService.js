@@ -1,11 +1,15 @@
 export function getBackendUrl() {
+  if (import.meta.env.PROD) {
+    return "/api";
+  }
+
   const raw = import.meta.env.VITE_BACKEND_URL;
   if (raw) {
     const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(raw);
-    if (!isLocal) return raw;
+    if (!isLocal) return raw.endsWith("/api") ? raw : raw.replace(/\/?$/, "/api");
     return raw.endsWith("/api") ? raw : raw.replace(/\/?$/, "/api");
   }
-  if (import.meta.env.PROD) return "/api";
+
   return "http://localhost:3001/api";
 }
 
