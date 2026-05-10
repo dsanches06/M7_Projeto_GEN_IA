@@ -1,12 +1,6 @@
 -- PostgreSQL schema for Neon / Vercel
 -- Execute this inside your target Neon database.
--- Exemplo local: psql "postgresql://user:pass@host:port/dbname" -f database-init-postgres.sql
-
--- Limpa qualquer schema/tabela existente antes de criar o novo schema.
--- IMPORTANTE: isto remove dados existentes no banco.
-DROP SCHEMA public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO public;
+-- This script creates tables if they don't exist, preserving existing data.
 
 -- Tabelas sem dependências primeiro
 CREATE TABLE IF NOT EXISTS roles (

@@ -32,17 +32,6 @@ async function runSQLFile(filePath) {
   }
 }
 
-async function resetNeonSchema() {
-  console.log('🧹 Resetando schema public no Neon...');
-  try {
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;');
-    console.log('✅ Schema public resetado com sucesso');
-  } catch (error) {
-    console.error('❌ Erro ao resetar schema public:', error.message);
-    throw error;
-  }
-}
-
 async function initDatabase() {
   console.log('🔍 Verificando DATABASE_URL...');
   if (!process.env.DATABASE_URL) {
@@ -56,21 +45,18 @@ async function initDatabase() {
     await pool.query('SELECT NOW()');
     console.log('✅ Conectado ao Neon com sucesso!');
 
-    console.log('🧹 Resetando o banco Neon antes de aplicar o schema...');
-    await resetNeonSchema();
-
-    console.log('📄 Preparando para executar schema...');
+    console.log('📄 Preparando para executar schema atualizado...');
     await runSQLFile(join(__dirname, 'database-init-postgres.sql'));
-    console.log('✅ Schema executado!');
+    console.log('✅ Schema atualizado!');
 
     console.log('📄 Preparando para executar seed...');
     await runSQLFile(join(__dirname, 'database-seed-postgres.sql'));
     console.log('✅ Seed executado!');
 
-    console.log('🎉 Banco de dados inicializado com sucesso!');
+    console.log('🎉 Banco de dados atualizado com sucesso!');
 
   } catch (error) {
-    console.error('❌ Erro na inicialização:', error.message);
+    console.error('❌ Erro na atualização:', error.message);
     console.error('Stack:', error.stack);
     process.exit(1);
   } finally {
