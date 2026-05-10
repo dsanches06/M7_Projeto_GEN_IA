@@ -18,12 +18,27 @@ function AppContent() {
   const [tasksLoading,  setTasksLoading]  = useState(true);
   const [tasksError,    setTasksError]    = useState(null);
   const [banner,        setBanner]        = useState(null);
+  const [redirectState, setRedirectState] = useState({ active: false, path: "", message: "" });
 
   useEffect(() => {
     if (!banner) return;
     const timer = setTimeout(() => setBanner(null), 3000);
     return () => clearTimeout(timer);
   }, [banner]);
+
+  useEffect(() => {
+    if (!redirectState.active) return;
+    const timer = setTimeout(() => {
+      navigate(redirectState.path);
+      setRedirectState({ active: false, path: "", message: "" });
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [redirectState, navigate]);
+
+  const startRedirect = (path, message) => {
+    setRedirectState({ active: true, path, message });
+    setShowChat(false);
+  };
 
   const loadTasks = async () => {
     try {
@@ -53,7 +68,7 @@ function AppContent() {
         setTasks((prev) => [taskService.transformTaskForDisplay(t), ...prev]);
         setBanner({ message: "✅ Tarefa criada no backend!", type: "success" });
       }
-      navigate("/dashboard");
+      startRedirect("/dashboard", "Tarefa criada! Aguardando carregamento antes de ir ao dashboard...");
     } catch (err) {
       setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
     }
@@ -75,9 +90,8 @@ function AppContent() {
 
   /** Closes chat and navigates to tickets page after ticket creation */
   const handleTicketCreated = () => {
-    setShowChat(false);
     setBanner({ message: "✅ Ticket criado com sucesso!", type: "success" });
-    navigate("/tickets");
+    startRedirect("/tickets", "Ticket criado! Aguardando carregamento antes de ir para tickets...");
   };
 
   return (
@@ -96,6 +110,14 @@ function AppContent() {
             >
               Recarregar tarefas
             </button>
+          </div>
+        </div>
+      )}
+
+      {redirectState.active && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl bg-slate-950/95 p-6 shadow-2xl backdrop-blur-xl">
+            <TrophySpin message={redirectState.message} />
           </div>
         </div>
       )}
