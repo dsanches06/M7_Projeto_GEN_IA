@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --env-file=.env src/server.js",
+    "dev-local": "nodemon --env-file=.env.local src/serverLocal.js",
     "start": "node src/server.js",
+    "start-local": "node src/serverLocal.js",
     "build": "echo 'No build step required for Node.js'",
     "init-db": "node backend/init-neon-db.js",
     "migrate-summaries": "node migrate-summaries.js",

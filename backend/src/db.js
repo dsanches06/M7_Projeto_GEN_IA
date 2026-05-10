@@ -1,7 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const isPostgres = !!process.env.DATABASE_URL;
+// Allow forcing MySQL mode even with DATABASE_URL (for local development)
+const forceMySQL = process.env.FORCE_MYSQL === 'true' || global.forceMySQL === true;
+const isPostgres = !!process.env.DATABASE_URL && !forceMySQL;
 
 function mysqlToPg(sql, params = []) {
   const values = [];
