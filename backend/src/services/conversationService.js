@@ -9,7 +9,7 @@ export const createConversation = async (data) => {
     [data.title]
   );
 
-  const id = result.insertId ?? result?.[0]?.id ?? null;
+  const id = result.insertId ?? result?.id ?? null;
   return mapConversationDTOResponse({ id, title: data.title, created_at: new Date() });
 };
 export const updateConversation = async (id, data) => {
