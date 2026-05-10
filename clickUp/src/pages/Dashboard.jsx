@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TaskCard } from "@/components/tasks/TaskCard";
+import TrophySpin from "@/components/ui/TrophySpin";
 import totalIcon     from "../assets/tarefa.png";
 import progressIcon  from "../assets/projeto_on_going.png";
 import completedIcon from "../assets/tarefa-concluida.png";
@@ -78,33 +79,37 @@ export function Dashboard({
     : statusFilter === "TODO"      ? "A Fazer"
     : "Todas";
 
+  if (tasksError) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold text-main mb-2">Dashboard</h2>
+          <p className="text-muted">Bem-vindo ao seu espaço de trabalho</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 text-center w-full max-w-md mx-auto">
+          <TrophySpin message="Servidor indisponível" />
+          <div>
+            <p className="text-lg font-semibold text-main">Não foi possível carregar as tarefas</p>
+            <p className="text-sm text-muted">Toque em recarregar para tentar novamente.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onRetryLoadTasks}
+            className="rounded-full border border-white/20 bg-white/5 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            ↺ Recarregar tarefas
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-main mb-2">Dashboard</h2>
         <p className="text-muted">Bem-vindo ao seu espaço de trabalho</p>
       </div>
-
-      {/* ── Backend error ── */}
-      {tasksError && (
-        <div className="mb-6 rounded-3xl border border-red-500/20 bg-red-600/10 p-5 text-red-100">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-base font-semibold">Servidor indisponível</p>
-              <p className="text-sm text-red-100/90">
-                Erro ao carregar tarefas: {tasksError}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onRetryLoadTasks}
-              className="rounded-full border border-red-200/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
-            >
-              Recarregar tarefas
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ── Toolbar ── */}
       <div className="flex flex-col gap-4 mb-6">
@@ -198,8 +203,8 @@ export function Dashboard({
         </div>
 
         {tasksLoading ? (
-          <div className="text-center py-12 text-muted text-sm">
-            A carregar tarefas…
+          <div className="py-12">
+            <TrophySpin message="A carregar tarefas..." />
           </div>
         ) : sorted.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

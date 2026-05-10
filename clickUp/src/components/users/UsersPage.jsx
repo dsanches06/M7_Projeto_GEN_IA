@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getBackendUrl } from "@/services/BaseService.js";
 import { STATUS_ID_TO_NAME } from "@/services/taskService.js";
+import TrophySpin from "@/components/ui/TrophySpin";
 import UserCard from "./UserCard.jsx";
 import UserDashboard from "./UserDashboard.jsx";
 import ModalConfirm from "../ui/ModalConfirm.jsx";
@@ -67,6 +68,45 @@ export default function UsersPage() {
   };
 
   useEffect(() => { loadUsers(); }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold text-main mb-2">Utilizadores</h2>
+          <p className="text-muted">Gerencie a equipa e os seus membros ativos.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 text-center w-full max-w-md mx-auto">
+          <TrophySpin message="A carregar utilizadores..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold text-main mb-2">Utilizadores</h2>
+          <p className="text-muted">Gerencie a equipa e os seus membros ativos.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 text-center w-full max-w-md mx-auto">
+          <TrophySpin message="Servidor indisponível" />
+          <div>
+            <p className="text-lg font-semibold text-main">Falha ao carregar utilizadores</p>
+            <p className="text-sm text-muted">Toque em recarregar para tentar novamente.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadUsers}
+            className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            ↺ Recarregar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const filtered = users.filter((u) => {
     const lower = search.toLowerCase();
@@ -231,20 +271,25 @@ export default function UsersPage() {
 
       {/* Loading / Error / Grid */}
       {loading && (
-        <div className="text-center py-16 text-muted text-sm">A carregar utilizadores…</div>
+        <div className="py-16">
+          <TrophySpin message="A carregar utilizadores..." />
+        </div>
       )}
 
       {error && !loading && (
-        <div className="text-center py-10">
-          <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-red-600/20 bg-red-600/5 p-8 mx-auto max-w-xl">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600/10 text-red-600 animate-pulse text-2xl">⚠️</div>
+        <div className="text-center py-16">
+          <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-surface bg-surface-2 p-6 mx-auto w-full max-w-md">
+            <TrophySpin message="Servidor indisponível" />
             <div>
-              <p className="text-lg font-semibold text-red-100">Servidor indisponível</p>
-              <p className="mt-1 text-sm text-red-200">Erro ao carregar utilizadores: {error}</p>
+              <p className="text-lg font-semibold text-main">Falha ao carregar utilizadores</p>
+              <p className="mt-1 text-sm text-muted">Toque em recarregar para tentar novamente.</p>
             </div>
-            <button type="button" onClick={loadUsers}
-              className="rounded-full border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20">
-              Recarregar
+            <button
+              type="button"
+              onClick={loadUsers}
+              className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              ↺ Recarregar
             </button>
           </div>
         </div>

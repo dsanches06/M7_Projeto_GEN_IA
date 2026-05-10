@@ -96,24 +96,6 @@ function AppContent() {
 
   return (
     <>
-      {tasksError && (
-        <div className="mx-auto mb-5 max-w-6xl rounded-3xl border border-red-500/20 bg-red-600/10 p-4 text-red-100 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <strong className="block text-sm font-semibold">Erro ao carregar o dashboard</strong>
-              <p className="text-sm text-red-100/90">{tasksError}</p>
-            </div>
-            <button
-              type="button"
-              onClick={loadTasks}
-              className="inline-flex items-center justify-center rounded-full border border-red-200/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
-            >
-              Recarregar tarefas
-            </button>
-          </div>
-        </div>
-      )}
-
       {redirectState.active && (
         <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl bg-slate-950/95 p-6 shadow-2xl backdrop-blur-xl">
