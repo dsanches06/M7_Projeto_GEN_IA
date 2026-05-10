@@ -3,8 +3,52 @@ dotenv.config();
 
 const isPostgres = !!process.env.DATABASE_URL;
 
-function mysqlToPg(sql, params) {
-  // ... (mantém a função igual)
+function mysqlToPg(sql, params = []) {
+  const values = [];
+  let paramIndex = 1;
+  const queue = Array.from(params);
+
+  const sqlWithParams = sql.replace(/\?/g, () => {
+    if (queue.length === 0) {
+      values.push(undefined);
+      return `$${paramIndex++}`;
+    }
+
+    const param = queue.shift();
+
+    if (param === undefined || param === null) {
+      values.push(param);
+      return `$${paramIndex++}`;
+    }
+
+    if (Array.isArray(param)) {
+      if (param.length === 0) {
+        values.push(null);
+        return `(NULL)`;
+      }
+      const placeholders = param.map(() => `$${paramIndex++}`).join(", ");
+      values.push(...param);
+      return placeholders;
+    }
+
+    if (typeof param === "object" && !(param instanceof Date) && !(param instanceof Buffer)) {
+      const keys = Object.keys(param);
+      if (keys.length === 0) {
+        values.push(undefined);
+        return `$${paramIndex++}`;
+      }
+      const assignments = keys.map((key) => {
+        values.push(param[key]);
+        return `${key} = $${paramIndex++}`;
+      });
+      return assignments.join(", ");
+    }
+
+    values.push(param);
+    return `$${paramIndex++}`;
+  });
+
+  return { s: sqlWithParams, p: values };
 }
 
 let _query;
