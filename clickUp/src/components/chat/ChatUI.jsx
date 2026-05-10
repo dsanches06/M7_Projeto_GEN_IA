@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { chatService } from "@/services/chatService";
 import { summaryService } from "@/services/summaryService";
 import { InfoBanner } from "@/components/ui/InfoBanner";
@@ -43,24 +43,22 @@ function TaskCreatedPreview({ task }) {
         <span className="text-xs font-bold text-[#065F46]">Tarefa criada</span>
       </div>
       <p className="text-xs font-semibold text-gray-800 truncate">{task.title}</p>
-      <p className="text-[10px] text-gray-400 mt-0.5">#{task.id}</p>
+      <p className="text-[10px] text-gray-400 mt-0.5">ID #{task.id}</p>
     </div>
   );
 }
 
 function AssignmentPreview({ assignment }) {
-  const initial = (assignment.user_name || '?').charAt(0).toUpperCase();
+  const initial = (assignment.user_name || "?").charAt(0).toUpperCase();
   return (
     <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2.5">
         <span>🔗</span>
         <span className="text-xs font-bold text-[#1D4ED8]">Atribuição confirmada</span>
       </div>
-
       <div className="space-y-1.5">
-        {/* Task row */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">Tarefa</span>
+        <div className="flex items-start gap-2">
+          <span className="text-[10px] text-gray-400 w-14 flex-shrink-0 pt-0.5">Tarefa</span>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-gray-800 truncate">
               {assignment.task_title || `Tarefa #${assignment.task_id}`}
@@ -68,11 +66,7 @@ function AssignmentPreview({ assignment }) {
             <p className="text-[10px] text-gray-400">ID #{assignment.task_id}</p>
           </div>
         </div>
-
-        {/* Divider */}
         <div className="border-t border-[#BFDBFE]" />
-
-        {/* User row */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">Atribuído</span>
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -90,9 +84,81 @@ function AssignmentPreview({ assignment }) {
   );
 }
 
+function TagAssignmentPreview({ tagAssignment }) {
+  const { task_id, task_title, added = [], skipped = [] } = tagAssignment;
+
+  return (
+    <div className="rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] p-3 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <span>🏷️</span>
+        <span className="text-xs font-bold text-[#7C3AED]">
+          Etiqueta{added.length !== 1 ? "s" : ""} adicionada{added.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Task */}
+      <div className="flex items-start gap-2 mb-2.5">
+        <span className="text-[10px] text-gray-400 w-12 flex-shrink-0 pt-0.5">Tarefa</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-800 truncate">
+            {task_title || `Tarefa #${task_id}`}
+          </p>
+          <p className="text-[10px] text-gray-400">ID #{task_id}</p>
+        </div>
+      </div>
+
+      <div className="border-t border-[#E9D5FF] mb-2" />
+
+      {/* Tags added */}
+      {added.length > 0 && (
+        <div className="mb-1.5">
+          <p className="text-[10px] text-gray-400 mb-1.5">Adicionadas</p>
+          <div className="flex flex-wrap gap-1.5">
+            {added.map(tag => (
+              <span
+                key={tag.tag_id}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: `${tag.tag_color}18`,
+                  color: tag.tag_color,
+                  border: `1px solid ${tag.tag_color}40`,
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: tag.tag_color }}
+                />
+                {tag.tag_name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tags skipped (already existed) */}
+      {skipped.length > 0 && (
+        <div>
+          <p className="text-[10px] text-gray-400 mb-1.5">Já existiam</p>
+          <div className="flex flex-wrap gap-1.5">
+            {skipped.map(tag => (
+              <span
+                key={tag.tag_id}
+                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200"
+              >
+                {tag.tag_name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TicketPreview({ ticket, onNavigate }) {
   const sev = ticket.severity || 5;
-  const color = sev >= 8 ? '#DC2626' : sev >= 5 ? '#D97706' : sev >= 3 ? '#2563EB' : '#16A34A';
+  const color = sev >= 8 ? "#DC2626" : sev >= 5 ? "#D97706" : sev >= 3 ? "#2563EB" : "#16A34A";
   return (
     <div className="rounded-xl border bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between mb-1.5">
@@ -112,11 +178,11 @@ function TicketPreview({ ticket, onNavigate }) {
   );
 }
 
-// ── Welcome ───────────────────────────────────────────────────────────────────
+// ── Welcome message ───────────────────────────────────────────────────────────
 
 const INITIAL_MESSAGE = {
   id: "welcome",
-  text: "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar tarefas, atribuí-las a utilizadores, criar notificações e tickets.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Cria uma tarefa e atribui à Ana'\n• 'Abre um ticket de bug: formulário não valida o email'",
+  text: "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar tarefas, atribuí-las, notificações e tickets.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Atribui a tarefa 5 ao Bruno'",
   sender: "bot",
   timestamp: new Date(),
 };
@@ -137,7 +203,11 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
-  useEffect(() => { if (!banner) return; const t = setTimeout(() => setBanner(null), 3000); return () => clearTimeout(t); }, [banner]);
+  useEffect(() => {
+    if (!banner) return;
+    const t = setTimeout(() => setBanner(null), 3000);
+    return () => clearTimeout(t);
+  }, [banner]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -145,6 +215,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
       .then(all => { if (all?.length) { setConversations(all); setShowHistory(true); } })
       .catch(() => {});
   }, [isOpen]);
+
+  // ── Conversation history ──────────────────────────────────────────────────
 
   const handleSelectConversation = async (conv) => {
     setConversationId(conv.id);
@@ -174,7 +246,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
     try {
       const d = chatService.extractTaskDataFromFunctionResult(fr);
       if (d && onTaskCreated) await onTaskCreated(d);
-    } catch(e) { setBanner({ message: `Erro: ${e.message}`, type: "error" }); }
+    } catch (e) { setBanner({ message: `Erro: ${e.message}`, type: "error" }); }
   };
 
   // ── Send ──────────────────────────────────────────────────────────────────
@@ -186,16 +258,21 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
     const userMessage = input.trim();
     const botMsgId    = Date.now() + 1;
 
-    const newMsg = {
+    const botMsg = {
       id: botMsgId, text: "", sender: "bot", timestamp: new Date(),
       functionResults: [],
       taskData:        null,
       assignmentData:  null,
+      tagData:         null,
       ticketData:      null,
     };
 
     const updatedHistory = [...conversationHistory, { role: "user", content: userMessage }];
-    setMessages(p => [...p, { id: Date.now(), text: userMessage, sender: "user", timestamp: new Date() }, newMsg]);
+    setMessages(p => [
+      ...p,
+      { id: Date.now(), text: userMessage, sender: "user", timestamp: new Date() },
+      botMsg,
+    ]);
     setConversationHistory(updatedHistory);
     setInput("");
     setLoading(true);
@@ -205,10 +282,12 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
         userMessage,
         updatedHistory,
 
+        // onChunk
         (chunk) => {
           setMessages(p => p.map(m => m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m));
         },
 
+        // onDone
         (done) => {
           if (done?.conversationId) {
             setConversationId(done.conversationId);
@@ -222,39 +301,40 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
             setMessages(p => p.map(m => m.id === botMsgId ? { ...m, functionResults: done.functionResults } : m));
           }
 
-          const persisted = done?.task || done?.notification || done?.ticket || done?.assignment;
+          const persisted = done?.task || done?.notification || done?.ticket || done?.assignment || done?.tagAssignment;
           if (!persisted && done?.functionResults?.[0]) handleFallback(done.functionResults[0]);
 
-          // Task created
+          // Task
           if (done?.task) {
             if (onTaskCreated) onTaskCreated(done.task);
             setMessages(p => p.map(m => m.id === botMsgId ? { ...m, taskData: done.task } : m));
           }
-
-          // Assignment (explicit or auto from task creation)
+          // Assignment
           if (done?.assignment) {
             setMessages(p => p.map(m => m.id === botMsgId ? { ...m, assignmentData: done.assignment } : m));
           }
-
+          // Tag assignment
+          if (done?.tagAssignment) {
+            setMessages(p => p.map(m => m.id === botMsgId ? { ...m, tagData: done.tagAssignment } : m));
+          }
           // Ticket
           if (done?.ticket) {
             setMessages(p => p.map(m => m.id === botMsgId ? { ...m, ticketData: done.ticket } : m));
           }
-
-          // Notification confirmation text
+          // Notification
           if (done?.notification) {
             setMessages(p => [...p, {
               id: Date.now() + 3,
               text: `✅ Notificação "${done.notification.title}" enviada!`,
               sender: "system",
               timestamp: new Date(),
-            }]);
+            }] );
           }
         },
 
         conversationId,
       );
-    } catch(err) {
+    } catch (err) {
       setMessages(p => p.map(m => m.id === botMsgId ? { ...m, text: `❌ Erro: ${err.message}`, isError: true } : m));
     } finally {
       setLoading(false);
@@ -270,18 +350,23 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
       {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
       <div className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" onClick={onClose} />
 
-      <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden animate-fadeInUp">
+      <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden">
         <ChatHeaderUI onClose={onClose} />
 
-        {/* History overlay */}
+        {/* ── History overlay ── */}
         {showHistory && (
-          <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col animate-fadeInUp">
+          <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col">
             <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-main">Histórico</h3>
-                <p className="text-xs text-muted mt-0.5">{conversations.length} conversa{conversations.length !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-muted mt-0.5">
+                  {conversations.length} conversa{conversations.length !== 1 ? "s" : ""}
+                </p>
               </div>
-              <button onClick={handleNewConversation} className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] font-medium">
+              <button
+                onClick={handleNewConversation}
+                className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] font-medium"
+              >
                 + Nova
               </button>
             </div>
@@ -292,33 +377,43 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</span>
                   </div>
                   {convs.map(conv => (
-                    <button key={conv.id} onClick={() => handleSelectConversation(conv)}
-                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group">
+                    <button
+                      key={conv.id}
+                      onClick={() => handleSelectConversation(conv)}
+                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group"
+                    >
                       <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">{conv.title}</p>
                       <p className="text-xs text-muted mt-0.5">{formatDate(conv.created_at)}</p>
                     </button>
                   ))}
                 </div>
               ))}
-              {conversations.length === 0 && <div className="flex items-center justify-center h-32 text-muted text-sm">Nenhuma conversa</div>}
+              {conversations.length === 0 && (
+                <div className="flex items-center justify-center h-32 text-muted text-sm">Nenhuma conversa</div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Chat view */}
+        {/* ── Chat view ── */}
         {!showHistory && (
           <>
-            <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4 animate-fadeIn">
+            <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
               {messages.map(msg => (
                 <div key={msg.id}>
-                  <ChatBubbleUI message={msg} sender={msg.sender} functionResults={msg.functionResults} isError={msg.isError} />
+                  <ChatBubbleUI
+                    message={msg}
+                    sender={msg.sender}
+                    functionResults={msg.functionResults}
+                    isError={msg.isError}
+                  />
 
-                  {/* Extra cards rendered below the bubble */}
-                  {(msg.taskData || msg.assignmentData || msg.ticketData) && (
+                  {/* Preview cards stacked below the bubble */}
+                  {(msg.taskData || msg.assignmentData || msg.tagData || msg.ticketData) && (
                     <div className="flex justify-start mt-2">
                       <div className="max-w-[260px] w-full space-y-2">
 
-                        {/* Task created (shown when no assignment, OR when assignment is also shown) */}
+                        {/* Task created */}
                         {msg.taskData && (
                           <TaskCreatedPreview task={msg.taskData} />
                         )}
@@ -326,6 +421,11 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
                         {/* Assignment preview */}
                         {msg.assignmentData && (
                           <AssignmentPreview assignment={msg.assignmentData} />
+                        )}
+
+                        {/* Tag assignment */}
+                        {msg.tagData && (
+                          <TagAssignmentPreview tagAssignment={msg.tagData} />
                         )}
 
                         {/* Ticket preview */}
@@ -353,7 +453,10 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTicketCreated }) {
             />
 
             {conversations.length > 0 && (
-              <button onClick={() => setShowHistory(true)} className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center">
+              <button
+                onClick={() => setShowHistory(true)}
+                className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
+              >
                 📋 Ver histórico ({conversations.length})
               </button>
             )}
