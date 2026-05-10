@@ -7,8 +7,8 @@ import * as taskService from "@/services/taskService";
 import { InfoBanner } from "./components/ui/InfoBanner";
 import TrophySpin from "./components/ui/TrophySpin";
 
-const Dashboard  = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
-const UsersPage  = lazy(() => import("@/components/users/UsersPage"));
+const Dashboard   = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const UsersPage   = lazy(() => import("@/components/users/UsersPage"));
 const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
 function AppContent() {
@@ -74,7 +74,6 @@ function AppContent() {
     }
   };
 
-  /** Called when bot updates an existing task's status */
   const handleTaskUpdated = (updatedTask) => {
     if (!updatedTask?.id) return;
     const transformed = taskService.transformTaskForDisplay(updatedTask);
@@ -88,7 +87,6 @@ function AppContent() {
     });
   };
 
-  /** Closes chat and navigates to tickets page after ticket creation */
   const handleTicketCreated = () => {
     setBanner({ message: "✅ Ticket criado com sucesso!", type: "success" });
     startRedirect("/tickets", "Ticket criado! Aguardando carregamento antes de ir para tickets...");
@@ -137,14 +135,21 @@ function AppContent() {
       {/* Banner */}
       {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
 
-      {/* Floating ChatBot button */}
+      {/*
+        Floating ChatBot button
+        Desktop: bottom-right above nothing
+        Mobile:  bottom-right but above the bottom nav (bottom-[80px])
+      */}
       {!showChat && (
         <button
           onClick={() => setShowChat(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all"
+          className="fixed right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
+          style={{
+            bottom: "calc(64px + 12px)", // above bottom nav on mobile
+          }}
           aria-label="Abrir ChatBot"
         >
-          <span className="text-xl">🤖</span>
+          <span className="text-lg sm:text-xl">🤖</span>
         </button>
       )}
 
@@ -165,8 +170,8 @@ function App() {
     <ThemeProvider>
       <BrowserRouter
         future={{
-          v7_startTransition:    true,
-          v7_relativeSplatPath:  true,
+          v7_startTransition:   true,
+          v7_relativeSplatPath: true,
         }}
       >
         <AppContent />

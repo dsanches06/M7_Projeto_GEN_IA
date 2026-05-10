@@ -166,18 +166,6 @@ function TagAssignmentPreview({ tagAssignment }) {
           </div>
         </div>
       )}
-      {skipped.length > 0 && (
-        <div>
-          <p className="text-[10px] text-gray-400 mb-1.5">Já existiam</p>
-          <div className="flex flex-wrap gap-1.5">
-            {skipped.map((tag) => (
-              <span key={tag.tag_id} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200">
-                {tag.tag_name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -308,7 +296,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
       assignmentData:  null,
       tagData:         null,
       ticketData:      null,
-      taskUpdatedData: null,   // ← NEW
+      taskUpdatedData: null,
     };
 
     const updatedHistory = [
@@ -329,15 +317,11 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
       await chatService.sendMessageToBotStream(
         userMessage,
         updatedHistory,
-
-        // onChunk
         (chunk) => {
           setMessages((p) =>
             p.map((m) => m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m)
           );
         },
-
-        // onDone
         (done) => {
           if (done?.conversationId) {
             setConversationId(done.conversationId);
@@ -359,40 +343,34 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                             done?.assignment || done?.tagAssignment || done?.taskUpdated;
           if (!persisted && done?.functionResults?.[0]) handleFallback(done.functionResults[0]);
 
-          // Task created
           if (done?.task) {
             if (onTaskCreated) onTaskCreated(done.task);
             setMessages((p) =>
               p.map((m) => m.id === botMsgId ? { ...m, taskData: done.task } : m)
             );
           }
-          // Task status updated  ← NEW
           if (done?.taskUpdated) {
             if (onTaskUpdated) onTaskUpdated(done.taskUpdated);
             setMessages((p) =>
               p.map((m) => m.id === botMsgId ? { ...m, taskUpdatedData: done.taskUpdated } : m)
             );
           }
-          // Assignment
           if (done?.assignment) {
             setMessages((p) =>
               p.map((m) => m.id === botMsgId ? { ...m, assignmentData: done.assignment } : m)
             );
           }
-          // Tag assignment
           if (done?.tags) {
             setMessages((p) =>
               p.map((m) => m.id === botMsgId ? { ...m, tagData: done.tags } : m)
             );
           }
-          // Ticket
           if (done?.ticket) {
             if (onTicketCreated) onTicketCreated();
             setMessages((p) =>
               p.map((m) => m.id === botMsgId ? { ...m, ticketData: done.ticket } : m)
             );
           }
-          // Notification
           if (done?.notification) {
             setMessages((p) => [
               ...p,
@@ -405,7 +383,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
             ]);
           }
         },
-
         conversationId,
       );
     } catch (err) {
@@ -426,14 +403,31 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
   return (
     <>
       {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
-      <div className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" onClick={onClose} />
 
-      <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-[320px] h-[80vh] min-h-[420px] flex-col bg-page border border-surface shadow-2xl rounded-3xl overflow-hidden">
+      {/* Mobile: full-screen overlay backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        onClick={onClose}
+      />
+
+      {/*
+        Mobile  → full screen (inset-0) with bottom padding for mobile nav
+        Desktop → floating bottom-right corner (same as before)
+      */}
+      <div
+        className={[
+          "fixed z-50 flex flex-col bg-page border border-surface shadow-2xl overflow-hidden",
+          // Mobile: full screen minus header & bottom nav
+          "inset-x-0 top-[52px] bottom-[64px] rounded-none",
+          // Desktop: floating card
+          "md:inset-auto md:bottom-6 md:right-6 md:w-[320px] md:h-[80vh] md:min-h-[420px] md:rounded-3xl",
+        ].join(" ")}
+      >
         <ChatHeaderUI onClose={onClose} />
 
         {/* ── History overlay ── */}
         {showHistory && (
-          <div className="absolute inset-0 z-50 bg-page rounded-3xl flex flex-col">
+          <div className="absolute inset-0 z-50 bg-page flex flex-col md:rounded-3xl">
             <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-main">Histórico</h3>
@@ -492,28 +486,14 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                     isError={msg.isError}
                   />
 
-                  {/* Preview cards */}
                   {(msg.taskData || msg.taskUpdatedData || msg.assignmentData || msg.tagData || msg.ticketData) && (
                     <div className="flex justify-start mt-2">
-                      <div className="max-w-[260px] w-full space-y-2">
-
-                        {msg.taskData && (
-                          <TaskCreatedPreview task={msg.taskData} />
-                        )}
-
-                        {msg.taskUpdatedData && (
-                          <TaskStatusPreview taskUpdated={msg.taskUpdatedData} />
-                        )}
-
-                        {msg.assignmentData && (
-                          <AssignmentPreview assignment={msg.assignmentData} />
-                        )}
-
-                        {msg.tagData && (
-                          <TagAssignmentPreview tagAssignment={msg.tagData} />
-                        )}
-
-                        {msg.ticketData && (
+                      <div className="max-w-[280px] w-full space-y-2">
+                        {msg.taskData        && <TaskCreatedPreview task={msg.taskData} />}
+                        {msg.taskUpdatedData && <TaskStatusPreview taskUpdated={msg.taskUpdatedData} />}
+                        {msg.assignmentData  && <AssignmentPreview assignment={msg.assignmentData} />}
+                        {msg.tagData         && <TagAssignmentPreview tagAssignment={msg.tagData} />}
+                        {msg.ticketData      && (
                           <TicketPreview
                             ticket={msg.ticketData}
                             onNavigate={() => {
