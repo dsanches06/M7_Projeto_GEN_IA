@@ -4,7 +4,8 @@
 INSERT INTO roles (id, name, flow_order) VALUES
   (1,'ADMIN',1),
   (2,'USER',2),
-  (3,'MODEL',3);
+  (3,'MODEL',3)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO users (id, name, email, phone, gender) VALUES
   (1, 'Ana Silva', 'ana@dev.com', '555-0101', 'Female'),
@@ -16,12 +17,14 @@ INSERT INTO users (id, name, email, phone, gender) VALUES
   (7, 'Gina Rosa', 'gina@dev.com', '555-0107', 'Female'),
   (8, 'Hugo Neto', 'hugo@dev.com', '555-0108', 'Male'),
   (9, 'Igor Lima', 'igor@dev.com', '555-0109', 'Male'),
-  (10, 'Joana Luz', 'joana@dev.com', '555-0110', 'Female');
+  (10, 'Joana Luz', 'joana@dev.com', '555-0110', 'Female')
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO project_status (id, name, flow_order) VALUES
   (1, 'Ativo', 1),
   (2, 'Em Desenvolvimento', 2),
-  (3, 'Concluido', 3);
+  (3, 'Concluido', 3)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO task_status (id, name, flow_order) VALUES
   (1,'CREATED',1),
@@ -29,27 +32,32 @@ INSERT INTO task_status (id, name, flow_order) VALUES
   (3,'IN_PROGRESS',3),
   (4,'BLOCKED',4),
   (5,'COMPLETED',5),
-  (6,'ARCHIVED',6);
+  (6,'ARCHIVED',6)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO task_types (id, name, flow_order) VALUES
   (1,'Feature',1),
   (2,'Bug',2),
-  (3,'Task',3);
+  (3,'Task',3)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO priorities (id, name, flow_order) VALUES
   (1,'Baixa',1),
   (2,'Média',2),
-  (3,'Alta',3);
+  (3,'Alta',3)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO categories (id, name, flow_order) VALUES
   (1,'WORKED',1),
   (2,'PERSONAL',2),
-  (3,'STUDY',3);
+  (3,'STUDY',3)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO project (id, name, description, project_status_id, start_date) VALUES
   (1, 'Portal E-learning', 'Escola online', 1, '2026-01-01'),
   (2, 'App Logística', 'Frotas e GPS', 1, '2026-01-15'),
-  (3, 'Data Lake Cloud', 'Infraestrutura AWS', 1, '2026-02-01');
+  (3, 'Data Lake Cloud', 'Infraestrutura AWS', 1, '2026-02-01')
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO tags (id, name, color) VALUES
   (1, 'Urgente', 'Red'),
@@ -57,7 +65,8 @@ INSERT INTO tags (id, name, color) VALUES
   (3, 'Frontend', 'Blue'),
   (4, 'Bug', 'Orange'),
   (5, 'Revisão', 'Purple'),
-  (6, 'Infra', 'Grey');
+  (6, 'Infra', 'Grey')
+ON CONFLICT (id) DO NOTHING;
 
 
 -- Ajusta as sequências para valores máximos das IDs inseridas
