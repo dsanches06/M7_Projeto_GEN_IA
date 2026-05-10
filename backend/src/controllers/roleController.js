@@ -1,4 +1,4 @@
-import * as roleService from "../services/taskService.js";
+import * as roleService from "../services/roleService.js";
 
 /* Função para buscar papéis */
 export const getRoles = async (req, res) => {
@@ -51,10 +51,12 @@ export const createRole = async (req, res) => {
 export const deleteRole = async (req, res) => {
   try {
     const role = await roleService.deleteRole(Number(req.params.id));
-    await taskService.removeRoleFromAllTasks(Number(req.params.id));
+    if (!role) {
+      return res.status(404).json({ message: "Papel não encontrado" });
+    }
     res.status(200).json({ message: "Papel deletado com sucesso", role });
   } catch (error) {
-    res.status(404).json({ message: "Erro ao deletar papel" });
+    res.status(400).json({ message: "Erro ao deletar papel" });
   }
 };
 
