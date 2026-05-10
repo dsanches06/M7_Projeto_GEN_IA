@@ -11,6 +11,11 @@ import {
 } from "../../functions/tasks/assign_task.js";
 
 import {
+  functionDeclarations as tagTaskDeclarations,
+  setTagTaskValues,
+} from "../../functions/tasks/tag_task.js";
+
+import {
   functionDeclarations as notificationDeclarations,
   setCreateNotificationValues,
 } from "../../functions/notifications/create_notification.js";
@@ -40,12 +45,14 @@ class ChatProcessor extends BaseChatProcessor {
       toolConfig: [
         ...taskDeclarations,
         ...assignDeclarations,
+        ...tagTaskDeclarations,
         ...notificationDeclarations,
         ...ticketDeclarations,
       ],
       functionHandlers: {
         set_create_task_values:         setCreateTaskValues,
         set_assign_task_values:         setAssignTaskValues,
+        set_tag_task_values:            setTagTaskValues,
         set_create_notification_values: setCreateNotificationValues,
         set_create_ticket_values:       setCreateTicketValues,
       },

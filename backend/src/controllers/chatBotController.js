@@ -20,6 +20,7 @@ import { upsertSummary }        from "../services/summaryService.js";
 import { getUserById }          from "../services/userService.js";
 import { getTaskById }          from "../services/taskService.js";
 import { createTaskAssignee }   from "../services/taskAssigneesService.js";
+import { createTagTask, createTagTasks } from "../services/tagTaskService.js";
 
 import { processChatMessage as processSummaryMessage } from "../genAI/summaries/chat_processor_summary.js";
 
@@ -119,8 +120,9 @@ const persistFunctionResult = async (functionResult) => {
   let notification = null;
   let ticket       = null;
   let assignment   = null;
+  let tags         = null;
 
-  if (!functionResult?.result) return { task, notification, ticket, assignment };
+  if (!functionResult?.result) return { task, notification, ticket, assignment, tags };
 
   const { functionName, result } = functionResult;
 
@@ -149,6 +151,16 @@ const persistFunctionResult = async (functionResult) => {
       assignment = await upsertAssignment(result.task_id, result.user_id);
       console.log("✅ Atribuição criada:", assignment);
 
+    // ── Adicionar etiquetas a tarefa existente ─────────────────────────────
+    } else if (functionName === "set_tag_task_values") {
+      console.log("🏷️ Adicionando etiquetas:", result);
+      if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0) {
+        tags = await createTagTasks(result);
+      } else if (result.tag_id) {
+        tags = [await createTagTask(result)];
+      }
+      console.log("✅ Etiquetas adicionadas:", tags);
+
     // ── Criar notificação ────────────────────────────────────────────────
     } else if (functionName === "set_create_notification_values") {
       console.log("📬 Criando notificação:", result);
@@ -168,7 +180,7 @@ const persistFunctionResult = async (functionResult) => {
     console.error(`❌ Erro ao persistir ${functionName}:`, err.message);
   }
 
-  return { task, notification, ticket, assignment };
+  return { task, notification, ticket, assignment, tags };
 };
 
 // ── Stream endpoint ───────────────────────────────────────────────────────────
@@ -235,6 +247,7 @@ export const sendMessageToBotStream = async (req, res) => {
     let notification = null;
     let ticket       = null;
     let assignment   = null;
+    let tags         = null;
 
     if (result.success !== false) {
       await createChatHistory({
@@ -245,7 +258,7 @@ export const sendMessageToBotStream = async (req, res) => {
 
       const firstResult = result.functionResults?.[0];
       if (firstResult) {
-        ({ task, notification, ticket, assignment } = await persistFunctionResult(firstResult));
+        ({ task, notification, ticket, assignment, tags } = await persistFunctionResult(firstResult));
       }
 
       setImmediate(() => autoGenerateSummary(actualConversationId));
@@ -259,7 +272,8 @@ export const sendMessageToBotStream = async (req, res) => {
       task,
       notification,
       ticket,
-      assignment,       // ← novo
+      assignment,
+      tags,
     });
 
     res.end();
@@ -303,14 +317,15 @@ export const sendMessageToConversation = async (req, res) => {
       });
 
       const firstResult = result.functionResults?.[0];
+      let persisted = {};
       if (firstResult) {
-        await persistFunctionResult(firstResult);
+        persisted = await persistFunctionResult(firstResult);
       }
 
       setImmediate(() => autoGenerateSummary(Number(conversationId)));
     }
 
-    res.status(result.success ? 200 : 400).json({ ...result, conversationId });
+    res.status(result.success ? 200 : 400).json({ ...result, conversationId, ...persisted });
   } catch (error) {
     res.status(500).json({
       success: false,

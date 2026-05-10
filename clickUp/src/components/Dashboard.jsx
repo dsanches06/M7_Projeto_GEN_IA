@@ -5,7 +5,7 @@ import progressIcon from "../assets/projeto_on_going.png";
 import completedIcon from "../assets/tarefa-concluida.png";
 import todoIcon from "../assets/filtrar-tarefas.png";
 
-export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
+export function Dashboard({ tasks = [], onTasksUpdate = () => {}, tasksLoading = false, tasksError = null, onRetryLoadTasks = () => {} }) {
   const allTasks = tasks || [];
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -74,24 +74,43 @@ export function Dashboard({ tasks = [], onTasksUpdate = () => {} }) {
       : "A Fazer";
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-6 py-6">
+    <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-main mb-2">Dashboard</h2>
         <p className="text-muted">Bem-vindo ao seu espaço de trabalho</p>
       </div>
 
+      {tasksError && (
+        <div className="mb-6 rounded-3xl border border-red-500/20 bg-red-600/10 p-5 text-red-100">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-semibold">Servidor indisponível</p>
+              <p className="text-sm text-red-100/90">Erro ao carregar tarefas: {tasksError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onRetryLoadTasks}
+              className="rounded-full border border-red-200/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
+            >
+              Recarregar tarefas
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
-          {statCards.map(({ label, value, icon, filter }) => {
+          {statCards.map(({ label, value, icon, filter }, index) => {
             const isSelected = statusFilter === filter;
             return (
               <button
                 key={label}
                 type="button"
                 onClick={() => setStatusFilter(filter)}
-                className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors focus:outline-none ${
+                className={`flex items-center gap-4 rounded-3xl p-2 text-left transition-colors focus:outline-none animate-fadeIn ${
                   isSelected ? "bg-surface-2 border border-surface" : "bg-surface"
                 }`}
+                style={{ animationDelay: `${index * 80}ms` }}
               >
                 <img src={icon} alt={label} className="w-8 h-8 object-contain" />
                 <div className="min-w-0">

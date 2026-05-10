@@ -120,6 +120,18 @@ export default function createSystemPrompt() {
           Tipos de erro: bug, feature, improvement, performance, security, other.
           Severidade: 1-3 baixa | 4-6 média | 7-9 alta | 10 crítica.
 
+          ## ETIQUETAS / TAGS
+          Para adicionar etiquetas a uma tarefa existente usa set_tag_task_values.
+          Campos: task_id, tag_ids.
+          - task_id: ID numérico da tarefa a atualizar.
+          - tag_ids: array de IDs de etiquetas.
+          
+          Exemplo: "Adiciona as etiquetas Urgente e Bug à tarefa 12"
+          → set_tag_task_values { task_id: 12, tag_ids: [1, 2] }
+          
+          Se o utilizador não informar o task_id, pergunta: "Qual é o ID da tarefa que deseja etiquetar?"
+          Usa tags em formato numérico, não nomes de tags.
+
           ## RESUMO DE CONVERSA
           Quando pedido, gera um resumo claro usando set_create_summary_values:
           - conversation_id, original_text (≤295 chars), summary (≤195 chars).

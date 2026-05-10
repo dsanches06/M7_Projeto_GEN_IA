@@ -36,15 +36,15 @@ function formatDate(str) {
 
 // ── Ticket card ───────────────────────────────────────────────────────────────
 
-function TicketCard({ ticket, onSelect }) {
+function TicketCard({ ticket, onSelect, delay = 0 }) {
   const sevStyle  = getSeverityStyle(ticket.severity || 5);
   const errCfg    = ERROR_TYPE_CONFIG[(ticket.error_type || '').toLowerCase()] || ERROR_TYPE_CONFIG.other;
   const statCfg   = STATUS_CONFIG[(ticket.status || 'open').toLowerCase()] || STATUS_CONFIG.open;
 
   return (
     <div
-      className="bg-white rounded-2xl border border-gray-100 p-5 cursor-pointer group transition-all"
-      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+      className="bg-white rounded-2xl border border-gray-100 p-5 cursor-pointer group transition-all animate-fadeIn"
+      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)', animationDelay: `${delay}ms` }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; e.currentTarget.style.transform = 'none'; }}
       onClick={() => onSelect(ticket)}
@@ -124,7 +124,7 @@ function TicketModal({ ticket, onClose, onStatusChange }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl"
+        className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl animate-fadeInUp"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
@@ -236,7 +236,7 @@ export default function TicketsPage() {
   });
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-6 py-6">
+    <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
 
       {/* ── Title ── */}
       <div className="mb-6">
@@ -302,8 +302,23 @@ export default function TicketsPage() {
       )}
 
       {error && !loading && (
-        <div className="text-center py-10 text-red-400 text-sm">
-          Erro ao carregar tickets: {error}
+        <div className="text-center py-10">
+          <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-red-600/20 bg-red-600/5 p-8 mx-auto max-w-xl">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600/10 text-red-600 animate-pulse text-2xl">
+              ⚠️
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-red-600">Servidor indisponível</p>
+              <p className="mt-1 text-sm text-red-500">Erro ao carregar tickets: {error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={load}
+              className="rounded-full border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-500/20"
+            >
+              Recarregar
+            </button>
+          </div>
         </div>
       )}
 
@@ -322,8 +337,8 @@ export default function TicketsPage() {
         <>
           <p className="text-xs text-gray-400 mb-3">{filtered.length} ticket{filtered.length !== 1 ? 's' : ''}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(ticket => (
-              <TicketCard key={ticket.id} ticket={ticket} onSelect={setSelected} />
+            {filtered.map((ticket, index) => (
+              <TicketCard key={ticket.id} ticket={ticket} onSelect={setSelected} delay={index * 60} />
             ))}
           </div>
         </>

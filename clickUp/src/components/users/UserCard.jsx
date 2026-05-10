@@ -11,7 +11,7 @@ import woman4 from "../../assets/woman-4.png";
 
 const AVATARS = [man1, woman1, man2, woman2, man3, woman3, man4, woman4];
 
-export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
+export default function UserCard({ user, onDashboard, onToggle, onDelete, delay = 0 }) {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
   const c = getPalette(user.id);
@@ -22,12 +22,13 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete }) {
 
   return (
     <div
-      className="relative w-full"
+      className="relative w-full animate-fadeInUp"
       style={{
         height: 220,
         perspective: 900,
         cursor: "pointer",
         transform: hovered ? "scale(1.02)" : "scale(1)",
+        animationDelay: `${delay}ms`,
         transition: "transform 0.25s ease, box-shadow 0.25s ease",
         boxShadow: hovered
           ? "0 20px 40px rgba(0,0,0,0.18)"

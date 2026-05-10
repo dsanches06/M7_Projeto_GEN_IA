@@ -36,21 +36,24 @@ export default function UsersPage() {
   const [activeDash, setActiveDash] = useState(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
 
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`${BACKEND_URL}/users`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setUsers(data.map(enrichUser));
+    } catch (err) {
+      console.error("Erro ao carregar utilizadores:", err);
+      setError(err.message || "Falha ao conectar ao servidor");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${BACKEND_URL}/users`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setUsers(data.map(enrichUser));
-      } catch (err) {
-        console.error("Erro ao carregar utilizadores:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadUsers();
   }, []);
 
   const filtered = users.filter((u) => {
@@ -174,7 +177,7 @@ export default function UsersPage() {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-6 py-6">
+    <div className="w-full max-w-7xl mx-auto px-6 py-6 animate-fadeInUp">
       <h2 className="text-3xl font-bold text-main mb-6">Gestão de Utilizadores</h2>
 
       {/* Toolbar */}
@@ -257,20 +260,36 @@ export default function UsersPage() {
       )}
 
       {error && !loading && (
-        <div className="text-center py-10 text-[#A32D2D] text-sm">
-          Erro ao carregar utilizadores: {error}
+        <div className="text-center py-10">
+          <div className="inline-flex flex-col items-center gap-4 rounded-3xl border border-red-600/20 bg-red-600/5 p-8 mx-auto max-w-xl">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600/10 text-red-600 animate-pulse text-2xl">
+              ⚠️
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-red-100">Servidor indisponível</p>
+              <p className="mt-1 text-sm text-red-200">Erro ao carregar utilizadores: {error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={loadUsers}
+              className="rounded-full border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
+            >
+              Recarregar
+            </button>
+          </div>
         </div>
       )}
 
       {!loading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {sortedUsers.map((u) => (
+          {sortedUsers.map((u, index) => (
             <UserCard
               key={u.id}
               user={u}
               onDashboard={setActiveDash}
               onToggle={toggleActive}
               onDelete={requestDeleteUser}
+              delay={index * 70}
             />
           ))}
           {filtered.length === 0 && (

@@ -5,7 +5,7 @@ export function TaskCard({ task }) {
   const statusStyle = getStatusBadgeStyle(task.status);
 
   return (
-    <div className="bg-surface-2 border border-surface rounded-lg p-4 hover:border-surface-strong transition">
+    <div className="bg-surface-2 border border-surface rounded-lg p-4 hover:border-surface-strong transition animate-fadeIn">
       <div className="flex items-start justify-between mb-2">
         <h3 className="text-main font-semibold flex-1">{task.title}</h3>
         <span 
