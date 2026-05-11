@@ -36,7 +36,7 @@ class ChatProcessor extends BaseChatProcessor {
         set_delete_ticket_values: setDeleteTicketValues,
         set_patch_status_ticket_values: setPatchStatusTicketValues,
         set_update_ticket_values: setUpdateTicketValues,
-        set_create_summary_values: setCreateSummaryValues
+        set_create_summary_values: setCreateSummaryValues,
       },
     });
   }

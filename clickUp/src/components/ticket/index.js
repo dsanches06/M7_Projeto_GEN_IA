@@ -1,2 +1,2 @@
 // ── Ticket components barrel ──────────────────────────────────────────────
-export { TicketCard } from "./TicketCard.jsx";
+export { default as TicketCard } from "./TicketCard.jsx";
