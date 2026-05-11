@@ -4,7 +4,6 @@ import { ChatUI, PageSection } from "@/components";
 import MainLayout from "@/pages/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import * as taskService from "@/services/taskService";
-import { InfoBanner } from "./components/ui/InfoBanner";
 import TrophySpin from "./components/ui/TrophySpin";
 
 const Dashboard   = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
@@ -17,14 +16,7 @@ function AppContent() {
   const [tasks,         setTasks]         = useState([]);
   const [tasksLoading,  setTasksLoading]  = useState(true);
   const [tasksError,    setTasksError]    = useState(null);
-  const [banner,        setBanner]        = useState(null);
   const [redirectState, setRedirectState] = useState({ active: false, path: "", message: "" });
-
-  useEffect(() => {
-    if (!banner) return;
-    const timer = setTimeout(() => setBanner(null), 3000);
-    return () => clearTimeout(timer);
-  }, [banner]);
 
   useEffect(() => {
     if (!redirectState.active) return;
@@ -62,15 +54,12 @@ function AppContent() {
       if (taskData.id) {
         const t = taskService.transformTaskForDisplay(taskData);
         setTasks((prev) => [t, ...prev]);
-        setBanner({ message: "✅ Tarefa criada com sucesso!", type: "success" });
       } else {
         const t = await taskService.createTask(taskData);
         setTasks((prev) => [taskService.transformTaskForDisplay(t), ...prev]);
-        setBanner({ message: "✅ Tarefa criada no backend!", type: "success" });
       }
-      startRedirect("/dashboard", "Tarefa criada! Aguardando carregamento antes de ir ao dashboard...");
+      startRedirect("/dashboard", "");
     } catch (err) {
-      setBanner({ message: `Erro ao criar tarefa: ${err.message}`, type: "error" });
     }
   };
 
@@ -80,15 +69,9 @@ function AppContent() {
     setTasks((prev) =>
       prev.map((t) => (t.id === updatedTask.id ? { ...t, ...transformed } : t))
     );
-    const statusLabel = transformed.status || updatedTask.status_name || "novo estado";
-    setBanner({
-      message: `🔄 Tarefa #${updatedTask.id} movida para "${statusLabel}"`,
-      type:    "success",
-    });
   };
 
   const handleTicketCreated = () => {
-    setBanner({ message: "✅ Ticket criado com sucesso!", type: "success" });
     startRedirect("/tickets", "Ticket criado! Aguardando carregamento antes de ir para tickets...");
   };
 
@@ -131,9 +114,6 @@ function AppContent() {
           </Route>
         </Routes>
       </Suspense>
-
-      {/* Banner */}
-      {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
 
       {/*
         Floating ChatBot button
