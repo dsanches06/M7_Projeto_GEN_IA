@@ -1,6 +1,18 @@
-import generateAIContent, {
-  generateAIContentStream,
-} from "../../genAI/gemini_config.js";
+/**
+ * BaseChatProcessor — Agentic loop with parallel function calling
+ *
+ * Pattern taken from multifunction.js:
+ *   const chat = ai.chats.create({ model, history, config });
+ *   let response = await chat.sendMessage({ message });
+ *   while (response.functionCalls?.length && step < MAX_STEPS) {
+ *     const results = await Promise.all(response.functionCalls.map(execute));
+ *     response = await chat.sendMessage({ message: { role:'tool', parts:[...results] } });
+ *   }
+ */
+
+import { createGeminiChat } from "../../genAI/gemini_config.js";
+
+const MAX_AGENTIC_STEPS = 5;
 
 export class BaseChatProcessor {
   constructor({ toolConfig = [], functionHandlers = {} }) {
@@ -8,288 +20,123 @@ export class BaseChatProcessor {
     this.functionHandlers = functionHandlers;
   }
 
-  // ── Utilitários ─────────────────────────────────────────────────────────────
-
-  getTextFromResponse(response) {
-    if (!response?.candidates?.length) return "";
-
-    const candidate = response.candidates[0];
-
-    if (typeof candidate.text === "string") return candidate.text.trim();
-
-    const content = candidate.content;
-
-    if (Array.isArray(content)) {
-      return content
-        .flatMap((item) => {
-          if (typeof item.text === "string") return [item.text];
-          if (Array.isArray(item.parts))
-            return item.parts
-              .filter((p) => typeof p?.text === "string")
-              .map((p) => p.text);
-          return [];
-        })
-        .join("")
-        .trim();
-    }
-
-    if (content?.parts && Array.isArray(content.parts)) {
-      return content.parts
-        .filter((p) => typeof p?.text === "string")
-        .map((p) => p.text)
-        .join("")
-        .trim();
-    }
-
-    return "";
-  }
-
-  extractFunctionCall(response) {
-    const functionCalls =
-      response?.functionCalls || response?.candidates?.[0]?.functionCalls;
-
-    if (Array.isArray(functionCalls) && functionCalls.length)
-      return functionCalls[0];
-
-    const candidate = response?.candidates?.[0];
-    if (!candidate) return null;
-
-    if (candidate.functionCall) return candidate.functionCall;
-
-    const content = candidate.content;
-
-    if (Array.isArray(content)) {
-      for (const item of content) {
-        if (item.functionCall) return item.functionCall;
-        if (Array.isArray(item.parts)) {
-          const fp = item.parts.find((p) => p.functionCall);
-          if (fp) return fp.functionCall;
-        }
-      }
-    }
-
-    if (content?.parts && Array.isArray(content.parts))
-      return content.parts.find((p) => p.functionCall)?.functionCall || null;
-
-    return null;
-  }
-
-  getTextFromStreamChunk(chunk) {
-    if (!chunk) return "";
-
-    if (typeof chunk.text === "string") return chunk.text;
-
-    const content = chunk.content;
-
-    if (Array.isArray(content)) {
-      return content
-        .flatMap((item) => {
-          if (typeof item.text === "string") return [item.text];
-          if (Array.isArray(item.parts))
-            return item.parts
-              .filter((p) => typeof p?.text === "string")
-              .map((p) => p.text);
-          return [];
-        })
-        .join("");
-    }
-
-    if (content?.parts && Array.isArray(content.parts))
-      return content.parts
-        .filter((p) => typeof p?.text === "string")
-        .map((p) => p.text)
-        .join("");
-
-    return "";
-  }
-
-  buildContents(userMessage, conversationHistory = []) {
-    const contents = conversationHistory.map((item) => ({
+  // ── Build Gemini history from our conversation format ───────────────────────
+  buildHistory(conversationHistory = []) {
+    return conversationHistory.map((item) => ({
       role:  item.role === "assistant" ? "model" : "user",
       parts: [{ text: item.content }],
     }));
-
-    contents.push({ role: "user", parts: [{ text: userMessage }] });
-    return contents;
   }
 
+  // ── Execute one function call ───────────────────────────────────────────────
   async executeFunction(functionCall) {
     const { name } = functionCall;
     const rawArgs  = functionCall.args || functionCall.arguments || {};
     const args     = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs;
     const handler  = this.functionHandlers[name];
 
-    if (!handler) throw new Error(`Função ${name} não suportada.`);
+    if (!handler) throw new Error(`Função "${name}" não está registada.`);
 
     const result = await handler(args);
-    return { name, args, result };
+    return { name, args, result, functionCall };
   }
 
-  buildFollowUpContents({ contents, response, functionCall, result, name }) {
-    const assistantCandidate = response.candidates?.[0];
-    const assistantContent   = Array.isArray(assistantCandidate?.content)
-      ? assistantCandidate.content
-      : assistantCandidate?.content?.parts || [];
-
-    return [
-      ...contents,
-      { role: "model", functionCall, parts: assistantContent },
-      {
-        role:  "user",
-        parts: [
-          {
-            functionResponse: {
-              name,
-              response: { content: result },
-            },
-          },
-        ],
-      },
-    ];
-  }
-
-  // ── Verifica se o erro veio do Gemini ──────────────────────────────────────
   isGeminiError(error) {
     return !!error?.geminiType;
   }
 
-  // ── Processamento normal ────────────────────────────────────────────────────
-
+  // ── Agentic loop (non-streaming) ────────────────────────────────────────────
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
-      const contents = this.buildContents(userMessage, conversationHistory);
+      const history = this.buildHistory(conversationHistory);
+      const chat    = createGeminiChat(this.toolConfig, history);
 
-      const response = await generateAIContent(contents, {
-        tools: this.toolConfig,
-      });
+      let response         = await chat.sendMessage({ message: userMessage });
+      const allResults     = [];
+      let step             = 0;
 
-      const functionCall  = this.extractFunctionCall(response);
-      const assistantText = this.getTextFromResponse(response);
+      while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
+        step++;
+        console.log(`[Agentic step ${step}] calling: ${response.functionCalls.map(f => f.name).join(", ")}`);
 
-      if (!functionCall) {
-        return {
-          success: true,
-          message: assistantText || "Como posso ajudar?",
-          functionResults: [],
-        };
+        // Execute ALL function calls in parallel
+        const execResults = await Promise.all(
+          response.functionCalls.map((fc) => this.executeFunction(fc))
+        );
+        allResults.push(...execResults);
+
+        // Return ALL results to the model in one message
+        response = await chat.sendMessage({
+          message: {
+            role:  "tool",
+            parts: execResults.map(({ name, result }) => ({
+              functionResponse: { name, response: result },
+            })),
+          },
+        });
       }
 
-      const { name, args, result } = await this.executeFunction(functionCall);
-
-      const followUpContents = this.buildFollowUpContents({
-        contents,
-        response,
-        functionCall,
-        result,
-        name,
-      });
-
-      const finalResponse = await generateAIContent(followUpContents, {
-        tools: this.toolConfig,
-      });
-
-      const finalText = this.getTextFromResponse(finalResponse);
-
+      const finalText = response.text || "";
       return {
-        success: true,
-        message: finalText || assistantText || `Função ${name} executada com sucesso.`,
-        functionResults: [{ functionName: name, arguments: args, result, functionCall }],
+        success:         true,
+        message:         finalText || "Como posso ajudar?",
+        functionResults: allResults.map(({ name, args, result, functionCall }) => ({
+          functionName: name,
+          arguments:    args,
+          result,
+          functionCall,
+        })),
       };
     } catch (error) {
-      // Erro classificado do Gemini → mensagem amigável
       if (this.isGeminiError(error)) {
         console.error(`[ChatProcessor] Gemini ${error.geminiType}:`, error.message);
-        return {
-          success:         false,
-          geminiError:     true,
-          errorType:       error.geminiType,
-          message:         error.message,
-          functionResults: [],
-        };
+        return { success: false, geminiError: true, errorType: error.geminiType, message: error.message, functionResults: [] };
       }
-
-      // Erro inesperado
       console.error("[ChatProcessor] Unexpected error:", error);
-      return {
-        success:         false,
-        geminiError:     false,
-        message:         "Ocorreu um erro interno. Tente novamente.",
-        functionResults: [],
-      };
+      return { success: false, geminiError: false, message: "Ocorreu um erro interno. Tente novamente.", functionResults: [] };
     }
   }
 
-  // ── Processamento stream ────────────────────────────────────────────────────
-
+  // ── Agentic loop (stream: function rounds non-streaming, final text chunked) ─
   async processChatMessageStream(userMessage, conversationHistory = [], onChunk) {
-    const contents = this.buildContents(userMessage, conversationHistory);
+    const history = this.buildHistory(conversationHistory);
+    const chat    = createGeminiChat(this.toolConfig, history);
 
-    // Primeira chamada — verificar function call
-    const response = await generateAIContent(contents, {
-      tools: this.toolConfig,
-    });
+    let response     = await chat.sendMessage({ message: userMessage });
+    const allResults = [];
+    let step         = 0;
 
-    const functionCall  = this.extractFunctionCall(response);
-    const assistantText = this.getTextFromResponse(response);
-    let   finalText     = "";
+    while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
+      step++;
+      console.log(`[Agentic stream step ${step}] calling: ${response.functionCalls.map(f => f.name).join(", ")}`);
 
-    if (functionCall) {
-      const { name, args, result } = await this.executeFunction(functionCall);
+      const execResults = await Promise.all(
+        response.functionCalls.map((fc) => this.executeFunction(fc))
+      );
+      allResults.push(...execResults);
 
-      const followUpContents = this.buildFollowUpContents({
-        contents,
-        response,
-        functionCall,
-        result,
-        name,
+      response = await chat.sendMessage({
+        message: {
+          role:  "tool",
+          parts: execResults.map(({ name, result }) => ({
+            functionResponse: { name, response: result },
+          })),
+        },
       });
-
-      const finalStream = await generateAIContentStream(followUpContents, {
-        tools: this.toolConfig,
-      });
-
-      const iterator =
-        typeof finalStream[Symbol.asyncIterator] === "function"
-          ? finalStream
-          : finalStream.stream;
-
-      for await (const chunk of iterator) {
-        const chunkText = this.getTextFromStreamChunk(chunk);
-        if (chunkText) {
-          finalText += chunkText;
-          onChunk(chunkText);
-        }
-      }
-
-      return {
-        success: true,
-        message: finalText || assistantText || `Função ${name} executada com sucesso.`,
-        functionResults: [{ functionName: name, arguments: args, result, functionCall }],
-      };
     }
 
-    // Sem function call — stream direto
-    const stream = await generateAIContentStream(contents, {
-      tools: this.toolConfig,
-    });
-
-    const iterator =
-      typeof stream[Symbol.asyncIterator] === "function"
-        ? stream
-        : stream.stream;
-
-    for await (const chunk of iterator) {
-      const chunkText = this.getTextFromStreamChunk(chunk);
-      if (chunkText) {
-        finalText += chunkText;
-        onChunk(chunkText);
-      }
-    }
+    const finalText = response.text || "";
+    if (finalText) onChunk(finalText);
 
     return {
       success:         true,
       message:         finalText,
-      functionResults: [],
+      functionResults: allResults.map(({ name, args, result, functionCall }) => ({
+        functionName: name,
+        arguments:    args,
+        result,
+        functionCall,
+      })),
     };
   }
 }

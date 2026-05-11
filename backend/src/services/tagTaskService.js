@@ -11,42 +11,51 @@ export const getTagTaskById = async (tagTaskId) => {
   return tagTasks.length > 0 ? mapTagTaskDTOResponse(tagTasks[0]) : null;
 };
 
+// ── createTagTask ─────────────────────────────────────────────────────────────
+// NOTE: tags_task has NO id column (composite PK: task_id + tag_id).
+// RETURNING id is removed — it caused PostgreSQL errors.
 export const createTagTask = async (data) => {
-  const [result] = await db.query(
-    "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?) RETURNING id",
+  await db.query(
+    "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?)",
     [data.task_id, data.tag_id]
   );
-  return mapTagTaskDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...data });
+  return mapTagTaskDTOResponse({ task_id: data.task_id, tag_id: data.tag_id });
 };
 
+// ── createTagTasks (bulk, skips duplicates) ───────────────────────────────────
 export const createTagTasks = async (data) => {
   const task_id = Number(data.task_id);
   const tag_ids = Array.isArray(data.tag_ids)
-    ? data.tag_ids.map(Number).filter((tagId) => tagId > 0)
+    ? data.tag_ids.map(Number).filter((n) => n > 0)
     : [];
 
-  if (!task_id || tag_ids.length === 0) {
+  if (!task_id || tag_ids.length === 0)
     throw new Error("task_id e tag_ids são obrigatórios para adicionar etiquetas");
-  }
 
-  const inserted = [];
+  const inserted  = [];
+  const skipped   = [];
+
   for (const tagId of tag_ids) {
+    // Check duplicate
     const [existing] = await db.query(
       "SELECT 1 FROM tags_task WHERE task_id = ? AND tag_id = ?",
       [task_id, tagId]
     );
 
-    if (existing.length > 0) {
+    if (Array.isArray(existing) && existing.length > 0) {
+      skipped.push(tagId);
       continue;
     }
 
-    const [result] = await db.query(
-      "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?) RETURNING id",
+    // No RETURNING — tags_task has no id column
+    await db.query(
+      "INSERT INTO tags_task (task_id, tag_id) VALUES (?, ?)",
       [task_id, tagId]
     );
-    inserted.push({ task_id, tag_id: tagId, id: result.insertId ?? result?.[0]?.id ?? null });
+    inserted.push({ task_id, tag_id: tagId });
   }
 
+  // Return inserted rows (or, if all skipped, return them anyway so controller can build response)
   return inserted.length > 0 ? inserted : tag_ids.map((tag_id) => ({ task_id, tag_id }));
 };
 
@@ -59,5 +68,3 @@ export const deleteTagTask = async (id) => {
   const [result] = await db.query("DELETE FROM tags_task WHERE task_id = ?", [id]);
   return result.affectedRows;
 };
-
-

@@ -6,6 +6,7 @@ clickUp/node_modules/
 # Environment variables
 .env
 backend/.env
+backend/.env.local
 clickUp/.env
 .vercel
 .env*.local

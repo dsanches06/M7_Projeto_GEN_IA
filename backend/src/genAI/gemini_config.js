@@ -20,128 +20,53 @@ if (!process.env.MODEL_NAME) {
   process.exit(1);
 }
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI    = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL_NAME = process.env.MODEL_NAME || "gemini-2.5-flash-lite";
 
-// ── Classificador de erros da API Gemini ─────────────────────────────────────
+// ── Gemini error classifier ───────────────────────────────────────────────────
 function classifyGeminiError(error) {
   const msg  = error?.message || "";
   const code = error?.status  || error?.code || 0;
 
-  // 503 / Service Unavailable
-  if (
-    code === 503 ||
-    msg.includes("503") ||
-    msg.toLowerCase().includes("service unavailable") ||
-    msg.toLowerCase().includes("overloaded") ||
-    msg.toLowerCase().includes("unavailable")
-  ) {
-    return {
-      type: "SERVICE_DOWN",
-      userMessage:
-        "O serviço de IA está temporariamente indisponível. Tente novamente em alguns instantes. 🔧",
-    };
-  }
-
-  // 429 / Rate limit
-  if (
-    code === 429 ||
-    msg.includes("429") ||
-    msg.toLowerCase().includes("quota") ||
-    msg.toLowerCase().includes("rate limit") ||
-    msg.toLowerCase().includes("resource_exhausted")
-  ) {
-    return {
-      type: "RATE_LIMIT",
-      userMessage:
-        "Limite de pedidos atingido. Aguarde alguns segundos e tente novamente. ⏳",
-    };
-  }
-
-  // 401 / 403 — chave inválida
-  if (
-    code === 401 ||
-    code === 403 ||
-    msg.includes("401") ||
-    msg.includes("403") ||
-    msg.toLowerCase().includes("api key") ||
-    msg.toLowerCase().includes("permission denied") ||
-    msg.toLowerCase().includes("unauthorized")
-  ) {
-    return {
-      type: "AUTH_ERROR",
-      userMessage:
-        "Erro de autenticação com o serviço de IA. Contacte o administrador. 🔑",
-    };
-  }
-
-  // Timeout / rede
-  if (
-    msg.toLowerCase().includes("timeout") ||
-    msg.toLowerCase().includes("econnrefused") ||
-    msg.toLowerCase().includes("enotfound") ||
-    msg.toLowerCase().includes("network") ||
-    msg.toLowerCase().includes("fetch failed")
-  ) {
-    return {
-      type: "NETWORK_ERROR",
-      userMessage:
-        "Não foi possível ligar ao serviço de IA. Verifique a sua ligação à internet. 🌐",
-    };
-  }
-
-  // 400 — pedido inválido
-  if (code === 400 || msg.includes("400") || msg.toLowerCase().includes("invalid")) {
-    return {
-      type: "INVALID_REQUEST",
-      userMessage: "O pedido não pôde ser processado. Tente reformular a mensagem. ✏️",
-    };
-  }
-
-  // Erro genérico
-  return {
-    type: "UNKNOWN",
-    userMessage: "O assistente de IA não está disponível de momento. Tente novamente. 🤖",
-  };
+  if (code === 503 || msg.includes("503") || msg.toLowerCase().includes("service unavailable") || msg.toLowerCase().includes("overloaded"))
+    return { type: "SERVICE_DOWN",    userMessage: "O serviço de IA está temporariamente indisponível. Tente novamente em alguns instantes. 🔧" };
+  if (code === 429 || msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate limit"))
+    return { type: "RATE_LIMIT",      userMessage: "Limite de pedidos atingido. Aguarde alguns segundos e tente novamente. ⏳" };
+  if (code === 401 || code === 403 || msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("permission denied"))
+    return { type: "AUTH_ERROR",      userMessage: "Erro de autenticação com o serviço de IA. Contacte o administrador. 🔑" };
+  if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("econnrefused") || msg.toLowerCase().includes("fetch failed"))
+    return { type: "NETWORK_ERROR",   userMessage: "Não foi possível ligar ao serviço de IA. Verifique a sua ligação à internet. 🌐" };
+  if (code === 400 || msg.includes("400") || msg.toLowerCase().includes("invalid"))
+    return { type: "INVALID_REQUEST", userMessage: "O pedido não pôde ser processado. Tente reformular a mensagem. ✏️" };
+  return { type: "UNKNOWN",           userMessage: "O assistente de IA não está disponível de momento. Tente novamente. 🤖" };
 }
 
-// ── Helper interno ────────────────────────────────────────────────────────────
+// ── Shared config builder ─────────────────────────────────────────────────────
 function buildGeminiConfig(tools, extraConfig = {}) {
   return {
     systemInstruction: createSystemPrompt(),
     temperature: 0.25,
     tools: tools ? [{ functionDeclarations: tools }] : undefined,
     toolConfig: {
-      functionCallingConfig: { mode: FunctionCallingConfigMode.ANY },
+      functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO },
     },
     ...extraConfig,
   };
 }
 
-// ── generateAIContent ─────────────────────────────────────────────────────────
-const generateAIContent = async (contents, options = {}) => {
-  const {
-    systemInstruction = createSystemPrompt(),
-    temperature = 0.25,
-    tools = null,
-    ...extraConfig
-  } = options;
-
+// ── createGeminiChat ─────────────────────────────────────────────────────────
+// Creates a stateful chat session (used by BaseChatProcessor agentic loop).
+// Matches the pattern in multifunction.js: ai.chats.create({ model, history, config })
+export const createGeminiChat = (tools, history = []) => {
   try {
-    return await genAI.models.generateContent({
+    return genAI.chats.create({
       model: MODEL_NAME,
-      contents,
-      config: buildGeminiConfig(tools, {
-        systemInstruction,
-        temperature,
-        ...extraConfig,
-      }),
+      history,
+      config: buildGeminiConfig(tools),
     });
   } catch (error) {
     const classified = classifyGeminiError(error);
-    console.error(`[Gemini] ${classified.type}:`, error.message);
-
-    // Anexa a mensagem amigável ao erro para o processador capturar
+    console.error(`[Gemini Chat] ${classified.type}:`, error.message);
     const enriched = new Error(classified.userMessage);
     enriched.geminiType    = classified.type;
     enriched.originalError = error;
@@ -149,29 +74,37 @@ const generateAIContent = async (contents, options = {}) => {
   }
 };
 
-// ── generateAIContentStream ───────────────────────────────────────────────────
-export const generateAIContentStream = async (contents, options = {}) => {
-  const {
-    systemInstruction = createSystemPrompt(),
-    temperature = 0.25,
-    tools = null,
-    ...extraConfig
-  } = options;
+// ── generateAIContent (stateless, kept for summaries processor) ───────────────
+const generateAIContent = async (contents, options = {}) => {
+  const { systemInstruction = createSystemPrompt(), temperature = 0.25, tools = null, ...extraConfig } = options;
+  try {
+    return await genAI.models.generateContent({
+      model: MODEL_NAME,
+      contents,
+      config: buildGeminiConfig(tools, { systemInstruction, temperature, ...extraConfig }),
+    });
+  } catch (error) {
+    const classified = classifyGeminiError(error);
+    console.error(`[Gemini] ${classified.type}:`, error.message);
+    const enriched = new Error(classified.userMessage);
+    enriched.geminiType    = classified.type;
+    enriched.originalError = error;
+    throw enriched;
+  }
+};
 
+// ── generateAIContentStream (stateless, kept for summaries processor) ─────────
+export const generateAIContentStream = async (contents, options = {}) => {
+  const { systemInstruction = createSystemPrompt(), temperature = 0.25, tools = null, ...extraConfig } = options;
   try {
     return await genAI.models.generateContentStream({
       model: MODEL_NAME,
       contents,
-      config: buildGeminiConfig(tools, {
-        systemInstruction,
-        temperature,
-        ...extraConfig,
-      }),
+      config: buildGeminiConfig(tools, { systemInstruction, temperature, ...extraConfig }),
     });
   } catch (error) {
     const classified = classifyGeminiError(error);
     console.error(`[Gemini Stream] ${classified.type}:`, error.message);
-
     const enriched = new Error(classified.userMessage);
     enriched.geminiType    = classified.type;
     enriched.originalError = error;

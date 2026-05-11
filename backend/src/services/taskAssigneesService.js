@@ -6,42 +6,40 @@ export const getAllTaskAssignees = async () => {
   return assignees.map(mapTaskAssigneeDTOResponse);
 };
 
-export const getTaskAssigneeById = async (id) => {
-  const [assignees] = await db.query("SELECT * FROM task_assignees WHERE id = ?", [id]);
-  return assignees.length > 0 ? mapTaskAssigneeDTOResponse(assignees[0]) : null;
-};
-
 export const getTaskAssigneeByUserId = async (userId) => {
   const [assignees] = await db.query("SELECT * FROM task_assignees WHERE user_id = ?", [userId]);
   return assignees.map(mapTaskAssigneeDTOResponse);
 };
 
+// ── createTaskAssignee ────────────────────────────────────────────────────────
+// NOTE: task_assignees has NO separate id column (composite PK: task_id + user_id).
+// RETURNING id removed — caused PostgreSQL "column id does not exist" errors.
 export const createTaskAssignee = async (data) => {
   const [existing] = await db.query(
     "SELECT * FROM task_assignees WHERE task_id = ?",
     [data.task_id]
   );
 
-  if (existing.length > 0) {
+  if (Array.isArray(existing) && existing.length > 0)
     throw new Error("Esta tarefa já está atribuída a outro utilizador.");
-  }
 
-  const [result] = await db.query(
-    "INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?) RETURNING id",
+  // Insert without RETURNING (no id column in this junction table)
+  await db.query(
+    "INSERT INTO task_assignees (task_id, user_id) VALUES (?, ?)",
     [data.task_id, data.user_id]
   );
 
-  return mapTaskAssigneeDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...data });
+  return mapTaskAssigneeDTOResponse({ task_id: data.task_id, user_id: data.user_id, assigned_at: new Date() });
 };
 
-export const updateTaskAssignee = async (id, data) => {
-  const [result] = await db.query("UPDATE task_assignees SET ? WHERE id = ?", [data, id]);
+// ── deleteTaskAssignee ────────────────────────────────────────────────────────
+// Deletes by task_id (not a separate row id — the table uses composite PK).
+export const deleteTaskAssignee = async (taskId) => {
+  const [result] = await db.query("DELETE FROM task_assignees WHERE task_id = ?", [taskId]);
+  return result.affectedRows ?? 0;
+};
+
+export const updateTaskAssignee = async (taskId, data) => {
+  const [result] = await db.query("UPDATE task_assignees SET ? WHERE task_id = ?", [data, taskId]);
   return result.affectedRows;
 };
-
-export const deleteTaskAssignee = async (id) => {
-  const [result] = await db.query("DELETE FROM task_assignees WHERE id = ?", [id]);
-  return result.affectedRows;
-};
-
-

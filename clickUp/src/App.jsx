@@ -12,25 +12,10 @@ const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
 function AppContent() {
   const navigate = useNavigate();
-  const [showChat,      setShowChat]      = useState(false);
-  const [tasks,         setTasks]         = useState([]);
-  const [tasksLoading,  setTasksLoading]  = useState(true);
-  const [tasksError,    setTasksError]    = useState(null);
-  const [redirectState, setRedirectState] = useState({ active: false, path: "", message: "" });
-
-  useEffect(() => {
-    if (!redirectState.active) return;
-    const timer = setTimeout(() => {
-      navigate(redirectState.path);
-      setRedirectState({ active: false, path: "", message: "" });
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [redirectState, navigate]);
-
-  const startRedirect = (path, message) => {
-    setRedirectState({ active: true, path, message });
-    setShowChat(false);
-  };
+  const [showChat,     setShowChat]     = useState(false);
+  const [tasks,        setTasks]        = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError,   setTasksError]   = useState(null);
 
   const loadTasks = async () => {
     try {
@@ -47,22 +32,24 @@ function AppContent() {
 
   useEffect(() => { loadTasks(); }, []);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────
 
+  /** Task created via ChatBot → add to list + navigate to dashboard (chat stays open) */
   const handleTaskCreated = async (taskData) => {
     try {
       if (taskData.id) {
-        const t = taskService.transformTaskForDisplay(taskData);
-        setTasks((prev) => [t, ...prev]);
+        setTasks((prev) => [taskService.transformTaskForDisplay(taskData), ...prev]);
       } else {
         const t = await taskService.createTask(taskData);
         setTasks((prev) => [taskService.transformTaskForDisplay(t), ...prev]);
       }
-      startRedirect("/dashboard", "");
+      navigate("/dashboard"); // navigate without closing chat
     } catch (err) {
+      console.error("[App] handleTaskCreated:", err?.message);
     }
   };
 
+  /** Task status/fields updated via ChatBot */
   const handleTaskUpdated = (updatedTask) => {
     if (!updatedTask?.id) return;
     const transformed = taskService.transformTaskForDisplay(updatedTask);
@@ -71,20 +58,19 @@ function AppContent() {
     );
   };
 
+  /** Task deleted via ChatBot */
+  const handleTaskDeleted = (deletedTaskId) => {
+    if (!deletedTaskId) return;
+    setTasks((prev) => prev.filter((t) => t.id !== Number(deletedTaskId)));
+  };
+
+  /** Ticket created/updated via ChatBot → navigate to tickets (chat stays open) */
   const handleTicketCreated = () => {
-    startRedirect("/tickets", "Ticket criado! Aguardando carregamento antes de ir para tickets...");
+    navigate("/tickets");
   };
 
   return (
     <>
-      {redirectState.active && (
-        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl bg-slate-950/95 p-6 shadow-2xl backdrop-blur-xl">
-            <TrophySpin message={redirectState.message} />
-          </div>
-        </div>
-      )}
-
       <Suspense fallback={<TrophySpin message="Carregando a página..." />}>
         <Routes>
           <Route path="/" element={<MainLayout />}>
@@ -115,30 +101,25 @@ function AppContent() {
         </Routes>
       </Suspense>
 
-      {/*
-        Floating ChatBot button
-        Desktop: bottom-right above nothing
-        Mobile:  bottom-right but above the bottom nav (bottom-[80px])
-      */}
+      {/* Floating ChatBot button */}
       {!showChat && (
         <button
           onClick={() => setShowChat(true)}
           className="fixed right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
-          style={{
-            bottom: "calc(64px + 12px)", // above bottom nav on mobile
-          }}
+          style={{ bottom: "calc(64px + 12px)" }}
           aria-label="Abrir ChatBot"
         >
           <span className="text-lg sm:text-xl">🤖</span>
         </button>
       )}
 
-      {/* ChatBot modal */}
+      {/* ChatBot — persists across page navigation because it lives outside <Routes> */}
       <ChatUI
         isOpen={showChat}
         onClose={() => setShowChat(false)}
         onTaskCreated={handleTaskCreated}
         onTaskUpdated={handleTaskUpdated}
+        onTaskDeleted={handleTaskDeleted}
         onTicketCreated={handleTicketCreated}
       />
     </>

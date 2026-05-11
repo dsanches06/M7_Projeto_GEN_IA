@@ -1,12 +1,22 @@
 import BaseService from "../services/BaseService.js";
 import { Task } from "../models/Task.js";
 
+// ── Map HTTP status → error type ─────────────────────────────────────────────
+function httpStatusToErrorType(status) {
+  if (status === 400) return "VALIDATION_ERROR";
+  if (status === 401 || status === 403) return "AUTH_ERROR";
+  if (status === 404) return "NOT_FOUND";
+  if (status === 429) return "RATE_LIMIT";
+  if (status === 503) return "SERVICE_DOWN";
+  return "SERVER_ERROR";
+}
+
 class ChatService extends BaseService {
   constructor() {
     super("/chat");
   }
 
-  // ── Stream com tratamento de gemini_error ────────────────────────────────
+  // ── Stream com tratamento completo de erros ──────────────────────────────
   async sendMessageToBotStream(
     message,
     conversationHistory = [],
@@ -23,21 +33,34 @@ class ChatService extends BaseService {
         body:    JSON.stringify(payload),
       });
 
+      // ── HTTP error BEFORE the stream starts ──────────────────────────────
       if (!response.ok) {
-        // Erro HTTP antes do stream (ex: 400, 500)
-        let errorMsg;
+        let serverMessage;
+        let errorType = httpStatusToErrorType(response.status);
+
         try {
           const body = await response.json();
-          errorMsg = body?.error || body?.message || `Erro HTTP ${response.status}`;
+          // Pick up the error message from the controller's JSON response
+          serverMessage =
+            body?.error ||
+            body?.message ||
+            body?.detail ||
+            `Erro ${response.status}: ${response.statusText}`;
         } catch {
-          errorMsg = `Erro HTTP ${response.status}`;
+          serverMessage = `Erro ${response.status}: ${response.statusText}`;
         }
-        throw Object.assign(new Error(errorMsg), {
-          geminiType:  "UNKNOWN",
-          isGeminiErr: false,
-        });
+
+        if (onDone)
+          onDone({
+            success:     false,
+            geminiError: false,
+            errorType,
+            message:     serverMessage,
+          });
+        return;
       }
 
+      // ── Read SSE stream ───────────────────────────────────────────────────
       const reader  = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "", event = null, data = "";
@@ -55,7 +78,6 @@ class ChatService extends BaseService {
             if (onDone) onDone(parsed);
 
           } else if (event === "gemini_error") {
-            // Repassa ao caller como done com flag de erro
             if (onDone)
               onDone({
                 ...parsed,
@@ -64,17 +86,17 @@ class ChatService extends BaseService {
               });
 
           } else if (event === "error") {
-            // Erro genérico do servidor
+            // Generic server-side error event
             if (onDone)
               onDone({
                 success:     false,
                 geminiError: false,
-                errorType:   "UNKNOWN",
+                errorType:   parsed?.errorType || "SERVER_ERROR",
                 message:     parsed?.message || "Erro inesperado do servidor.",
               });
           }
         } catch {
-          /* chunk inválido — ignora */
+          /* malformed chunk — ignore */
         }
 
         event = null;
@@ -96,7 +118,7 @@ class ChatService extends BaseService {
         }
       }
 
-      // Flush do buffer restante
+      // Flush any remaining buffer
       if (buffer.trim()) {
         for (const line of buffer.split("\n")) {
           if      (line.startsWith("event:")) event  = line.replace("event:", "").trim();
@@ -105,19 +127,22 @@ class ChatService extends BaseService {
         }
         flush();
       }
+
     } catch (err) {
-      // Erro de rede / fetch failed
-      const isGemini = !!err?.geminiType;
-      const msg = isGemini
-        ? err.message
-        : "Não foi possível ligar ao servidor. Verifique a sua ligação. 🌐";
+      // Network / fetch failure (no response at all)
+      const isTimeout =
+        err?.name === "AbortError" ||
+        (err?.message || "").toLowerCase().includes("timeout");
 
       if (onDone)
         onDone({
           success:     false,
-          geminiError: isGemini,
-          errorType:   err?.geminiType || "NETWORK_ERROR",
-          message:     msg,
+          geminiError: false,
+          errorType:   isTimeout ? "TIMEOUT" : "NETWORK_ERROR",
+          message:
+            isTimeout
+              ? "O pedido demorou demasiado tempo. Tente novamente. ⏱️"
+              : "Não foi possível ligar ao servidor. Verifique a sua ligação à internet. 🌐",
         });
       else
         throw err;
@@ -125,12 +150,17 @@ class ChatService extends BaseService {
   }
 
   async sendMessageToConversation(conversationId, message) {
-    return this.sendMessage(`/chat/conversation/${conversationId}/message`, { message });
+    return this.sendMessage(
+      `/chat/conversation/${conversationId}/message`,
+      { message },
+    );
   }
 
   async sendMessage(endpoint, payload, onChunk, onDone, conversationId = null) {
     if (onChunk || onDone)
-      return this.sendMessageToBotStream(payload, [], onChunk, onDone, conversationId);
+      return this.sendMessageToBotStream(
+        payload, [], onChunk, onDone, conversationId,
+      );
     return super.sendMessage(endpoint, payload);
   }
 
@@ -143,13 +173,11 @@ class ChatService extends BaseService {
     if (!geminiResponse) return null;
     if (typeof geminiResponse === "object")
       return Task.fromObject(geminiResponse)?.toPayload() || null;
-
     try {
       const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch)
         return Task.fromObject(JSON.parse(jsonMatch[0]))?.toPayload() || null;
     } catch { /* ignore */ }
-
     return null;
   }
 
