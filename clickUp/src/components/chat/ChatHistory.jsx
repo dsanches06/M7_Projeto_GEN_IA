@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import ChatMessage from '@/components/chat/ChatMessage';
+import { ChatMessage } from '@/components/chat';
 
 export function ChatHistory({ messages = [], loading = false }) {
   const messagesEndRef = useRef(null);

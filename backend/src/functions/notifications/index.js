@@ -3,4 +3,4 @@ export {
   setNotificationValuesFunctionDeclaration,
   functionDeclarations as createNotificationDeclarations,
   setCreateNotificationValues,
-} from "./create_notification.js";
+} from "./create.js";

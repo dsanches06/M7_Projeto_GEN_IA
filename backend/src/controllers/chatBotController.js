@@ -1,7 +1,7 @@
 import {
   processChatMessage,
   processChatMessageStream,
-} from "../genAI/orchestration/chat_processor.js";
+} from "../genAI/chat_processor.js";
 
 import {
   createChatHistory,
@@ -35,8 +35,6 @@ import { createTaskAssignee, deleteTaskAssignee } from "../services/taskAssignee
 import { createTagTask, createTagTasks }   from "../services/tagTaskService.js";
 import { getAllTags }                       from "../services/tagService.js";
 
-import { processChatMessage as processSummaryMessage } from "../genAI/summaries/chat_processor_summary.js";
-
 const ROLE_USER      = 2;
 const ROLE_ASSISTANT = 3;
 
@@ -63,7 +61,7 @@ const autoGenerateSummary = async (conversationId) => {
       .join("\n");
 
     const prompt = `Resume esta conversa (conversation_id: ${conversationId}). Histórico:\n${historyText}`;
-    const result = await processSummaryMessage(prompt, []);
+    const result = await processChatMessage(prompt, []);
 
     if (result.geminiError) return;
 

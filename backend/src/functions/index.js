@@ -19,6 +19,7 @@ import { createTicketDeclarations }       from "./tickets/index.js";
 import { deleteTicketDeclarations }       from "./tickets/index.js";
 import { patchStatusTicketDeclarations }  from "./tickets/index.js";
 import { updateTicketDeclarations }       from "./tickets/index.js";
+import { createSummaryDeclarations }      from "./summaries/index.js";
 
 export const ALL_FUNCTION_DECLARATIONS = [
   ...createTaskDeclarations,
@@ -32,4 +33,5 @@ export const ALL_FUNCTION_DECLARATIONS = [
   ...deleteTicketDeclarations,
   ...patchStatusTicketDeclarations,
   ...updateTicketDeclarations,
+  ...createSummaryDeclarations,
 ];

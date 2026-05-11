@@ -3,34 +3,34 @@ export {
   setTaskValuesFunctionDeclaration,
   functionDeclarations as createTaskDeclarations,
   setCreateTaskValues,
-} from "./create_task.js";
+} from "./create.js";
 
 export {
   setAssignTaskValuesFunctionDeclaration,
   functionDeclarations as assignTaskDeclarations,
   setAssignTaskValues,
-} from "./assign_task.js";
+} from "./assign.js";
 
 export {
   setTagTaskValuesFunctionDeclaration,
   functionDeclarations as tagTaskDeclarations,
   setTagTaskValues,
-} from "./tag_task.js";
+} from "./tags.js";
 
 export {
   setPatchStatusTaskValuesFunctionDeclaration,
   functionDeclarations as patchStatusTaskDeclarations,
   setPatchStatusTaskValues,
-} from "./patch_status_task.js";
+} from "./patch_status.js";
 
 export {
   setDeleteTaskValuesFunctionDeclaration,
   functionDeclarations as deleteTaskDeclarations,
   setDeleteTaskValues,
-} from "./delete_task.js";
+} from "./delete.js";
 
 export {
   setUpdateTaskValuesFunctionDeclaration,
   functionDeclarations as updateTaskDeclarations,
   setUpdateTaskValues,
-} from "./update_task.js";
+} from "./update.js";

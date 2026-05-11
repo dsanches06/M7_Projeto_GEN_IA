@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "@/services/BaseService.js";
-import TicketCard from "@/components/ticket/TicketCard.jsx";
+import { TicketCard } from "@/components/ticket/index.js";
 import { STATUS_CONFIG } from "@/utils/ticketUtils.js";
 
 const BACKEND_URL = getBackendUrl();

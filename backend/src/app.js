@@ -1,38 +1,40 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import projectRoutes from "./routes/projectRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
-import taskRoutes from "./routes/taskRoutes.js";
-import tagRoutes from "./routes/tagRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js";
-import sprintRoutes from "./routes/sprintRoutes.js";
-import projectStatusRoutes from "./routes/projectStatusRoutes.js";
-import taskStatusRoutes from "./routes/taskStatusRoutes.js";
-import categoryRoutes from "./routes/categoryRoutes.js";
-import taskTypesRoutes from "./routes/taskTypesRoutes.js";
-import priorityRoutes from "./routes/priorityRoutes.js";
-import tagTaskRoutes from "./routes/tagTaskRoutes.js";
-import taskAssigneesRoutes from "./routes/taskAssigneesRoutes.js";
-import teamRoutes from "./routes/teamRoutes.js";
-import teamMembersRoleRoutes from "./routes/teamMembersRoleRoutes.js";
-import taskAttachmentRoutes from "./routes/taskAttachmentRoutes.js";
-import taskVoteRoutes from "./routes/taskVoteRoutes.js";
-import taskStatusHistoryRoutes from "./routes/taskStatusHistoryRoutes.js";
-import projectPermissionRoutes from "./routes/projectPermissionRoutes.js";
-import taskDependencyRoutes from "./routes/taskDependencyRoutes.js";
-import favoriteTaskRoutes from "./routes/favoriteTaskRoutes.js";
-import reminderRoutes from "./routes/reminderRoutes.js";
-import mentionRoutes from "./routes/mentionRoutes.js";
-import timeLogRoutes from "./routes/timeLogRoutes.js";
-import statisticsRoutes from "./routes/statisticsRoutes.js";
-import conversationRoutes from "./routes/conversationRoutes.js";
-import roleRoutes from "./routes/roleRoutes.js";
-import summaryRoutes from "./routes/summaryRoutes.js";
-import ticketRoutes from "./routes/ticketRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
-import * as chatBotController from "./controllers/chatBotController.js";
-import logger from "./middlewares/loggerMiddleware.js";
+import {
+  categoryRoutes,
+  chatRoutes,
+  conversationRoutes,
+  favoriteTaskRoutes,
+  mentionRoutes,
+  notificationRoutes,
+  priorityRoutes,
+  projectPermissionRoutes,
+  projectRoutes,
+  projectStatusRoutes,
+  reminderRoutes,
+  roleRoutes,
+  sprintRoutes,
+  statisticsRoutes,
+  summaryRoutes,
+  tagRoutes,
+  tagTaskRoutes,
+  taskAssigneesRoutes,
+  taskAttachmentRoutes,
+  taskDependencyRoutes,
+  taskRoutes,
+  taskStatusHistoryRoutes,
+  taskStatusRoutes,
+  taskTypesRoutes,
+  taskVoteRoutes,
+  teamMembersRoleRoutes,
+  teamRoutes,
+  ticketRoutes,
+  timeLogRoutes,
+  userRoutes,
+} from "./routes/index.js";
+import { chatBotController } from "./controllers/index.js";
+import { loggerMiddleware } from "./middlewares/index.js";
 
 dotenv.config();
 
@@ -47,7 +49,7 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: true }));
-app.use(logger);
+app.use(loggerMiddleware);
 
 /* Endpoint Geral */
 app.get("/", (req, res) => {

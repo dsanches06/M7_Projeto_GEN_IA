@@ -1,6 +1,10 @@
-// Export all Chat UI components
-export { ChatBubbleUI } from '@/components/chat/ChatBubbleUI';
-export { ChatHeaderUI } from '@/components/chat/ChatHeaderUI';
-export { ChatLoadingUI } from '@/components/chat/ChatLoadingUI';
-export { ChatTaskDisplayUI } from '@/components/chat/ChatTaskDisplayUI';
-export { ChatInputUI } from '@/components/chat/ChatInputUI';
+// ── Chat components barrel ────────────────────────────────────────────────────
+export { ChatUI }           from "./ChatUI.jsx";
+export { ChatBubbleUI }     from "./ChatBubbleUI.jsx";
+export { ChatHeaderUI }     from "./ChatHeaderUI.jsx";
+export { ChatInputUI }      from "./ChatInputUI.jsx";
+export { ChatLoadingUI }    from "./ChatLoadingUI.jsx";
+export { ChatTaskDisplayUI }from "./ChatTaskDisplayUI.jsx";
+export { ChatMessage }      from "./ChatMessage.jsx";
+export { ChatHistory }      from "./ChatHistory.jsx";
+export { GeminiErrorCard }  from "./GeminiErrorCard.jsx";

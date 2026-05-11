@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
-import createSystemPrompt from "./createSystemPrompt.js";
+import createSystemPrompt from "./.js";
 import dotenv from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);

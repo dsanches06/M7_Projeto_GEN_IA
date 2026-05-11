@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
-import { ThemeToggle } from "@/components/ui/ThemeToggle.jsx";
+import { ThemeToggle } from "@/components/ui";
 import NotificationButton from "../notifications/NotificationButton.jsx";
 
 export function Header() {

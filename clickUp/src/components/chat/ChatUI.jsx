@@ -6,26 +6,28 @@ import {
   ChatHeaderUI,
   ChatLoadingUI,
   ChatInputUI,
-} from "@/components/chat";
-import { GeminiErrorCard } from "@/components/chat/GeminiErrorCard";
+  GeminiErrorCard,
+} from "@/components/chat/index.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const groupConversationsByDate = (conversations) => {
   const sorted = [...conversations].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
   );
-  const now       = new Date();
-  const today     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-  const week      = new Date(today); week.setDate(week.getDate() - 7);
-  const groups    = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const week = new Date(today);
+  week.setDate(week.getDate() - 7);
+  const groups = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
   sorted.forEach((conv) => {
     const d = new Date(conv.created_at);
-    if      (d >= today)     groups["Hoje"].push(conv);
+    if (d >= today) groups["Hoje"].push(conv);
     else if (d >= yesterday) groups["Ontem"].push(conv);
-    else if (d >= week)      groups["Esta Semana"].push(conv);
-    else                     groups["Anteriores"].push(conv);
+    else if (d >= week) groups["Esta Semana"].push(conv);
+    else groups["Anteriores"].push(conv);
   });
   return Object.entries(groups)
     .filter(([, c]) => c.length > 0)
@@ -35,9 +37,14 @@ const groupConversationsByDate = (conversations) => {
 const formatDate = (s) => {
   try {
     return new Date(s).toLocaleString("pt-PT", {
-      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
     });
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 };
 
 // ── Preview cards ─────────────────────────────────────────────────────────────
@@ -49,7 +56,9 @@ function TaskCreatedPreview({ task }) {
         <span>✅</span>
         <span className="text-xs font-bold text-[#065F46]">Tarefa criada</span>
       </div>
-      <p className="text-xs font-semibold text-gray-800 truncate">{task.title}</p>
+      <p className="text-xs font-semibold text-gray-800 truncate">
+        {task.title}
+      </p>
       <p className="text-[10px] text-gray-400 mt-0.5">ID #{task.id}</p>
     </div>
   );
@@ -57,14 +66,20 @@ function TaskCreatedPreview({ task }) {
 
 function TaskUpdatedPreview({ taskUpdated }) {
   const STATUS_COLORS = {
-    CREATED:"#EAB308", ASSIGNED:"#3B82F6", IN_PROGRESS:"#8B5CF6",
-    BLOCKED:"#EF4444", COMPLETED:"#22C55E", ARCHIVED:"#9CA3AF",
+    CREATED: "#EAB308",
+    ASSIGNED: "#3B82F6",
+    IN_PROGRESS: "#8B5CF6",
+    BLOCKED: "#EF4444",
+    COMPLETED: "#22C55E",
+    ARCHIVED: "#9CA3AF",
   };
   const statusName = taskUpdated.status_name || "UPDATED";
-  const color      = STATUS_COLORS[statusName] || "#6B7280";
+  const color = STATUS_COLORS[statusName] || "#6B7280";
   return (
-    <div className="rounded-xl p-3 shadow-sm"
-      style={{ border: `1px solid ${color}40`, background: `${color}12` }}>
+    <div
+      className="rounded-xl p-3 shadow-sm"
+      style={{ border: `1px solid ${color}40`, background: `${color}12` }}
+    >
       <div className="flex items-center gap-2 mb-1.5">
         <span>🔄</span>
         <span className="text-xs font-bold" style={{ color }}>
@@ -76,9 +91,16 @@ function TaskUpdatedPreview({ taskUpdated }) {
       </p>
       {statusName !== "UPDATED" && (
         <div className="flex items-center gap-1.5 mt-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-          <span className="text-[11px] font-bold" style={{ color }}>{statusName}</span>
-          <span className="text-[10px] text-gray-400 ml-auto">ID #{taskUpdated.id}</span>
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+          <span className="text-[11px] font-bold" style={{ color }}>
+            {statusName}
+          </span>
+          <span className="text-[10px] text-gray-400 ml-auto">
+            ID #{taskUpdated.id}
+          </span>
         </div>
       )}
     </div>
@@ -106,10 +128,14 @@ function AssignmentPreview({ assignment }) {
     <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2.5">
         <span>🔗</span>
-        <span className="text-xs font-bold text-[#1D4ED8]">Atribuição confirmada</span>
+        <span className="text-xs font-bold text-[#1D4ED8]">
+          Atribuição confirmada
+        </span>
       </div>
       <div className="flex items-start gap-2">
-        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0 pt-0.5">Tarefa</span>
+        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0 pt-0.5">
+          Tarefa
+        </span>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-gray-800 truncate">
             {assignment.task_title || `Tarefa #${assignment.task_id}`}
@@ -119,14 +145,18 @@ function AssignmentPreview({ assignment }) {
       </div>
       <div className="border-t border-[#BFDBFE] my-2" />
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">Atribuído</span>
+        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">
+          Atribuído
+        </span>
         <div className="w-5 h-5 rounded-full bg-[#BFDBFE] flex items-center justify-center text-[9px] font-bold text-[#1D4ED8] flex-shrink-0">
           {initial}
         </div>
         <p className="text-xs font-semibold text-gray-800 truncate flex-1">
           {assignment.user_name || `Utilizador #${assignment.user_id}`}
         </p>
-        <span className="text-[10px] text-gray-400 flex-shrink-0">#{assignment.user_id}</span>
+        <span className="text-[10px] text-gray-400 flex-shrink-0">
+          #{assignment.user_id}
+        </span>
       </div>
     </div>
   );
@@ -139,11 +169,14 @@ function TagAssignmentPreview({ tagAssignment }) {
       <div className="flex items-center gap-2 mb-2.5">
         <span>🏷️</span>
         <span className="text-xs font-bold text-[#7C3AED]">
-          Etiqueta{added.length !== 1 ? "s" : ""} adicionada{added.length !== 1 ? "s" : ""}
+          Etiqueta{added.length !== 1 ? "s" : ""} adicionada
+          {added.length !== 1 ? "s" : ""}
         </span>
       </div>
       <div className="flex items-start gap-2 mb-2.5">
-        <span className="text-[10px] text-gray-400 w-12 flex-shrink-0 pt-0.5">Tarefa</span>
+        <span className="text-[10px] text-gray-400 w-12 flex-shrink-0 pt-0.5">
+          Tarefa
+        </span>
         <div>
           <p className="text-xs font-semibold text-gray-800 truncate">
             {task_title || `Tarefa #${task_id}`}
@@ -154,10 +187,19 @@ function TagAssignmentPreview({ tagAssignment }) {
       {added.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {added.map((tag) => (
-            <span key={tag.tag_id}
+            <span
+              key={tag.tag_id}
               className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: `${tag.tag_color}18`, color: tag.tag_color, border: `1px solid ${tag.tag_color}40` }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.tag_color }} />
+              style={{
+                backgroundColor: `${tag.tag_color}18`,
+                color: tag.tag_color,
+                border: `1px solid ${tag.tag_color}40`,
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: tag.tag_color }}
+              />
               {tag.tag_name}
             </span>
           ))}
@@ -173,7 +215,9 @@ function TicketPreview({ ticket, onNavigate }) {
       <div className="rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">
         <div className="flex items-center gap-2">
           <span>🗑️</span>
-          <span className="text-xs font-bold text-red-700">Ticket #{ticket.id} eliminado</span>
+          <span className="text-xs font-bold text-red-700">
+            Ticket #{ticket.id} eliminado
+          </span>
         </div>
       </div>
     );
@@ -187,28 +231,47 @@ function TicketPreview({ ticket, onNavigate }) {
             Ticket #{ticket.id} → {ticket.status}
           </span>
         </div>
-        <button onClick={onNavigate}
-          className="mt-2 w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)]">
+        <button
+          onClick={onNavigate}
+          className="mt-2 w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)]"
+        >
           Ver Tickets →
         </button>
       </div>
     );
 
-  const sev   = ticket.severity || 5;
-  const color = sev >= 8 ? "#DC2626" : sev >= 5 ? "#D97706" : sev >= 3 ? "#2563EB" : "#16A34A";
+  const sev = ticket.severity || 5;
+  const color =
+    sev >= 8
+      ? "#DC2626"
+      : sev >= 5
+        ? "#D97706"
+        : sev >= 3
+          ? "#2563EB"
+          : "#16A34A";
   return (
-    <div className="rounded-xl border bg-white p-3 shadow-sm"
-      style={{ borderLeft: `3px solid ${color}` }}>
+    <div
+      className="rounded-xl border bg-white p-3 shadow-sm"
+      style={{ borderLeft: `3px solid ${color}` }}
+    >
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-mono text-gray-400">Ticket #{ticket.id}</span>
-        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-          style={{ background: `${color}18`, color }}>
+        <span className="text-[10px] font-mono text-gray-400">
+          Ticket #{ticket.id}
+        </span>
+        <span
+          className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+          style={{ background: `${color}18`, color }}
+        >
           Sev. {sev}/10
         </span>
       </div>
-      <p className="text-xs text-gray-700 line-clamp-2 mb-2">{ticket.user_report}</p>
-      <button onClick={onNavigate}
-        className="w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)]">
+      <p className="text-xs text-gray-700 line-clamp-2 mb-2">
+        {ticket.user_report}
+      </p>
+      <button
+        onClick={onNavigate}
+        className="w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)]"
+      >
         Ver página de Tickets →
       </button>
     </div>
@@ -217,9 +280,9 @@ function TicketPreview({ ticket, onNavigate }) {
 
 // ── Welcome message ───────────────────────────────────────────────────────────
 const INITIAL_MESSAGE = {
-  id:        "welcome",
-  text:      "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar, editar, eliminar e atribuir tarefas, tickets e notificações.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno e adiciona etiqueta Urgente'\n• 'Move a tarefa 1 para em progresso'\n• 'Elimina o ticket 3'\n• 'Fecha o ticket 7'",
-  sender:    "bot",
+  id: "welcome",
+  text: "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar, editar, eliminar e atribuir tarefas, tickets e notificações.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno e adiciona etiqueta Urgente'\n• 'Move a tarefa 1 para em progresso'\n• 'Elimina o ticket 3'\n• 'Fecha o ticket 7'",
+  sender: "bot",
   timestamp: new Date(),
 };
 
@@ -232,16 +295,16 @@ export function ChatUI({
   onTaskDeleted,
   onTicketCreated,
 }) {
-  const [messages,            setMessages]            = useState([INITIAL_MESSAGE]);
-  const [input,               setInput]               = useState("");
-  const [loading,             setLoading]             = useState(false);
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
-  const [conversationId,      setConversationId]      = useState(null);
-  const [conversations,       setConversations]       = useState([]);
-  const [showHistory,         setShowHistory]         = useState(false);
-  const [lastUserMessage,     setLastUserMessage]     = useState(null);
+  const [conversationId, setConversationId] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [lastUserMessage, setLastUserMessage] = useState(null);
   const messagesEndRef = useRef(null);
-  const inputRef       = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -253,8 +316,14 @@ export function ChatUI({
 
   useEffect(() => {
     if (!isOpen) return;
-    chatService.getConversations()
-      .then((all) => { if (all?.length) { setConversations(all); setShowHistory(true); } })
+    chatService
+      .getConversations()
+      .then((all) => {
+        if (all?.length) {
+          setConversations(all);
+          setShowHistory(true);
+        }
+      })
       .catch(() => {});
   }, [isOpen]);
 
@@ -265,11 +334,26 @@ export function ChatUI({
     setShowHistory(false);
     try {
       const summary = await summaryService.getSummaryByConversationId(conv.id);
-      const text    = summary?.summary ? `📋 Resumo:\n\n${summary.summary}` : "⏳ Resumo ainda a ser gerado.";
-      setMessages([{ id: `${conv.id}-s`, text, sender: "bot", timestamp: new Date() }]);
-      setConversationHistory(summary?.summary ? [{ role: "assistant", content: summary.summary }] : []);
+      const text = summary?.summary
+        ? `📋 Resumo:\n\n${summary.summary}`
+        : "⏳ Resumo ainda a ser gerado.";
+      setMessages([
+        { id: `${conv.id}-s`, text, sender: "bot", timestamp: new Date() },
+      ]);
+      setConversationHistory(
+        summary?.summary
+          ? [{ role: "assistant", content: summary.summary }]
+          : [],
+      );
     } catch {
-      setMessages([{ id: `${conv.id}-e`, text: "Não foi possível carregar o resumo.", sender: "bot", timestamp: new Date() }]);
+      setMessages([
+        {
+          id: `${conv.id}-e`,
+          text: "Não foi possível carregar o resumo.",
+          sender: "bot",
+          timestamp: new Date(),
+        },
+      ]);
       setConversationHistory([]);
     }
   };
@@ -288,10 +372,10 @@ export function ChatUI({
     setMessages((p) => [
       ...p,
       {
-        id:          Date.now(),
-        text:        "",
-        sender:      "bot",
-        timestamp:   new Date(),
+        id: Date.now(),
+        text: "",
+        sender: "bot",
+        timestamp: new Date(),
         geminiError: { errorType, message },
       },
     ]);
@@ -303,18 +387,18 @@ export function ChatUI({
     const botMsgId = Date.now() + 1;
 
     const botMsg = {
-      id:              botMsgId,
-      text:            "",
-      sender:          "bot",
-      timestamp:       new Date(),
+      id: botMsgId,
+      text: "",
+      sender: "bot",
+      timestamp: new Date(),
       functionResults: [],
-      taskData:        null,
+      taskData: null,
       taskUpdatedData: null,
       taskDeletedData: null,
-      assignmentData:  null,
-      tagData:         null,
-      ticketData:      null,
-      geminiError:     null,
+      assignmentData: null,
+      tagData: null,
+      ticketData: null,
+      geminiError: null,
     };
 
     const updatedHistory = [
@@ -324,7 +408,12 @@ export function ChatUI({
 
     setMessages((p) => [
       ...p,
-      { id: Date.now(), text: userMessage, sender: "user", timestamp: new Date() },
+      {
+        id: Date.now(),
+        text: userMessage,
+        sender: "user",
+        timestamp: new Date(),
+      },
       botMsg,
     ]);
     setConversationHistory(updatedHistory);
@@ -336,20 +425,26 @@ export function ChatUI({
         updatedHistory,
         (chunk) => {
           setMessages((p) =>
-            p.map((m) => m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m)
+            p.map((m) =>
+              m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m,
+            ),
           );
         },
         (done) => {
           // ── Any error (Gemini, HTTP, server) → show inline ─────────────
           if (done?.success === false || done?.geminiError) {
             const errorMsg = done.message || "Erro desconhecido.";
-            const errType  = done.errorType || "UNKNOWN";
+            const errType = done.errorType || "UNKNOWN";
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId
-                  ? { ...m, text: "", geminiError: { errorType: errType, message: errorMsg } }
-                  : m
-              )
+                  ? {
+                      ...m,
+                      text: "",
+                      geminiError: { errorType: errType, message: errorMsg },
+                    }
+                  : m,
+              ),
             );
             return;
           }
@@ -357,17 +452,29 @@ export function ChatUI({
           // ── Success ───────────────────────────────────────────────────
           if (done?.conversationId) {
             setConversationId(done.conversationId);
-            chatService.getConversations().then(setConversations).catch(() => {});
+            chatService
+              .getConversations()
+              .then(setConversations)
+              .catch(() => {});
           }
           if (done?.message) {
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, text: done.message } : m)
+              p.map((m) =>
+                m.id === botMsgId ? { ...m, text: done.message } : m,
+              ),
             );
-            setConversationHistory((p) => [...p, { role: "assistant", content: done.message }]);
+            setConversationHistory((p) => [
+              ...p,
+              { role: "assistant", content: done.message },
+            ]);
           }
           if (done?.functionResults?.length) {
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, functionResults: done.functionResults } : m)
+              p.map((m) =>
+                m.id === botMsgId
+                  ? { ...m, functionResults: done.functionResults }
+                  : m,
+              ),
             );
           }
 
@@ -375,43 +482,69 @@ export function ChatUI({
           if (done?.task) {
             if (onTaskCreated) onTaskCreated(done.task);
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, taskData: done.task } : m)
+              p.map((m) =>
+                m.id === botMsgId ? { ...m, taskData: done.task } : m,
+              ),
             );
           }
           if (done?.taskUpdated) {
             if (onTaskUpdated) onTaskUpdated(done.taskUpdated);
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, taskUpdatedData: done.taskUpdated } : m)
+              p.map((m) =>
+                m.id === botMsgId
+                  ? { ...m, taskUpdatedData: done.taskUpdated }
+                  : m,
+              ),
             );
           }
           if (done?.taskDeleted) {
             if (onTaskDeleted) onTaskDeleted(done.taskDeleted.id);
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, taskDeletedData: done.taskDeleted } : m)
+              p.map((m) =>
+                m.id === botMsgId
+                  ? { ...m, taskDeletedData: done.taskDeleted }
+                  : m,
+              ),
             );
           }
           if (done?.assignment) {
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, assignmentData: done.assignment } : m)
+              p.map((m) =>
+                m.id === botMsgId
+                  ? { ...m, assignmentData: done.assignment }
+                  : m,
+              ),
             );
           }
           if (done?.tags) {
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, tagData: done.tags } : m)
+              p.map((m) =>
+                m.id === botMsgId ? { ...m, tagData: done.tags } : m,
+              ),
             );
           }
           if (done?.ticket) {
-            if (done.ticket._type !== "ticket_deleted" && done.ticket._type !== "ticket_status") {
+            if (
+              done.ticket._type !== "ticket_deleted" &&
+              done.ticket._type !== "ticket_status"
+            ) {
               if (onTicketCreated) onTicketCreated();
             }
             setMessages((p) =>
-              p.map((m) => m.id === botMsgId ? { ...m, ticketData: done.ticket } : m)
+              p.map((m) =>
+                m.id === botMsgId ? { ...m, ticketData: done.ticket } : m,
+              ),
             );
           }
           if (done?.notification) {
             setMessages((p) => [
               ...p,
-              { id: Date.now() + 3, text: `✅ Notificação "${done.notification.title}" enviada!`, sender: "system", timestamp: new Date() },
+              {
+                id: Date.now() + 3,
+                text: `✅ Notificação "${done.notification.title}" enviada!`,
+                sender: "system",
+                timestamp: new Date(),
+              },
             ]);
           }
         },
@@ -422,9 +555,17 @@ export function ChatUI({
       setMessages((p) =>
         p.map((m) =>
           m.id === botMsgId
-            ? { ...m, text: "", geminiError: { errorType: "NETWORK_ERROR", message: "Não foi possível ligar ao servidor. Verifique a sua ligação. 🌐" } }
-            : m
-        )
+            ? {
+                ...m,
+                text: "",
+                geminiError: {
+                  errorType: "NETWORK_ERROR",
+                  message:
+                    "Não foi possível ligar ao servidor. Verifique a sua ligação. 🌐",
+                },
+              }
+            : m,
+        ),
       );
     } finally {
       setLoading(false);
@@ -459,13 +600,18 @@ export function ChatUI({
   return (
     <>
       {/* Mobile backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        onClick={onClose}
+      />
 
-      <div className={[
-        "fixed z-50 flex flex-col bg-page border border-surface shadow-2xl overflow-hidden",
-        "inset-x-0 top-[52px] bottom-[64px] rounded-none",
-        "md:inset-auto md:bottom-6 md:right-6 md:w-[320px] md:h-[80vh] md:min-h-[420px] md:rounded-3xl",
-      ].join(" ")}>
+      <div
+        className={[
+          "fixed z-50 flex flex-col bg-page border border-surface shadow-2xl overflow-hidden",
+          "inset-x-0 top-[52px] bottom-[64px] rounded-none",
+          "md:inset-auto md:bottom-6 md:right-6 md:w-[320px] md:h-[80vh] md:min-h-[420px] md:rounded-3xl",
+        ].join(" ")}
+      >
         <ChatHeaderUI onClose={onClose} />
 
         {/* ── History overlay ── */}
@@ -474,10 +620,15 @@ export function ChatUI({
             <div className="px-4 py-3 border-b border-surface flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-main">Histórico</h3>
-                <p className="text-xs text-muted mt-0.5">{conversations.length} conversa{conversations.length !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-muted mt-0.5">
+                  {conversations.length} conversa
+                  {conversations.length !== 1 ? "s" : ""}
+                </p>
               </div>
-              <button onClick={handleNewConversation}
-                className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] font-medium">
+              <button
+                onClick={handleNewConversation}
+                className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] font-medium"
+              >
                 + Nova
               </button>
             </div>
@@ -485,19 +636,30 @@ export function ChatUI({
               {grouped.map(({ label, convs }) => (
                 <div key={label}>
                   <div className="px-4 py-1.5 bg-surface sticky top-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                      {label}
+                    </span>
                   </div>
                   {convs.map((conv) => (
-                    <button key={conv.id} onClick={() => handleSelectConversation(conv)}
-                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group">
-                      <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">{conv.title}</p>
-                      <p className="text-xs text-muted mt-0.5">{formatDate(conv.created_at)}</p>
+                    <button
+                      key={conv.id}
+                      onClick={() => handleSelectConversation(conv)}
+                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group"
+                    >
+                      <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">
+                        {conv.title}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {formatDate(conv.created_at)}
+                      </p>
                     </button>
                   ))}
                 </div>
               ))}
               {conversations.length === 0 && (
-                <div className="flex items-center justify-center h-32 text-muted text-sm">Nenhuma conversa</div>
+                <div className="flex items-center justify-center h-32 text-muted text-sm">
+                  Nenhuma conversa
+                </div>
               )}
             </div>
           </div>
@@ -528,19 +690,39 @@ export function ChatUI({
                   )}
 
                   {/* Action preview cards */}
-                  {(msg.taskData || msg.taskUpdatedData || msg.taskDeletedData ||
-                    msg.assignmentData || msg.tagData || msg.ticketData) && (
+                  {(msg.taskData ||
+                    msg.taskUpdatedData ||
+                    msg.taskDeletedData ||
+                    msg.assignmentData ||
+                    msg.tagData ||
+                    msg.ticketData) && (
                     <div className="flex justify-start mt-2">
                       <div className="max-w-[280px] w-full space-y-2">
-                        {msg.taskData        && <TaskCreatedPreview  task={msg.taskData} />}
-                        {msg.taskUpdatedData && <TaskUpdatedPreview  taskUpdated={msg.taskUpdatedData} />}
-                        {msg.taskDeletedData && <TaskDeletedPreview  taskDeleted={msg.taskDeletedData} />}
-                        {msg.assignmentData  && <AssignmentPreview   assignment={msg.assignmentData} />}
-                        {msg.tagData         && <TagAssignmentPreview tagAssignment={msg.tagData} />}
-                        {msg.ticketData      && (
+                        {msg.taskData && (
+                          <TaskCreatedPreview task={msg.taskData} />
+                        )}
+                        {msg.taskUpdatedData && (
+                          <TaskUpdatedPreview
+                            taskUpdated={msg.taskUpdatedData}
+                          />
+                        )}
+                        {msg.taskDeletedData && (
+                          <TaskDeletedPreview
+                            taskDeleted={msg.taskDeletedData}
+                          />
+                        )}
+                        {msg.assignmentData && (
+                          <AssignmentPreview assignment={msg.assignmentData} />
+                        )}
+                        {msg.tagData && (
+                          <TagAssignmentPreview tagAssignment={msg.tagData} />
+                        )}
+                        {msg.ticketData && (
                           <TicketPreview
                             ticket={msg.ticketData}
-                            onNavigate={() => { if (onTicketCreated) onTicketCreated(); }}
+                            onNavigate={() => {
+                              if (onTicketCreated) onTicketCreated();
+                            }}
                           />
                         )}
                       </div>
@@ -562,8 +744,10 @@ export function ChatUI({
             />
 
             {conversations.length > 0 && (
-              <button onClick={() => setShowHistory(true)}
-                className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center">
+              <button
+                onClick={() => setShowHistory(true)}
+                className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
+              >
                 📋 Ver histórico ({conversations.length})
               </button>
             )}

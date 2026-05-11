@@ -1,4 +1,4 @@
-import { ChatBot } from '@/components/chat/ChatBot';
+import { ChatBot } from '@/components/chat';
 
 /**
  * Página com o componente ChatBot

@@ -1,2 +1,2 @@
-export { ChatUI } from '@/components/chat/ChatUI';
+export { ChatUI } from '@/components/chat';
 export { PageSection } from '@/pages/PageSection';
