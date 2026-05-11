@@ -46,11 +46,15 @@ const autoGenerateSummary = async (conversationId) => {
 
     const historyText = historyRows
       .slice(-12)
-      .map((r) => `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`)
+      .map((r) =>
+        `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`
+      )
       .join("\n");
 
     const prompt = `Resume esta conversa de forma concisa (conversation_id: ${conversationId}). Histórico:\n${historyText}`;
     const result = await processSummaryMessage(prompt, []);
+
+    if (result.geminiError) return; // Gemini indisponível → não persiste resumo
 
     if (result.functionResults?.[0]?.result) {
       const fd = result.functionResults[0].result;
@@ -76,9 +80,8 @@ const upsertAssignment = async (task_id, user_id) => {
   const taskIdNum = Number(task_id);
   const userIdNum = Number(user_id);
 
-  if (!taskIdNum || !userIdNum) {
-    throw new Error(`IDs inválidos para atribuição: task_id=${task_id}, user_id=${user_id}`);
-  }
+  if (!taskIdNum || !userIdNum)
+    throw new Error(`IDs inválidos: task_id=${task_id}, user_id=${user_id}`);
 
   let assignment;
   try {
@@ -110,101 +113,57 @@ const upsertAssignment = async (task_id, user_id) => {
 
 // ── Persist function result ───────────────────────────────────────────────────
 const persistFunctionResult = async (functionResult) => {
-  let task         = null;
-  let notification = null;
-  let ticket       = null;
-  let assignment   = null;
-  let tags         = null;
-  let taskUpdated  = null;
+  let task = null, notification = null, ticket = null,
+      assignment = null, tags = null, taskUpdated = null;
 
-  if (!functionResult?.result) return { task, notification, ticket, assignment, tags, taskUpdated };
+  if (!functionResult?.result)
+    return { task, notification, ticket, assignment, tags, taskUpdated };
 
   const { functionName, result } = functionResult;
 
   try {
-    // ── Criar tarefa ─────────────────────────────────────────────────────
     if (functionName === "set_create_task_values") {
-      console.log("📝 Criando tarefa:", result);
       task = await createTask(result);
-      console.log("✅ Tarefa criada:", task);
-
       if (result.user_id && task?.id) {
-        console.log(`🔗 Auto-atribuindo tarefa #${task.id} ao utilizador #${result.user_id}`);
-        try {
-          assignment = await upsertAssignment(task.id, result.user_id);
-          console.log("✅ Atribuição automática criada:", assignment);
-        } catch (assignErr) {
-          console.warn("[chatBotController] Auto-atribuição falhou:", assignErr.message);
-        }
+        try { assignment = await upsertAssignment(task.id, result.user_id); }
+        catch (e) { console.warn("[persist] Auto-assign failed:", e.message); }
       }
-
-    // ── Atribuir tarefa existente ────────────────────────────────────────
     } else if (functionName === "set_assign_task_values") {
-      console.log("🔗 Atribuindo tarefa:", result);
       assignment = await upsertAssignment(result.task_id, result.user_id);
-      console.log("✅ Atribuição criada:", assignment);
-
-    // ── Alterar status da tarefa ──────────────────────────────────────────
     } else if (functionName === "set_patch_status_task_values") {
-      console.log("🔄 Atualizando status da tarefa:", result);
       const taskIdNum   = Number(result.task_id);
       const statusIdNum = Number(result.status_id);
-
-      if (!taskIdNum || !statusIdNum) {
+      if (!taskIdNum || !statusIdNum)
         throw new Error(`IDs inválidos: task_id=${result.task_id}, status_id=${result.status_id}`);
-      }
-
       await updateStatus(taskIdNum, { status_id: statusIdNum });
       taskUpdated = await getTaskById(taskIdNum);
-
-      if (taskUpdated) {
-        taskUpdated.status_name = STATUS_NAME[statusIdNum] || "UNKNOWN";
-      }
-      console.log("✅ Status atualizado:", taskUpdated);
-
-    // ── Adicionar etiquetas ────────────────────────────────────────────────
+      if (taskUpdated) taskUpdated.status_name = STATUS_NAME[statusIdNum] || "UNKNOWN";
     } else if (functionName === "set_tag_task_values") {
-      console.log("🏷️ Adicionando etiquetas:", result);
       let rawTags = [];
-      if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0) {
+      if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0)
         rawTags = await createTagTasks(result);
-      } else if (result.tag_id) {
+      else if (result.tag_id)
         rawTags = [await createTagTask(result)];
-      }
 
       let allTags = [];
       try { allTags = await getAllTags(); } catch { /* non-critical */ }
 
-      const tagMap     = Object.fromEntries(allTags.map(t => [t.id, t]));
+      const tagMap      = Object.fromEntries(allTags.map((t) => [t.id, t]));
       const taskDetails = await getTaskById(result.task_id).catch(() => null);
 
       tags = {
         task_id:    result.task_id,
         task_title: taskDetails?.title || `Tarefa #${result.task_id}`,
-        added: (rawTags || []).map(rt => {
+        added: (rawTags || []).map((rt) => {
           const tag = tagMap[rt.tag_id] || {};
-          return {
-            tag_id:    rt.tag_id,
-            tag_name:  tag.name  || `Tag #${rt.tag_id}`,
-            tag_color: tag.color || "#6B7280",
-          };
+          return { tag_id: rt.tag_id, tag_name: tag.name || `Tag #${rt.tag_id}`, tag_color: tag.color || "#6B7280" };
         }),
         skipped: [],
       };
-      console.log("✅ Etiquetas adicionadas:", tags);
-
-    // ── Criar notificação ────────────────────────────────────────────────
     } else if (functionName === "set_create_notification_values") {
-      console.log("📬 Criando notificação:", result);
       notification = await createNotification(result);
-      console.log("✅ Notificação criada:", notification);
-
-    // ── Criar ticket ─────────────────────────────────────────────────────
     } else if (functionName === "set_create_ticket_values") {
-      console.log("🎟️ Criando ticket:", result);
       ticket = await createTicket(result);
-      console.log("✅ Ticket criado:", ticket);
-
     } else {
       console.warn("[chatBotController] Função desconhecida:", functionName);
     }
@@ -215,14 +174,23 @@ const persistFunctionResult = async (functionResult) => {
   return { task, notification, ticket, assignment, tags, taskUpdated };
 };
 
+// ── Mensagens de erro amigáveis por tipo ──────────────────────────────────────
+const GEMINI_ERROR_MESSAGES = {
+  SERVICE_DOWN:    "⚠️ O serviço de IA está temporariamente em baixo. Tente novamente em instantes.",
+  RATE_LIMIT:      "⏳ Limite de pedidos atingido. Aguarde alguns segundos e tente novamente.",
+  AUTH_ERROR:      "🔑 Erro de autenticação com o serviço de IA. Contacte o administrador.",
+  NETWORK_ERROR:   "🌐 Sem ligação ao serviço de IA. Verifique a internet e tente novamente.",
+  INVALID_REQUEST: "✏️ O pedido não pôde ser processado. Tente reformular a mensagem.",
+  UNKNOWN:         "🤖 O assistente de IA não está disponível. Tente novamente.",
+};
+
 // ── Stream endpoint ───────────────────────────────────────────────────────────
 export const sendMessageToBotStream = async (req, res) => {
   try {
     const { message, conversationHistory, conversationId } = req.body;
 
-    if (!message || message.trim().length === 0) {
+    if (!message || message.trim().length === 0)
       return res.status(400).json({ success: false, error: "Mensagem não pode estar vazia" });
-    }
 
     const userMessage = message.trim();
     let actualConversationId        = conversationId ? Number(conversationId) : null;
@@ -230,15 +198,14 @@ export const sendMessageToBotStream = async (req, res) => {
 
     if (actualConversationId) {
       const existing = await getConversationById(actualConversationId);
-      if (!existing) {
+      if (!existing)
         return res.status(404).json({ success: false, error: "Conversation não encontrada" });
-      }
       if (!resolvedConversationHistory.length) {
         const historyRows = await getChatHistoryByConversationId(actualConversationId);
         resolvedConversationHistory = buildConversationHistory(historyRows);
       }
     } else {
-      const title = userMessage.length > 50 ? userMessage.substring(0, 47) + "..." : userMessage;
+      const title   = userMessage.length > 50 ? userMessage.substring(0, 47) + "..." : userMessage;
       const newConv = await createConversation({ title });
       actualConversationId = newConv.id;
     }
@@ -261,25 +228,41 @@ export const sendMessageToBotStream = async (req, res) => {
 
     let finalText = "";
 
-    const result = await processChatMessageStream(
-      userMessage,
-      resolvedConversationHistory,
-      (chunkText) => {
-        finalText += chunkText;
-        sendEvent("message", { text: chunkText });
+    try {
+      const result = await processChatMessageStream(
+        userMessage,
+        resolvedConversationHistory,
+        (chunkText) => {
+          finalText += chunkText;
+          sendEvent("message", { text: chunkText });
+        }
+      );
+
+      const assistantText = result.message || finalText;
+
+      // ── Gemini em baixo ou erro classificado ────────────────────────────
+      if (result.geminiError || result.success === false) {
+        const errorMsg = GEMINI_ERROR_MESSAGES[result.errorType] || result.message;
+
+        // Persiste a mensagem de erro no histórico para contexto
+        await createChatHistory({
+          conversation_id: actualConversationId,
+          role_id:         ROLE_ASSISTANT,
+          content:         errorMsg,
+        });
+
+        sendEvent("gemini_error", {
+          success:       false,
+          geminiError:   true,
+          errorType:     result.errorType || "UNKNOWN",
+          message:       errorMsg,
+          conversationId: actualConversationId,
+        });
+
+        return res.end();
       }
-    );
 
-    const assistantText = result.message || finalText;
-
-    let task         = null;
-    let notification = null;
-    let ticket       = null;
-    let assignment   = null;
-    let tags         = null;
-    let taskUpdated  = null;
-
-    if (result.success !== false) {
+      // ── Sucesso ─────────────────────────────────────────────────────────
       await createChatHistory({
         conversation_id: actualConversationId,
         role_id:         ROLE_ASSISTANT,
@@ -287,32 +270,52 @@ export const sendMessageToBotStream = async (req, res) => {
       });
 
       const firstResult = result.functionResults?.[0];
-      if (firstResult) {
-        ({ task, notification, ticket, assignment, tags, taskUpdated } =
-          await persistFunctionResult(firstResult));
-      }
+      let persisted = {};
+      if (firstResult)
+        persisted = await persistFunctionResult(firstResult);
 
       setImmediate(() => autoGenerateSummary(actualConversationId));
+
+      sendEvent("done", {
+        success:         true,
+        message:         assistantText,
+        conversationId:  actualConversationId,
+        functionResults: result.functionResults || [],
+        ...persisted,
+      });
+
+      res.end();
+    } catch (streamError) {
+      // Erro Gemini que escapou do processador (ex: no stream do follow-up)
+      const isGeminiErr = !!streamError?.geminiType;
+      const errorMsg    = isGeminiErr
+        ? streamError.message
+        : GEMINI_ERROR_MESSAGES.UNKNOWN;
+
+      console.error("[Controller Stream] Error:", streamError.message);
+
+      sendEvent("gemini_error", {
+        success:       false,
+        geminiError:   isGeminiErr,
+        errorType:     streamError?.geminiType || "UNKNOWN",
+        message:       errorMsg,
+        conversationId: actualConversationId,
+      });
+
+      res.end();
     }
-
-    sendEvent("done", {
-      success:         true,
-      message:         assistantText,
-      conversationId:  actualConversationId,
-      functionResults: result.functionResults || [],
-      task,
-      notification,
-      ticket,
-      assignment,
-      tags,
-      taskUpdated,
-    });
-
-    res.end();
   } catch (error) {
-    console.error("Erro no controller stream:", error);
-    res.write(`event: error\ndata: ${JSON.stringify({ message: error.message })}\n\n`);
-    res.end();
+    console.error("[Controller] Fatal error:", error);
+    // Se os headers ainda não foram enviados
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, error: "Erro interno do servidor." });
+    }
+    try {
+      res.write(`event: gemini_error\ndata: ${JSON.stringify({
+        success: false, geminiError: false, message: GEMINI_ERROR_MESSAGES.UNKNOWN,
+      })}\n\n`);
+      res.end();
+    } catch { /* cliente desligou */ }
   }
 };
 
@@ -322,21 +325,18 @@ export const sendMessageToConversation = async (req, res) => {
     const conversationId = Number(req.params.conversationId);
     const { message }    = req.body;
 
-    if (!message || message.trim().length === 0) {
+    if (!message || message.trim().length === 0)
       return res.status(400).json({ success: false, error: "Mensagem não pode estar vazia" });
-    }
 
-    if (!conversationId) {
+    if (!conversationId)
       return res.status(400).json({ success: false, error: "conversationId inválido" });
-    }
 
     const existingConversation = await getConversationById(conversationId);
-    if (!existingConversation) {
+    if (!existingConversation)
       return res.status(404).json({ success: false, error: "Conversation não encontrada" });
-    }
 
-    const userMessage      = message.trim();
-    const chatHistoryRows  = await getChatHistoryByConversationId(conversationId);
+    const userMessage     = message.trim();
+    const chatHistoryRows = await getChatHistoryByConversationId(conversationId);
     const conversationHist = buildConversationHistory(chatHistoryRows);
 
     await createChatHistory({
@@ -347,29 +347,32 @@ export const sendMessageToConversation = async (req, res) => {
 
     const result = await processChatMessage(userMessage, conversationHist);
 
-    if (result.success && result.message) {
-      await createChatHistory({
-        conversation_id: conversationId,
-        role_id:         ROLE_ASSISTANT,
-        content:         result.message,
+    // Gemini em baixo
+    if (result.geminiError || result.success === false) {
+      const errorMsg = GEMINI_ERROR_MESSAGES[result.errorType] || result.message;
+      return res.status(503).json({
+        success:     false,
+        geminiError: true,
+        errorType:   result.errorType || "UNKNOWN",
+        message:     errorMsg,
+        conversationId,
       });
-
-      const firstResult = result.functionResults?.[0];
-      let persisted = {};
-      if (firstResult) {
-        persisted = await persistFunctionResult(firstResult);
-      }
-
-      setImmediate(() => autoGenerateSummary(Number(conversationId)));
-
-      return res.status(200).json({ ...result, conversationId, ...persisted });
     }
 
-    res.status(result.success ? 200 : 400).json({ ...result, conversationId });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error:   "Erro ao processar mensagem: " + error.message,
+    await createChatHistory({
+      conversation_id: conversationId,
+      role_id:         ROLE_ASSISTANT,
+      content:         result.message,
     });
+
+    const firstResult = result.functionResults?.[0];
+    let persisted = {};
+    if (firstResult) persisted = await persistFunctionResult(firstResult);
+
+    setImmediate(() => autoGenerateSummary(Number(conversationId)));
+
+    return res.status(200).json({ ...result, conversationId, ...persisted });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Erro ao processar mensagem: " + error.message });
   }
 };

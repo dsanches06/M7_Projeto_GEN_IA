@@ -8,6 +8,7 @@ import {
   ChatLoadingUI,
   ChatInputUI,
 } from "@/components/chat";
+import { GeminiErrorCard } from "@/components/chat/GeminiErrorCard";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -57,20 +58,14 @@ function TaskCreatedPreview({ task }) {
 
 function TaskStatusPreview({ taskUpdated }) {
   const STATUS_COLORS = {
-    CREATED:     "#EAB308",
-    ASSIGNED:    "#3B82F6",
-    IN_PROGRESS: "#8B5CF6",
-    BLOCKED:     "#EF4444",
-    COMPLETED:   "#22C55E",
-    ARCHIVED:    "#9CA3AF",
+    CREATED:"#EAB308", ASSIGNED:"#3B82F6", IN_PROGRESS:"#8B5CF6",
+    BLOCKED:"#EF4444", COMPLETED:"#22C55E", ARCHIVED:"#9CA3AF",
   };
   const statusName = taskUpdated.status_name || "UNKNOWN";
   const color      = STATUS_COLORS[statusName] || "#6B7280";
   return (
-    <div
-      className="rounded-xl p-3 shadow-sm"
-      style={{ border: `1px solid ${color}40`, background: `${color}12` }}
-    >
+    <div className="rounded-xl p-3 shadow-sm"
+      style={{ border: `1px solid ${color}40`, background: `${color}12` }}>
       <div className="flex items-center gap-2 mb-1.5">
         <span>🔄</span>
         <span className="text-xs font-bold" style={{ color }}>Estado atualizado</span>
@@ -126,7 +121,7 @@ function AssignmentPreview({ assignment }) {
 }
 
 function TagAssignmentPreview({ tagAssignment }) {
-  const { task_id, task_title, added = [], skipped = [] } = tagAssignment;
+  const { task_id, task_title, added = [] } = tagAssignment;
   return (
     <div className="rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] p-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2.5">
@@ -144,26 +139,16 @@ function TagAssignmentPreview({ tagAssignment }) {
           <p className="text-[10px] text-gray-400">ID #{task_id}</p>
         </div>
       </div>
-      <div className="border-t border-[#E9D5FF] mb-2" />
       {added.length > 0 && (
-        <div className="mb-1.5">
-          <p className="text-[10px] text-gray-400 mb-1.5">Adicionadas</p>
-          <div className="flex flex-wrap gap-1.5">
-            {added.map((tag) => (
-              <span
-                key={tag.tag_id}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: `${tag.tag_color}18`,
-                  color:           tag.tag_color,
-                  border:          `1px solid ${tag.tag_color}40`,
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tag.tag_color }} />
-                {tag.tag_name}
-              </span>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {added.map((tag) => (
+            <span key={tag.tag_id}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: `${tag.tag_color}18`, color: tag.tag_color, border: `1px solid ${tag.tag_color}40` }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tag.tag_color }} />
+              {tag.tag_name}
+            </span>
+          ))}
         </div>
       )}
     </div>
@@ -172,10 +157,7 @@ function TagAssignmentPreview({ tagAssignment }) {
 
 function TicketPreview({ ticket, onNavigate }) {
   const sev   = ticket.severity || 5;
-  const color =
-    sev >= 8 ? "#DC2626" :
-    sev >= 5 ? "#D97706" :
-    sev >= 3 ? "#2563EB" : "#16A34A";
+  const color = sev >= 8 ? "#DC2626" : sev >= 5 ? "#D97706" : sev >= 3 ? "#2563EB" : "#16A34A";
   return (
     <div className="rounded-xl border bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between mb-1.5">
@@ -186,10 +168,8 @@ function TicketPreview({ ticket, onNavigate }) {
         </span>
       </div>
       <p className="text-xs text-gray-700 line-clamp-2 mb-2">{ticket.user_report}</p>
-      <button
-        onClick={onNavigate}
-        className="w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)] transition-colors font-medium"
-      >
+      <button onClick={onNavigate}
+        className="w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)] font-medium">
         Ver página de Tickets →
       </button>
     </div>
@@ -197,16 +177,14 @@ function TicketPreview({ ticket, onNavigate }) {
 }
 
 // ── Welcome message ───────────────────────────────────────────────────────────
-
 const INITIAL_MESSAGE = {
   id:        "welcome",
-  text:      "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar tarefas, atribuí-las, alterar estados, notificações e tickets.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Move a tarefa 1 para em progresso'\n• 'Marca a tarefa 3 como concluída'\n• 'Bloqueia a tarefa 7'",
+  text:      "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar tarefas, atribuí-las, alterar estados, notificações e tickets.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno'\n• 'Move a tarefa 1 para em progresso'\n• 'Marca a tarefa 3 como concluída'",
   sender:    "bot",
   timestamp: new Date(),
 };
 
 // ── ChatUI ────────────────────────────────────────────────────────────────────
-
 export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicketCreated }) {
   const [messages,            setMessages]            = useState([INITIAL_MESSAGE]);
   const [input,               setInput]               = useState("");
@@ -216,6 +194,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
   const [conversations,       setConversations]       = useState([]);
   const [showHistory,         setShowHistory]         = useState(false);
   const [banner,              setBanner]              = useState(null);
+  const [lastUserMessage,     setLastUserMessage]     = useState(null); // para retry
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
 
@@ -265,6 +244,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
     setShowHistory(false);
     setMessages([{ ...INITIAL_MESSAGE, timestamp: new Date() }]);
     setConversationHistory([]);
+    setLastUserMessage(null);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -279,12 +259,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
 
   // ── Send ──────────────────────────────────────────────────────────────────
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
-
-    const userMessage = input.trim();
-    const botMsgId    = Date.now() + 1;
+  const doSend = async (userMessage) => {
+    const botMsgId = Date.now() + 1;
 
     const botMsg = {
       id:              botMsgId,
@@ -297,6 +273,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
       tagData:         null,
       ticketData:      null,
       taskUpdatedData: null,
+      geminiError:     null, // { errorType, message }
     };
 
     const updatedHistory = [
@@ -310,7 +287,6 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
       botMsg,
     ]);
     setConversationHistory(updatedHistory);
-    setInput("");
     setLoading(true);
 
     try {
@@ -323,6 +299,26 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
           );
         },
         (done) => {
+          // ── Erro do Gemini ────────────────────────────────────────────
+          if (done?.geminiError || done?.success === false) {
+            setMessages((p) =>
+              p.map((m) =>
+                m.id === botMsgId
+                  ? {
+                      ...m,
+                      text:        "",          // remove qualquer texto parcial
+                      geminiError: {
+                        errorType: done.errorType || "UNKNOWN",
+                        message:   done.message  || "IA indisponível.",
+                      },
+                    }
+                  : m
+              )
+            );
+            return;
+          }
+
+          // ── Sucesso ───────────────────────────────────────────────────
           if (done?.conversationId) {
             setConversationId(done.conversationId);
             chatService.getConversations().then(setConversations).catch(() => {});
@@ -331,7 +327,9 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
             setMessages((p) =>
               p.map((m) => m.id === botMsgId ? { ...m, text: done.message } : m)
             );
-            setConversationHistory((p) => [...p, { role: "assistant", content: done.message }]);
+            setConversationHistory((p) => [
+              ...p, { role: "assistant", content: done.message },
+            ]);
           }
           if (done?.functionResults?.length) {
             setMessages((p) =>
@@ -374,26 +372,52 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
           if (done?.notification) {
             setMessages((p) => [
               ...p,
-              {
-                id:        Date.now() + 3,
-                text:      `✅ Notificação "${done.notification.title}" enviada!`,
-                sender:    "system",
-                timestamp: new Date(),
-              },
+              { id: Date.now() + 3, text: `✅ Notificação "${done.notification.title}" enviada!`, sender: "system", timestamp: new Date() },
             ]);
           }
         },
         conversationId,
       );
-    } catch (err) {
+    } catch {
+      // Fallback improvável — o chatService já trata erros no onDone
       setMessages((p) =>
         p.map((m) =>
-          m.id === botMsgId ? { ...m, text: `❌ Erro: ${err.message}`, isError: true } : m
+          m.id === botMsgId
+            ? {
+                ...m,
+                text:        "",
+                geminiError: { errorType: "UNKNOWN", message: "🤖 O assistente de IA não está disponível. Tente novamente." },
+              }
+            : m
         )
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+
+    const userMessage = input.trim();
+    setLastUserMessage(userMessage);
+    setInput("");
+    await doSend(userMessage);
+  };
+
+  // Retry — reenvia a última mensagem do utilizador
+  const handleRetry = async () => {
+    if (!lastUserMessage || loading) return;
+    // Remove a última mensagem do bot (que tem o erro)
+    setMessages((p) => {
+      const lastBotIdx = [...p].reverse().findIndex((m) => m.sender === "bot");
+      if (lastBotIdx === -1) return p;
+      const idx = p.length - 1 - lastBotIdx;
+      // Remove também a mensagem do utilizador que a precede
+      return p.filter((_, i) => i !== idx && i !== idx - 1);
+    });
+    await doSend(lastUserMessage);
   };
 
   if (!isOpen) return null;
@@ -404,25 +428,13 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
     <>
       {banner && <InfoBanner message={banner.message} type={banner.type} isVisible />}
 
-      {/* Mobile: full-screen overlay backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose} />
 
-      {/*
-        Mobile  → full screen (inset-0) with bottom padding for mobile nav
-        Desktop → floating bottom-right corner (same as before)
-      */}
-      <div
-        className={[
-          "fixed z-50 flex flex-col bg-page border border-surface shadow-2xl overflow-hidden",
-          // Mobile: full screen minus header & bottom nav
-          "inset-x-0 top-[52px] bottom-[64px] rounded-none",
-          // Desktop: floating card
-          "md:inset-auto md:bottom-6 md:right-6 md:w-[320px] md:h-[80vh] md:min-h-[420px] md:rounded-3xl",
-        ].join(" ")}
-      >
+      <div className={[
+        "fixed z-50 flex flex-col bg-page border border-surface shadow-2xl overflow-hidden",
+        "inset-x-0 top-[52px] bottom-[64px] rounded-none",
+        "md:inset-auto md:bottom-6 md:right-6 md:w-[320px] md:h-[80vh] md:min-h-[420px] md:rounded-3xl",
+      ].join(" ")}>
         <ChatHeaderUI onClose={onClose} />
 
         {/* ── History overlay ── */}
@@ -435,10 +447,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                   {conversations.length} conversa{conversations.length !== 1 ? "s" : ""}
                 </p>
               </div>
-              <button
-                onClick={handleNewConversation}
-                className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] font-medium"
-              >
+              <button onClick={handleNewConversation}
+                className="text-xs px-3 py-1.5 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] font-medium">
                 + Nova
               </button>
             </div>
@@ -451,11 +461,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                     </span>
                   </div>
                   {convs.map((conv) => (
-                    <button
-                      key={conv.id}
-                      onClick={() => handleSelectConversation(conv)}
-                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group"
-                    >
+                    <button key={conv.id} onClick={() => handleSelectConversation(conv)}
+                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group">
                       <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">
                         {conv.title}
                       </p>
@@ -479,13 +486,30 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
             <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id}>
-                  <ChatBubbleUI
-                    message={msg}
-                    sender={msg.sender}
-                    functionResults={msg.functionResults}
-                    isError={msg.isError}
-                  />
+                  {/* Bubble de texto normal */}
+                  {msg.text && (
+                    <ChatBubbleUI
+                      message={msg}
+                      sender={msg.sender}
+                      functionResults={msg.functionResults}
+                      isError={msg.isError}
+                    />
+                  )}
 
+                  {/* Card de erro Gemini */}
+                  {msg.geminiError && (
+                    <div className="flex justify-start mt-1">
+                      <div className="max-w-[280px] w-full">
+                        <GeminiErrorCard
+                          errorType={msg.geminiError.errorType}
+                          message={msg.geminiError.message}
+                          onRetry={handleRetry}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview cards de ações */}
                   {(msg.taskData || msg.taskUpdatedData || msg.assignmentData || msg.tagData || msg.ticketData) && (
                     <div className="flex justify-start mt-2">
                       <div className="max-w-[280px] w-full space-y-2">
@@ -496,10 +520,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                         {msg.ticketData      && (
                           <TicketPreview
                             ticket={msg.ticketData}
-                            onNavigate={() => {
-                              onClose();
-                              if (onTicketCreated) onTicketCreated();
-                            }}
+                            onNavigate={() => { onClose(); if (onTicketCreated) onTicketCreated(); }}
                           />
                         )}
                       </div>
@@ -507,6 +528,7 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
                   )}
                 </div>
               ))}
+
               {loading && <ChatLoadingUI />}
               <div ref={messagesEndRef} />
             </div>
@@ -520,10 +542,8 @@ export function ChatUI({ isOpen, onClose, onTaskCreated, onTaskUpdated, onTicket
             />
 
             {conversations.length > 0 && (
-              <button
-                onClick={() => setShowHistory(true)}
-                className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center"
-              >
+              <button onClick={() => setShowHistory(true)}
+                className="py-2 text-xs text-muted hover:text-main transition-colors border-t border-surface text-center">
                 📋 Ver histórico ({conversations.length})
               </button>
             )}

@@ -1,10 +1,25 @@
 import dotenv from "dotenv";
-dotenv.config();
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 
-// Allow forcing MySQL mode even with DATABASE_URL (for local development)
-const forceMySQL = process.env.FORCE_MYSQL === 'true' || global.forceMySQL === true;
-const isPostgres = !!process.env.DATABASE_URL && !forceMySQL;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
+// Carrega .env.local primeiro (desenvolvimento local), depois .env (produção/fallback)
+// dotenv.config não sobrescreve variáveis já definidas por padrão
+dotenv.config({ path: resolve(__dirname, "../.env.local") });
+dotenv.config({ path: resolve(__dirname, "../.env") });
+
+// FORCE_MYSQL=true em .env.local → usa MySQL local
+// DATABASE_URL definido → usa PostgreSQL (Neon/Vercel)
+const forceMySQL = process.env.FORCE_MYSQL === "true";
+const isPostgres  = !!process.env.DATABASE_URL && !forceMySQL;
+
+// ============================================================
+// CONVERSOR MySQL → PostgreSQL  (usado apenas no branch PG)
+// Converte queries com ? para $1, $2...
+// e adapta SET ?, LIKE, INSERT para sintaxe PostgreSQL
+// ============================================================
 function mysqlToPg(sql, params = []) {
   const values = [];
   let paramIndex = 1;
@@ -26,14 +41,18 @@ function mysqlToPg(sql, params = []) {
     if (Array.isArray(param)) {
       if (param.length === 0) {
         values.push(null);
-        return `(NULL)`;
+        return "(NULL)";
       }
       const placeholders = param.map(() => `$${paramIndex++}`).join(", ");
       values.push(...param);
       return placeholders;
     }
 
-    if (typeof param === "object" && !(param instanceof Date) && !(param instanceof Buffer)) {
+    if (
+      typeof param === "object" &&
+      !(param instanceof Date) &&
+      !(param instanceof Buffer)
+    ) {
       const keys = Object.keys(param);
       if (keys.length === 0) {
         values.push(undefined);
@@ -50,12 +69,19 @@ function mysqlToPg(sql, params = []) {
     return `$${paramIndex++}`;
   });
 
-  return { s: sqlWithParams, p: values };
+  // LIKE → ILIKE (case-insensitive no PostgreSQL)
+  const finalSql = sqlWithParams.replace(/\bLIKE\b/g, "ILIKE");
+
+  return { s: finalSql, p: values };
 }
 
+// ============================================================
+// INICIALIZAÇÃO DO POOL
+// ============================================================
 let _query;
 
 if (isPostgres) {
+  // ── PostgreSQL (Neon / Vercel) ──────────────────────────────
   console.log("🐘 DB: PostgreSQL (Neon)");
 
   const { default: pgPkg } = await import("pg");
@@ -74,26 +100,73 @@ if (isPostgres) {
         insertId,
         affectedRows: res.rowCount ?? 0,
       });
-      return [rows, { insertId, affectedRows: res.rowCount ?? 0, rowCount: res.rowCount ?? 0 }];
+      return [
+        rows,
+        {
+          insertId,
+          affectedRows: res.rowCount ?? 0,
+          rowCount:     res.rowCount ?? 0,
+        },
+      ];
     } catch (err) {
       console.error("[PG] Error:", err.message, "\nSQL:", sql);
       throw err;
     }
   };
 } else {
-  // Ambiente local sem DATABASE_URL — avisa e usa fallback vazio
-  console.warn("⚠️  DATABASE_URL não definida. Queries vão falhar.");
-  _query = async () => { throw new Error("DATABASE_URL não configurada"); };
+  // ── MySQL (local) ───────────────────────────────────────────
+  console.log("🐬 DB: MySQL (local)");
+  console.log(
+    `   Host: ${process.env.DB_HOST || "localhost"} | DB: ${process.env.DB_NAME || "clickup_db"}`
+  );
+
+  const mysql = await import("mysql2/promise");
+
+  const pool = mysql.createPool({
+    host:               process.env.DB_HOST     || "localhost",
+    user:               process.env.DB_USER     || "root",
+    password:           process.env.DB_PASSWORD || "",
+    database:           process.env.DB_NAME     || "clickup_db",
+    port:               parseInt(process.env.DB_PORT || "3306"),
+    waitForConnections: true,
+    connectionLimit:    10,
+    queueLimit:         0,
+  });
+
+  // Remove cláusula RETURNING (sintaxe PostgreSQL não suportada pelo MySQL)
+  const stripReturning = (sql) =>
+    sql.replace(/\s+RETURNING\s+\w+(\s*,\s*\w+)*/gi, "").trim();
+
+  _query = async (sql, params = []) => {
+    const mysqlSql = stripReturning(sql);
+    try {
+      const [rows] = await pool.query(mysqlSql, params);
+      return [
+        rows,
+        {
+          insertId:     rows?.insertId     ?? null,
+          affectedRows: rows?.affectedRows ?? 0,
+          rowCount:     rows?.affectedRows ?? 0,
+        },
+      ];
+    } catch (err) {
+      console.error("[MySQL] Error:", err.message, "\nSQL:", mysqlSql);
+      throw err;
+    }
+  };
 }
 
+// ============================================================
+// EXPORTS
+// ============================================================
 export const db = { query: _query };
 
 export async function initDB() {
   try {
     await _query("SELECT 1");
-    console.log("✅ DB OK");
+    console.log("✅ DB connection OK");
   } catch (err) {
-    console.error("❌ DB failed:", err.message);
+    console.error("❌ DB connection failed:", err.message);
     throw err;
   }
 }
