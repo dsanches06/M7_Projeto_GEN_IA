@@ -39,8 +39,12 @@ function normalizeTaskPayload(taskData) {
 
 // ── Display transform ─────────────────────────────────────────────────────────
 export function transformTaskForDisplay(task) {
+  const createdAt = task.created_at || task.createdAt || new Date().toISOString();
+
   return {
     ...task,
+    created_at: createdAt,
+    createdAt,
     priority:     getPriorityLabel(task.priority_id),
     status:       getStatusLabel(task.status_id),
     statusName:   STATUS_ID_TO_NAME[task.status_id] || "CREATED",

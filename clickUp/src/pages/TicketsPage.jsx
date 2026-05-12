@@ -212,19 +212,28 @@ export default function TicketsPage() {
 
             {/* Icon buttons grouped together, always right-aligned */}
             <div className="flex items-center gap-2 ml-auto">
-              <button onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
+              <button
+                type="button"
+                onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
                 title="Pesquisar"
-                className="w-9 h-9 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 text-base flex-shrink-0">
+                className="w-9 h-9 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer text-base flex-shrink-0"
+              >
                 ⌕
               </button>
-              <button onClick={cycleSortDir}
+              <button
+                type="button"
+                onClick={cycleSortDir}
                 title="Ordenar por severidade"
-                className="w-9 h-9 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 flex-shrink-0">
+                className="w-9 h-9 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer flex-shrink-0"
+              >
                 {sortDir === "ASC" ? "⬆" : sortDir === "DESC" ? "⬇" : "⇅"}
               </button>
-              <button onClick={load}
+              <button
+                type="button"
+                onClick={load}
                 title="Recarregar"
-                className="w-9 h-9 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 flex-shrink-0">
+                className="w-9 h-9 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer flex-shrink-0"
+              >
                 ↺
               </button>
             </div>

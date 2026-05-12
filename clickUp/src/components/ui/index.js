@@ -6,3 +6,4 @@ export { InfoBanner }  from "./InfoBanner.jsx";
 export { default as ModalConfirm }from "./ModalConfirm.jsx";
 export { ThemeToggle } from "./ThemeToggle.jsx";
 export { default as TrophySpin }  from "./TrophySpin.jsx";
+export { PageSection }  from "./PageSection.jsx";

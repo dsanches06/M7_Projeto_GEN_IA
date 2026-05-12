@@ -25,10 +25,29 @@ function TagBadge({ tag }) {
   );
 }
 
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const value = String(dateString).trim();
+  if (!value || value.toUpperCase() === 'N/A') return '';
+
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' });
+  }
+
+  const parts = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (parts) {
+    return `${parts[1].padStart(2, '0')}/${parts[2].padStart(2, '0')}`;
+  }
+
+  return value;
+}
+
 export function TaskCard({ task }) {
   const priorityStyle = getPriorityBadgeStyle(task.priority);
   const statusStyle   = getStatusBadgeStyle(task.status);
   const hasTags       = Array.isArray(task.tags) && task.tags.length > 0;
+  const createdAt     = formatDate(task.created_at || task.createdAt);
 
   return (
     <div className="bg-surface-2 border border-surface rounded-lg p-4 hover:border-surface-strong transition animate-fadeIn flex flex-col gap-2">
@@ -58,7 +77,7 @@ export function TaskCard({ task }) {
         </div>
       )}
 
-      {/* Footer: status + assignee + date */}
+      {/* Footer: status + assignee + dates */}
       <div className="flex items-center justify-between mt-auto pt-1 border-t border-surface">
         <div className="flex items-center gap-2 min-w-0">
           <span
@@ -73,7 +92,13 @@ export function TaskCard({ task }) {
             </span>
           )}
         </div>
-        <span className="text-muted text-xs flex-shrink-0 ml-2">{task.dueDate}</span>
+        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+          {createdAt && (
+            <span className="text-muted text-xs" title={`Criado em: ${task.created_at || task.createdAt}`}>
+              📅 {createdAt}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

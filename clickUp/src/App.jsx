@@ -7,7 +7,7 @@ import * as taskService from "@/services/taskService";
 import TrophySpin from "./components/ui/TrophySpin";
 
 const Dashboard   = lazy(() => import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })));
-const UsersPage   = lazy(() => import("@/components/users/UsersPage"));
+const UsersPage   = lazy(() => import("@/pages/UsersPage"));
 const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
 function AppContent() {
@@ -56,17 +56,44 @@ function AppContent() {
     setTasks((prev) =>
       prev.map((t) => (t.id === updatedTask.id ? { ...t, ...transformed } : t))
     );
+    navigate("/dashboard"); // navigate without closing chat
   };
 
   /** Task deleted via ChatBot */
   const handleTaskDeleted = (deletedTaskId) => {
     if (!deletedTaskId) return;
     setTasks((prev) => prev.filter((t) => t.id !== Number(deletedTaskId)));
+    navigate("/dashboard"); // navigate without closing chat
+  };
+
+  /** Task assigned or modified via ChatBot */
+  const handleTaskAssigned = (taskData) => {
+    if (!taskData?.id) return;
+    const transformed = taskService.transformTaskForDisplay(taskData);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskData.id ? { ...t, ...transformed } : t))
+    );
+    navigate("/dashboard"); // navigate without closing chat
   };
 
   /** Ticket created/updated via ChatBot → navigate to tickets (chat stays open) */
   const handleTicketCreated = () => {
     navigate("/tickets");
+  };
+
+  /** Ticket updated/deleted via ChatBot → navigate to tickets (chat stays open) */
+  const handleTicketUpdated = () => {
+    navigate("/tickets");
+  };
+
+  /** Notification sent via ChatBot → can stay on current page or notify */
+  const handleNotificationCreated = () => {
+    // Notifications don't require navigation, just showing feedback in chat
+  };
+
+  /** User/Tag action via ChatBot → navigate to appropriate page */
+  const handleUserOrTagAction = () => {
+    navigate("/utilizadores");
   };
 
   return (
@@ -120,7 +147,11 @@ function AppContent() {
         onTaskCreated={handleTaskCreated}
         onTaskUpdated={handleTaskUpdated}
         onTaskDeleted={handleTaskDeleted}
+        onTaskAssigned={handleTaskAssigned}
         onTicketCreated={handleTicketCreated}
+        onTicketUpdated={handleTicketUpdated}
+        onNotificationCreated={handleNotificationCreated}
+        onUserOrTagAction={handleUserOrTagAction}
       />
     </>
   );

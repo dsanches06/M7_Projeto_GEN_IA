@@ -77,9 +77,12 @@ export function Dashboard({
   const sorted = [...bySearch].sort((a, b) => {
     if (sortDir === "ASC")  return (PRIORITY_ORDER[a.priority] || 0) - (PRIORITY_ORDER[b.priority] || 0);
     if (sortDir === "DESC") return (PRIORITY_ORDER[b.priority] || 0) - (PRIORITY_ORDER[a.priority] || 0);
+    const idA = a.id ?? 0;
+    const idB = b.id ?? 0;
+    if (idA !== idB) return idB - idA;
     const ad = new Date(a.created_at || a.createdAt || 0).getTime();
     const bd = new Date(b.created_at || b.createdAt || 0).getTime();
-    return bd - ad || (b.id ?? 0) - (a.id ?? 0);
+    return bd - ad;
   });
 
   statCards[4].value = sorted.length;
@@ -154,13 +157,18 @@ export function Dashboard({
           <span className="hidden sm:inline-flex text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2">
             Filtro: {filterLabel}
           </span>
-          <button onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
-            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 text-base flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
+            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer text-base flex-shrink-0"
+          >
             ⌕
           </button>
-          <button onClick={() => { /* cycle */ }}
-            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 flex-shrink-0"
-            onClick={() => setSortDir((d) => d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE")}>
+          <button
+            type="button"
+            onClick={() => setSortDir((d) => d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE")}
+            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer flex-shrink-0"
+          >
             {sortDir === "ASC" ? "⬆" : sortDir === "DESC" ? "⬇" : "⇅"}
           </button>
         </div>

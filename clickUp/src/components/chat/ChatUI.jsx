@@ -39,7 +39,11 @@ export function ChatUI({
   onTaskCreated,
   onTaskUpdated,
   onTaskDeleted,
+  onTaskAssigned,
   onTicketCreated,
+  onTicketUpdated,
+  onNotificationCreated,
+  onUserOrTagAction,
 }) {
   const [messages, setMessages] = useState([createWelcomeMessage()]);
   const [input, setInput] = useState("");
@@ -265,6 +269,7 @@ export function ChatUI({
             );
           }
           if (done?.assignment) {
+            if (onTaskAssigned && done.assignment?.id) onTaskAssigned({ id: done.assignment.task_id, ...done.assignment });
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId
@@ -274,6 +279,8 @@ export function ChatUI({
             );
           }
           if (done?.tags) {
+            if (onTaskAssigned && done.tags?.task_id) onTaskAssigned({ id: done.tags.task_id, ...done.tags });
+            if (onUserOrTagAction) onUserOrTagAction();
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId ? { ...m, tagData: done.tags } : m,
@@ -286,6 +293,11 @@ export function ChatUI({
               done.ticket._type !== "ticket_status"
             ) {
               if (onTicketCreated) onTicketCreated();
+            } else if (
+              done.ticket._type === "ticket_deleted" ||
+              done.ticket._type === "ticket_status"
+            ) {
+              if (onTicketUpdated) onTicketUpdated();
             }
             setMessages((p) =>
               p.map((m) =>
@@ -294,6 +306,7 @@ export function ChatUI({
             );
           }
           if (done?.notification) {
+            if (onNotificationCreated) onNotificationCreated();
             setMessages((p) => [
               ...p,
               {
@@ -401,11 +414,15 @@ export function ChatUI({
                     <button
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv)}
-                      className="w-full px-4 py-3 text-left hover:bg-surface-2 border-b border-surface transition-colors group"
+                      className="w-full px-4 py-3 text-left hover:bg-surface-2 active:bg-surface-3 border-b border-surface transition-colors group cursor-pointer"
+                      title="Clique para ver o resumo da conversa"
                     >
-                      <p className="text-sm font-medium text-main truncate group-hover:text-[var(--primary)]">
-                        {conv.title}
-                      </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium text-main truncate flex-1 group-hover:text-[var(--primary)] transition-colors">
+                          {conv.title}
+                        </p>
+                        <span className="text-lg flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">📋</span>
+                      </div>
                       <p className="text-xs text-muted mt-0.5">
                         {formatConversationDate(conv.created_at)}
                       </p>

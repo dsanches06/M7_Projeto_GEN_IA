@@ -1,4 +1,4 @@
-import { initDatabase } from './init-neon-db.js';
+import { initDatabase } from '../init-neon-db.js';
 import { runMigration } from './migrate-summaries.js';
 import { fileURLToPath } from 'url';
 

@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { getBackendUrl } from "@/services/BaseService.js";
 import { STATUS_ID_TO_NAME } from "@/services/taskService.js";
 import TrophySpin from "@/components/ui/TrophySpin";
-import UserCard from "./UserCard.jsx";
-import UserDashboard from "./UserDashboard.jsx";
-import ModalConfirm from "../ui/ModalConfirm.jsx";
-import usersIcon    from "../../assets/users.png";
-import activeIcon   from "../../assets/active.png";
-import inactiveIcon from "../../assets/inactive.png";
-import filterIcon   from "../../assets/filter.png";
-import percentIcon  from "../../assets/percentagem.png";
+import UserCard from "@/components/users/UserCard.jsx";
+import UserDashboard from "@/components/users/UserDashboard.jsx";
+import ModalConfirm from "@/components/ui/ModalConfirm.jsx";
+import usersIcon    from "@/assets/users.png";
+import activeIcon   from "@/assets/active.png";
+import inactiveIcon from "@/assets/inactive.png";
+import filterIcon   from "@/assets/filter.png";
+import percentIcon  from "@/assets/percentagem.png";
 
 const BACKEND_URL = getBackendUrl();
 
@@ -231,10 +231,16 @@ export default function UsersPage() {
           <span className="hidden sm:inline-flex text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2">
             Filtro: {filterLabel}
           </span>
-          <button onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
-            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2">⌕</button>
-          <button onClick={() => setSortDirection((c) => c === "NONE" ? "ASC" : c === "ASC" ? "DESC" : "NONE")}
-            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2">
+          <button
+            type="button"
+            onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
+            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer"
+          >⌕</button>
+          <button
+            type="button"
+            onClick={() => setSortDirection((c) => c === "NONE" ? "ASC" : c === "ASC" ? "DESC" : "NONE")}
+            className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer"
+          >
             {sortDirection === "ASC" ? "⬆" : sortDirection === "DESC" ? "⬇" : "⇅"}
           </button>
         </div>

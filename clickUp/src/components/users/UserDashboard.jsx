@@ -28,10 +28,10 @@ const STATUS_ICON = {
 };
 
 /* ── Kanban task card ── */
-function TaskCard({ task, cardBorder, userName, onStatusChange }) {
+function TaskCard({ task, cardBorder, userName }) {
   return (
     <div
-      className="bg-white rounded-lg p-3 cursor-pointer"
+      className="bg-white rounded-lg p-3"
       style={{
         borderLeft: `4px solid ${cardBorder}`,
         borderRadius: "0.5rem",
@@ -46,7 +46,6 @@ function TaskCard({ task, cardBorder, userName, onStatusChange }) {
         e.currentTarget.style.transform = "none";
         e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
       }}
-      onClick={() => onStatusChange(task)}
     >
       <p className="text-[13px] font-semibold text-gray-800 leading-snug mb-1.5 line-clamp-2">
         {task.title}
@@ -68,107 +67,17 @@ function TaskCard({ task, cardBorder, userName, onStatusChange }) {
 }
 
 /* ── Status change modal ── */
-function StatusModal({ task, onClose, onUpdate, statusMap }) {
-  const [pending, setPending] = useState(false);
-  const handlePick = async (col) => {
-    if (col.id === task.status) {
-      onClose();
-      return;
-    }
-    setPending(true);
-    try {
-      await onUpdate(task, col.id, statusMap[col.id] || 1);
-    } finally {
-      setPending(false);
-      onClose();
-    }
-  };
-  return (
-    <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-sm font-bold text-gray-700 mb-0.5">
-          Alterar Estado
-        </h3>
-        <p className="text-xs text-gray-400 mb-4 truncate">{task.title}</p>
-        <div className="flex flex-col gap-2">
-          {STATUS_CONFIG.map((col) => {
-            const selected = col.id === task.status;
-            return (
-              <button
-                key={col.id}
-                disabled={pending}
-                onClick={() => handlePick(col)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all text-left disabled:opacity-60"
-                style={{
-                  borderColor: selected ? col.cardBorder : "#e5e7eb",
-                  backgroundColor: selected ? col.bg : "#fff",
-                  color: selected ? col.cardBorder : "#374151",
-                }}
-              >
-                <span
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: col.cardBorder }}
-                />
-                {col.label}
-                {selected && (
-                  <span className="ml-auto text-[10px] opacity-70">
-                    ✓ atual
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <button
-          onClick={onClose}
-          className="mt-4 w-full text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          Fechar
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ── Main component ── */
 export default function UserDashboard({ user, onBack }) {
   const [tasks, setTasks] = useState(user.tasks || []);
-  const [statusMap, setStatusMap] = useState({
-    CREATED: 1,
-    ASSIGNED: 2,
-    IN_PROGRESS: 3,
-    BLOCKED: 4,
-    COMPLETED: 5,
-    ARCHIVED: 6,
-  });
-  const [modalTask, setModalTask] = useState(null);
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [sortDir, setSortDir] = useState("NONE"); // NONE | ASC | DESC
   const [filterCol, setFilterCol] = useState("ALL"); // "ALL" or a STATUS_CONFIG id
-  const [saving, setSaving] = useState(false); // eslint-disable-line no-unused-vars
 
   const c = getPalette(user.id);
   const firstName = (user.name || "").split(" ")[0];
 
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/task_status`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => {
-        const map = {};
-        data.forEach((s) => {
-          map[s.name] = s.id;
-        });
-        if (Object.keys(map).length) setStatusMap(map);
-      })
-      .catch(() => {});
-  }, []);
 
   /* ── Stats ── */
   const statCards = [
@@ -228,24 +137,6 @@ export default function UserDashboard({ user, onBack }) {
   /* ── Handlers ── */
   function cycleSortDir() {
     setSortDir((d) => (d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE"));
-  }
-
-  async function handleStatusUpdate(task, newStatus, statusId) {
-    setSaving(true);
-    try {
-      await fetch(`${BACKEND_URL}/tasks/${task.id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status_id: statusId }),
-      });
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)),
-      );
-    } catch (err) {
-      console.error("Erro ao atualizar status:", err);
-    } finally {
-      setSaving(false);
-    }
   }
 
   const filterLabel =
@@ -434,7 +325,6 @@ export default function UserDashboard({ user, onBack }) {
                     task={task}
                     cardBorder={col.cardBorder}
                     userName={firstName}
-                    onStatusChange={setModalTask}
                   />
                 ))}
                 {colTasks.length === 0 && (
@@ -455,15 +345,6 @@ export default function UserDashboard({ user, onBack }) {
         })}
       </div>
 
-      {/* ── Status modal ── */}
-      {modalTask && (
-        <StatusModal
-          task={modalTask}
-          statusMap={statusMap}
-          onClose={() => setModalTask(null)}
-          onUpdate={handleStatusUpdate}
-        />
-      )}
     </div>
   );
 }
