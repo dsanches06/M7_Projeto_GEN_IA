@@ -10,8 +10,8 @@
     "start": "node src/server.js",
     "start-local": "node src/serverLocal.js",
     "build": "echo 'No build step required for Node.js'",
-    "init-db": "node init-neon-db.js",
-    "full-migration": "node full-migration.js"
+    "init-db": "node neon_database/init-neon-db.js",
+    "full-migration": "node neon_database/full-migration.js"
   },
   "engines": {
     "node": ">=18.0.0"

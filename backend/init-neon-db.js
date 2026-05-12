@@ -4,7 +4,6 @@ import { dirname, join } from 'path';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
-
 const { Pool } = pkg;
 dotenv.config();
 
@@ -66,8 +65,11 @@ async function initDatabase() {
   }
 }
 
-// Run if called directly
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// Verifica de forma segura se o ficheiro está a ser executado diretamente (CLI ou script npm)
+const currentFilePath = fileURLToPath(import.meta.url);
+const isDirectRun = process.argv.some(arg => currentFilePath.includes(arg) || arg.endsWith('init-neon-db.js'));
+
+if (isDirectRun || process.env.VERCEL) {
   initDatabase();
 }
 
