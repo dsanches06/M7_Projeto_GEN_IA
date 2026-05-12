@@ -9,7 +9,7 @@ export const getAllUsers = async (search, sort) => {
 };
 export const getUserById = async (id) => { const [r] = await db.query("SELECT * FROM users WHERE id = ?", [id]); return r[0] ? mapUserDTOResponse(r[0]) : null; };
 export const createUser = async (data) => {
-  const [result] = await db.query("INSERT INTO users (name, email, phone, gender) VALUES (?, ?, ?, ?)", [data.name, data.email, data.phone ?? null, data.gender ?? "Male"]);
+  const [result] = await db.query("INSERT INTO users (name, email, phone, gender) VALUES (?, ?, ?, ?)", [data.name, data.email, data.phone ?? "", data.gender ?? "Não informado"]);
   return mapUserDTOResponse({ id: result.insertId, ...data });
 };
 export const updateUser = async (userId, data) => {

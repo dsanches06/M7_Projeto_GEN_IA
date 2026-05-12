@@ -1,4 +1,4 @@
-import * as taskAssigneesService from "../services/taskAssigneesService.js";
+import { taskAssigneesService } from "../services/index.js";
 
 
 /* Função para obter todos os responsáveis por tarefas */

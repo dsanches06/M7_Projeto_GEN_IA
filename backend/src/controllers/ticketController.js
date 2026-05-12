@@ -1,5 +1,4 @@
-import * as ticketService from "../services/ticketService.js";
-import * as taskService   from "../services/taskService.js";
+import { ticketService, taskService } from "../services/index.js";
 
 export const getTickets = async (req, res) => {
   try {

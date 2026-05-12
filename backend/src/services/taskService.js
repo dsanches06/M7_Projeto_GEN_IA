@@ -19,11 +19,21 @@ export const createTask = async (data) => {
     estimated_hours: pn(data.estimated_hours ?? data.estimatedHours, 0),
     due_date: toD(data.due_date ?? data.dueDate),
     completed_at: toD(data.completed_at ?? data.completedAt),
+    created_at: toD(data.created_at ?? data.createdAt),
   };
 
+  const columns = ["title", "description", "status_id", "priority_id", "estimated_hours", "due_date", "completed_at"];
+  const values = [d.title, d.description, d.status_id, d.priority_id, d.estimated_hours, d.due_date, d.completed_at];
+
+  if (d.created_at) {
+    columns.push("created_at");
+    values.push(d.created_at);
+  }
+
+  const placeholders = columns.map(() => "?").join(", ");
   const [result] = await db.query(
-    "INSERT INTO task (title, description, status_id, priority_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
-    [d.title, d.description, d.status_id, d.priority_id, d.estimated_hours, d.due_date, d.completed_at],
+    `INSERT INTO task (${columns.join(", ")}) VALUES (${placeholders}) RETURNING id`,
+    values,
   );
 
   return mapTaskDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...d });

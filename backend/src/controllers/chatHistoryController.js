@@ -1,4 +1,4 @@
-import * as chatHistoryService from "../services/chatHistoryService.js";
+import { chatHistoryService } from "../services/index.js";
 
 /* Função para buscar histórico de chat */
 export const getChatHistories = async (req, res) => {

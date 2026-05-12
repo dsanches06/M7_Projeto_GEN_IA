@@ -1,4 +1,4 @@
-import * as taskStatusService from "../services/taskStatusService.js";
+import { taskStatusService } from "../services/index.js";
 
 
 /* Função para obter todos os status de tarefa */

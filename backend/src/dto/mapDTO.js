@@ -11,47 +11,8 @@ export function mapUserDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de status do projeto */
-export function mapProjectStatusDTOResponse(data) {
-  return {
-    id: data.id,
-    name: data.name,
-    flow_order: data.flow_order,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapProjectDTOResponse(data) {
-  return {
-    id: data.id,
-    name: data.name,
-    description: data.description,
-    project_status_id: data.project_status_id,
-    start_date: data.start_date,
-    end_date_expected: data.end_date_expected,
-  };
-}
-
 /* Função para mapear resposta de status de tarefa */
 export function mapTaskStatusDTOResponse(data) {
-  return {
-    id: data.id,
-    name: data.name,
-    flow_order: data.flow_order,
-  };
-}
-
-/* Função para mapear resposta de tipos de tarefa */
-export function mapTaskTypesDTOResponse(data) {
-  return {
-    id: data.id,
-    name: data.name,
-    flow_order: data.flow_order,
-  };
-}
-
-/* Função para mapear resposta de categoria */
-export function mapCategoryDTOResponse(data) {
   return {
     id: data.id,
     name: data.name,
@@ -110,30 +71,6 @@ export function mapTagTaskDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de anexo de tarefa */
-export function mapTaskAttachmentDTOResponse(data) {
-  return {
-    id: data.id,
-    task_id: data.task_id,
-    file_name: data.file_name,
-    file_path: data.file_path,
-    uploaded_at: data.uploaded_at,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapTaskCommentDTOResponse(data) {
-  return {
-    id: data.id,
-    content: data.content,
-    task_id: data.task_id,
-    userId: data.user_id,
-    created_at: data.created_at,
-    edited_at: data.edited_at,
-    resolved: data.resolved,
-  };
-}
-
 /* Função para mapear resposta de comentário */
 export function mapNotificationDTOResponse(data) {
   return {
@@ -143,140 +80,6 @@ export function mapNotificationDTOResponse(data) {
     message: data.message,
     is_read: data.is_read,
     sent_at: data.sent_at,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapTeamDTOResponse(data) {
-  return {
-    id: data.id,
-    name: data.name,
-    description: data.description,
-    created_at: data.created_at,
-  };
-}
-
-/* Função para mapear resposta de cargo de membro de equipe */
-export function mapTeamMemberRolesDTOResponse(data) {
-  return {
-    id: data.id,
-    name: data.name,
-    flow_order: data.flow_order,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapTeamMemberDTOResponse(data) {
-  return {
-    team_id: data.team_id,
-    user_id: data.user_id,
-    role_id: data.role_id,
-    joined_at: data.joined_at,
-  };
-}
-
-/* Função para mapear resposta de votação de tarefa */
-export function mapTaskVoteDTOResponse(data) {
-  return {
-    id: data.id,
-    task_id: data.task_id,
-    user_id: data.user_id,
-    vote_type: data.vote_type,
-    created_at: data.created_at,
-  };
-}
-
-/* Função para mapear resposta de dependência de tarefa */
-export function mapTaskDependencyDTOResponse(data) {
-  return {
-    id: data.id,
-    task_id: data.task_id,
-    depends_on_task_id: data.depends_on_task_id,
-    created_at: data.created_at,
-  };
-}
-
-/* Função para mapear resposta de histórico de status de tarefa */
-export function mapTaskStatusHistoryDTOResponse(data) {
-  return {
-    id: data.id,
-    task_id: data.task_id,
-    status_id: data.status_id,
-    changed_at: data.changed_at,
-    changed_by: data.changed_by,
-  };
-}
-
-/* Função para mapear resposta de permissão de projeto */
-export function mapProjectPermissionDTOResponse(data) {
-  return {
-    id: data.id,
-    project_id: data.project_id,
-    user_id: data.user_id,
-    permission: data.permission,
-    created_at: data.created_at,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapFavoriteTaskDTOResponse(data) {
-  return {
-    user_id: data.user_id,
-    task_id: data.task_id,
-    marked_at: data.marked_at,
-  };
-}
-
-/* Função para mapear resposta de lembrete */
-export function mapReminderDTOResponse(data) {
-  return {
-    id: data.id,
-    task_id: data.task_id,
-    user_id: data.user_id,
-    remind_at: data.remind_at,
-    created_at: data.created_at,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapSprintDTOResponse(data) {
-  return {
-    id: data.id,
-    project_id: data.project_id,
-    name: data.name,
-    description: data.description,
-    status_id: data.status_id,
-    start_date: data.start_date,
-    end_date: data.end_date,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapSprintTaskDTOResponse(data) {
-  return {
-    sprint_id: data.sprint_id,
-    task_id: data.task_id,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapMentionDTOResponse(data) {
-  return {
-    id: data.id,
-    comment_id: data.comment_id,
-    mentioned_user_id: data.mentioned_user_id,
-  };
-}
-
-/* Função para mapear resposta de comentário */
-export function mapTimeLogDTOResponse(data) {
-  return {
-    id: data.id,
-    task_id: data.task_id,
-    user_id: data.user_id,
-    hours: data.hours,
-    description: data.description,
-    logged_at: data.logged_at,
   };
 }
 
@@ -341,17 +144,6 @@ export function mapConversationDTOResponse(data) {
   return {
     id: data.id,
     title: data.title,
-    created_at: data.created_at,
-  };
-}
-
-// Função para mapear resposta de resumo de historico de chat
-export function mapSummaryDTOResponse(data) {
-  return {
-    id: data.id,
-    project_id: data.project_id,
-    original_text: data.original_text,
-    summary: data.summary,
     created_at: data.created_at,
   };
 }

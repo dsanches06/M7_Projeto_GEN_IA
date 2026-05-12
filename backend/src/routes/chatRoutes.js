@@ -23,6 +23,15 @@ router.post(
   chatBotController.sendMessageToConversation
 );
 
+/**
+ * GET /chat/conversation/:conversationId/summary
+ * Gera um resumo da conversa a partir do histórico, sem salvar nada em DB
+ */
+router.get(
+  "/conversation/:conversationId/summary",
+  chatBotController.getConversationSummary
+);
+
 
 // Chat history CRUD unificado em /chat/history
 router.get("/history", chatHistoryController.getChatHistories);

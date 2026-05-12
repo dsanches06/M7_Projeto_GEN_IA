@@ -1,5 +1,4 @@
-import * as tagService from "../services/tagService.js";
-import * as taskService from "../services/taskService.js";
+import { tagService, taskService } from "../services/index.js";
 
 /* Função para buscar etiquetas */
 export const getTags = async (req, res) => {

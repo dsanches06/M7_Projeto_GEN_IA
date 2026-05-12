@@ -1,4 +1,4 @@
-﻿import * as userService from "../services/userService.js";
+﻿import { userService } from "../services/index.js";
 
 export const validateUserData = async (req, res, next) => {
   try {

@@ -3,7 +3,7 @@ export {
   setTicketValuesFunctionDeclaration,
   functionDeclarations as createTicketDeclarations,
   setCreateTicketValues,
-} from "./create_.js";
+} from "./create.js";
 
 export {
   setDeleteTicketValuesFunctionDeclaration,

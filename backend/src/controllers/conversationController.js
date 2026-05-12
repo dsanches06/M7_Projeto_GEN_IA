@@ -1,5 +1,4 @@
-import * as conversationService from "../services/conversationService.js";
-import * as taskService from "../services/taskService.js";
+import { conversationService, taskService } from "../services/index.js";
 
 /* Função para buscar conversas */
 export const getConversations = async (req, res) => {

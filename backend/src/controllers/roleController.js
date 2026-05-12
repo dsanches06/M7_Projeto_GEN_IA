@@ -1,4 +1,4 @@
-import * as roleService from "../services/roleService.js";
+import { roleService } from "../services/index.js";
 
 /* Função para buscar papéis */
 export const getRoles = async (req, res) => {

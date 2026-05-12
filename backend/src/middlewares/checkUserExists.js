@@ -1,4 +1,4 @@
-import * as userService from "../services/userService.js";
+import { userService } from "../services/index.js";
 
 /* Função para verificar se o usuário existe */
 export const checkUserExists = async (req, res, next) => {

@@ -14,6 +14,11 @@ class CreateTicketFunction extends BaseFunction {
       description: "Define os valores para criar um ticket no ClickUp",
 
       properties: {
+        user_id: {
+          type: Type.INTEGER,
+          description: "ID do utilizador que reporta o ticket",
+        },
+
         user_report: {
           type: Type.STRING,
           description: "Relato do utilizador sobre o problema ou solicitação",
@@ -40,6 +45,7 @@ class CreateTicketFunction extends BaseFunction {
           description: "Data de criação",
         },
       },
+      required: ["user_id"],
     });
   }
 
@@ -49,12 +55,13 @@ class CreateTicketFunction extends BaseFunction {
 
   // Mapeia os argumentos recebidos para os campos esperados pela função
   mapValues(args = {}) {
-    const { user_report, error_type, severity, fix_suggestion, created_at } =
+    const { user_id, user_report, error_type, severity, fix_suggestion, created_at } =
       args;
 
     // Retorna um objeto com os valores mapeados,
     // usando métodos auxiliares para garantir o formato correto
     return {
+      user_id: this.parseNumber(user_id, 0),
       user_report: this.parseString(user_report),
       error_type: this.parseString(error_type),
       severity: this.parseNumber(severity, 10),

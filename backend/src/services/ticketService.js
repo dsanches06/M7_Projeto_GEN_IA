@@ -4,8 +4,8 @@ export const getAllTickets = async () => { const [r] = await db.query("SELECT * 
 export const getTicketById = async (id) => { const [r] = await db.query("SELECT * FROM tickets WHERE id = ?", [id]); return r[0] ? mapTicketDTOResponse(r[0]) : null; };
 export const createTicket = async (data) => {
   const [result] = await db.query(
-    "INSERT INTO tickets (user_report, error_type, severity, fix_suggestion, status) VALUES (?, ?, ?, ?, ?) RETURNING id",
-    [data.user_report, data.error_type, data.severity, data.fix_suggestion, data.status || "open"]
+    "INSERT INTO tickets (user_id, user_report, error_type, severity, fix_suggestion, status) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+    [data.user_id, data.user_report, data.error_type, data.severity, data.fix_suggestion, data.status || "open"]
   );
   return mapTicketDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...data });
 };

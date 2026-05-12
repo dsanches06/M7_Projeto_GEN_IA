@@ -1,4 +1,4 @@
-import * as tagTaskService from "../services/tagTaskService.js";
+import { tagTaskService } from "../services/index.js";
 
 
 /* Função para obter todas as tarefas de etiqueta */

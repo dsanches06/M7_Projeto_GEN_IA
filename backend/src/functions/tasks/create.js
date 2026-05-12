@@ -15,15 +15,11 @@ class CreateTaskFunction extends BaseFunction {
       properties: {
         title: {
           type: Type.STRING,
-          description: "Título da tarefa",
+          description: "Título curto e objetivo da tarefa (não a descrição completa)",
         },
         description: {
           type: Type.STRING,
-          description: "Descrição detalhada da tarefa",
-        },
-        types_id: {
-          type: Type.INTEGER,
-          description: "ID do tipo da tarefa",
+          description: "Descrição completa e contextualizada da tarefa, elaborada a partir do pedido do utilizador",
         },
         status_id: {
           type: Type.INTEGER,
@@ -32,14 +28,6 @@ class CreateTaskFunction extends BaseFunction {
         priority_id: {
           type: Type.INTEGER,
           description: "ID da prioridade",
-        },
-        category_id: {
-          type: Type.INTEGER,
-          description: "ID da categoria",
-        },
-        project_id: {
-          type: Type.INTEGER,
-          description: "ID do projeto",
         },
         created_at: {
           type: Type.STRING,
@@ -80,11 +68,8 @@ class CreateTaskFunction extends BaseFunction {
     const {
       title,
       description,
-      types_id,
       status_id,
       priority_id,
-      category_id,
-      project_id,
       created_at,
       due_date,
       completed_at,
@@ -104,14 +89,8 @@ class CreateTaskFunction extends BaseFunction {
       title: this.parseString(title),
       description: this.parseString(description),
 
-      types_id: this.parseNumber(
-        types_id,
-        this.parseNumber(args.type_id, this.parseNumber(args.typeId, 1))
-      ),
       status_id: this.parseNumber(status_id, this.parseNumber(args.statusId, 1)),
       priority_id: this.parseNumber(priority_id, this.parseNumber(args.priorityId, 1)),
-      category_id: this.parseNumber(category_id, this.parseNumber(args.categoryId, 1)),
-      project_id: this.parseNumber(project_id, this.parseNumber(args.projectId, 1)),
 
       created_at: created_at || args.createdAt || this.currentDate(),
       due_date: due_date || args.dueDate || null,

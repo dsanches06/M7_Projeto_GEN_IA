@@ -1,4 +1,4 @@
-import * as priorityService from "../services/priorityService.js";
+import { priorityService } from "../services/index.js";
 
 
 /* Função para obter todas as prioridades */

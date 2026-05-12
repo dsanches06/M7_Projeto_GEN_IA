@@ -1,5 +1,4 @@
-import * as userService from "../services/userService.js";
-import * as notificationService from "../services/notificationService.js";
+import { userService, notificationService } from "../services/index.js";
 
 /* Função para buscar usuários */
 export const getUsers = async (req, res) => {
