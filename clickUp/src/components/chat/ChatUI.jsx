@@ -89,19 +89,21 @@ export function ChatUI({
       }));
       setConversationHistory(history);
 
-      // Show last 10 messages as preview in the chat window
-      const preview = rows.slice(-10).map((r) => ({
-        id:        r.id,
-        text:      r.content,
-        sender:    r.role_id === 2 ? "user" : "bot",
-        timestamp: new Date(r.sent_at),
-      }));
+      const summaryResponse = await chatService.getChatSummary(conv.id);
+      const summaryText =
+        summaryResponse?.success && summaryResponse?.summary
+          ? summaryResponse.summary
+          : "Resumo não disponível para esta conversa.";
 
-      setMessages(
-        preview.length > 0
-          ? preview
-          : [{ id: `${conv.id}-empty`, text: "Conversa sem mensagens.", sender: "bot", timestamp: new Date() }],
-      );
+      setMessages([
+        {
+          id: `${conv.id}-summary`,
+          text: summaryText,
+          sender: "bot",
+          timestamp: new Date(),
+          isSummary: true,
+        },
+      ]);
     } catch {
       setMessages([{
         id: `${conv.id}-e`,

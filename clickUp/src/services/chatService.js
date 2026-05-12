@@ -183,7 +183,7 @@ class ChatService extends BaseService {
   }
 
   async getConversations()              { return this.fetchData("/conversations"); }
-  async getChatSummary(conversationId)  { return this.fetchData(`/summaries/conversation/${conversationId}`); }
+  async getChatSummary(conversationId)  { return this.fetchData(`/chat/conversation/${conversationId}/summary`); }
   async getChatHistory(conversationId)  { return this.fetchData(`/chat/history/conversation/${conversationId}`); }
 }
 
