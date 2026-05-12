@@ -48,7 +48,6 @@ class CreateNotificationFunction extends BaseFunction {
             "Data de envio",
         },
       },
-      required: ["user_id"],
     });
   }
 
