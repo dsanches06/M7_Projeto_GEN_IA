@@ -4,9 +4,10 @@ import { mapConversationDTOResponse } from "../dto/mapDTO.js";
 export const getAllConversations = async () => { const [r] = await db.query("SELECT * FROM conversations"); return r.map(mapConversationDTOResponse); };
 export const getConversationById = async (id) => { const [r] = await db.query("SELECT * FROM conversations WHERE id = ?", [id]); return r[0] ? mapConversationDTOResponse(r[0]) : null; };
 export const createConversation = async (data) => {
+  const userId = Number(data.user_id) || 1;
   const [result] = await db.query(
-    "INSERT INTO conversations (title) VALUES (?) RETURNING id",
-    [data.title]
+    "INSERT INTO conversations (user_id, title) VALUES (?, ?) RETURNING id",
+    [userId, data.title]
   );
 
   const id = result.insertId ?? result?.id ?? null;

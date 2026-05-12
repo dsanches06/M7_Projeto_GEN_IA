@@ -29,7 +29,6 @@ import {
 
 import { db }                              from "../db.js";
 import { createNotification }              from "../services/notificationService.js";
-import { upsertSummary }                   from "../services/summaryService.js";
 import { getUserById }                     from "../services/userService.js";
 import { createTaskAssignee, deleteTaskAssignee } from "../services/taskAssigneesService.js";
 import { createTagTask, createTagTasks }   from "../services/tagTaskService.js";
@@ -49,40 +48,34 @@ const buildConversationHistory = (historyRows) =>
     content: row.content,
   }));
 
-// ── Auto-summary (fire-and-forget) ───────────────────────────────────────────
+// ── Gera resumo da conversa e devolve como texto (sem gravar na DB) ───────────
 const autoGenerateSummary = async (conversationId) => {
   try {
     const historyRows = await getChatHistoryByConversationId(conversationId);
-    if (!historyRows || historyRows.length < 2) return;
+    if (!historyRows || historyRows.length < 2) return null;
 
     const historyText = historyRows
       .slice(-12)
       .map((r) => `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`)
       .join("\n");
 
-    const prompt = `Resume esta conversa (conversation_id: ${conversationId}). Histórico:\n${historyText}`;
+    const prompt = `Resume esta conversa em 1-2 frases curtas e claras (máx. 195 caracteres). Histórico:\n${historyText}`;
     const result = await processChatMessage(prompt, []);
 
-    if (result.geminiError) return;
+    if (result.geminiError || !result.success) return null;
 
-    if (result.functionResults?.[0]?.result) {
-      const fd = result.functionResults[0].result;
-      await upsertSummary({
-        conversation_id: fd.conversation_id || conversationId,
-        original_text:   historyText.substring(0, 295),
-        summary:         (fd.summary || result.message || "Resumo indisponível").substring(0, 195),
-      });
-    } else if (result.message) {
-      await upsertSummary({
-        conversation_id: conversationId,
-        original_text:   historyText.substring(0, 295),
-        summary:         result.message.substring(0, 195),
-      });
-    }
+    const summaryText =
+      result.functionResults?.[0]?.result?.summary ||
+      result.message ||
+      null;
+
+    return summaryText ? summaryText.substring(0, 195) : null;
   } catch (err) {
     console.warn("[AutoSummary] Non-critical error:", err.message);
+    return null;
   }
 };
+
 
 // ── Upsert task assignment ────────────────────────────────────────────────────
 const upsertAssignment = async (task_id, user_id) => {
@@ -263,7 +256,7 @@ export const sendMessageToBotStream = async (req, res) => {
   let actualConversationId = null;
 
   try {
-    const { message, conversationHistory, conversationId } = req.body;
+    const { message, conversationHistory, conversationId, user_id } = req.body;
 
     if (!message || message.trim().length === 0)
       return res.status(400).json({ success: false, error: "Mensagem não pode estar vazia" });
@@ -282,7 +275,7 @@ export const sendMessageToBotStream = async (req, res) => {
       }
     } else {
       const title   = userMessage.length > 50 ? userMessage.substring(0, 47) + "..." : userMessage;
-      const newConv = await createConversation({ title });
+      const newConv = await createConversation({ title, user_id: Number(user_id) || 1 });
       actualConversationId = newConv.id;
     }
 
@@ -327,13 +320,14 @@ export const sendMessageToBotStream = async (req, res) => {
       if (result.functionResults?.length)
         persisted = await persistAllFunctionResults(result.functionResults);
 
-      setImmediate(() => autoGenerateSummary(actualConversationId));
+      const summary = await autoGenerateSummary(actualConversationId);
 
       sendEvent("done", {
         success:         true,
         message:         assistantText,
         conversationId:  actualConversationId,
         functionResults: result.functionResults || [],
+        summary,
         ...persisted,
       });
 
@@ -398,9 +392,9 @@ export const sendMessageToConversation = async (req, res) => {
     if (result.functionResults?.length)
       persisted = await persistAllFunctionResults(result.functionResults);
 
-    setImmediate(() => autoGenerateSummary(Number(conversationId)));
+    const summary = await autoGenerateSummary(conversationId);
 
-    return res.status(200).json({ ...result, conversationId, ...persisted });
+    return res.status(200).json({ ...result, conversationId, summary, ...persisted });
   } catch (error) {
     res.status(500).json({ success: false, error: "Erro ao processar mensagem: " + error.message });
   }

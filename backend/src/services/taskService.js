@@ -10,41 +10,40 @@ export const getAllTasks = async (search, sort) => {
   if (sort === "asc" || sort === "desc") q += ` ORDER BY t.title ${sort.toUpperCase()}`;
   const [rows] = await db.query(q, p); return rows.map(mapTaskDTOResponse);
 };
-export const getTasksByProjectId = async (projectId, search, sort) => {
-  let q = "SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id WHERE t.project_id = ?"; const p = [projectId];
-  if (search) { q += " AND (t.title LIKE ? OR t.description LIKE ?)"; p.push(`%${search}%`, `%${search}%`); }
-  if (sort === "asc" || sort === "desc") q += ` ORDER BY t.title ${sort.toUpperCase()}`;
-  const [rows] = await db.query(q, p); return rows.map(mapTaskDTOResponse);
-};
 export const createTask = async (data) => {
   const d = {
-    title: (data.title ?? "").toString().trim(), description: (data.description ?? "").toString().trim(),
-    types_id: pn(data.types_id ?? data.type_id ?? data.typeId, 1), status_id: pn(data.status_id ?? data.statusId, 1),
-    priority_id: pn(data.priority_id ?? data.priorityId, 1), category_id: pn(data.category_id ?? data.categoryId, 1),
-    project_id: pn(data.project_id ?? data.projectId, 1), estimated_hours: pn(data.estimated_hours ?? data.estimatedHours, 0),
-    due_date: toD(data.due_date ?? data.dueDate), completed_at: toD(data.completed_at ?? data.completedAt),
+    title: (data.title ?? "").toString().trim(),
+    description: (data.description ?? "").toString().trim(),
+    status_id: pn(data.status_id ?? data.statusId, 1),
+    priority_id: pn(data.priority_id ?? data.priorityId, 1),
+    estimated_hours: pn(data.estimated_hours ?? data.estimatedHours, 0),
+    due_date: toD(data.due_date ?? data.dueDate),
+    completed_at: toD(data.completed_at ?? data.completedAt),
   };
+
   const [result] = await db.query(
-    "INSERT INTO task (title, description, types_id, status_id, priority_id, category_id, project_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
-    [d.title, d.description, d.types_id, d.status_id, d.priority_id, d.category_id, d.project_id, d.estimated_hours, d.due_date, d.completed_at]);
+    "INSERT INTO task (title, description, status_id, priority_id, estimated_hours, due_date, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+    [d.title, d.description, d.status_id, d.priority_id, d.estimated_hours, d.due_date, d.completed_at],
+  );
+
   return mapTaskDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...d });
 };
+
 export const updateStatus = async (taskId, data) => { const [, r] = await db.query("UPDATE task SET status_id = ? WHERE id = ?", [data.status_id, taskId]); return r.affectedRows; };
+
 export const updateTask = async (taskId, data) => {
   const fields = [], values = [], add = (c, v) => { fields.push(`${c} = ?`); values.push(v); };
   if (data.title !== undefined) add("title", data.title);
   if (data.description !== undefined) add("description", data.description);
   if (data.status_id !== undefined) add("status_id", data.status_id);
   if (data.priority_id !== undefined) add("priority_id", data.priority_id);
-  if (data.category_id !== undefined) add("category_id", data.category_id);
-  if (data.types_id !== undefined) add("types_id", data.types_id);
-  if (data.project_id !== undefined) add("project_id", data.project_id);
   if (data.estimated_hours !== undefined) add("estimated_hours", data.estimated_hours);
   if (data.due_date !== undefined) add("due_date", data.due_date);
   if (data.completed_at !== undefined) add("completed_at", data.completed_at);
   if (!fields.length) return 0;
   values.push(taskId);
-  const [, r] = await db.query(`UPDATE task SET ${fields.join(", ")} WHERE id = ?`, values); return r.affectedRows;
+  const [, r] = await db.query(`UPDATE task SET ${fields.join(", ")} WHERE id = ?`, values);
+  return r.affectedRows;
 };
 export const deleteTask = async (taskId) => { const [, r] = await db.query("DELETE FROM task WHERE id = ?", [taskId]); return r.affectedRows; };
 export const getTaskById = async (taskId) => {
@@ -65,6 +64,7 @@ export const getTagsByTaskId = async (taskId) => { const [r] = await db.query("S
 export const getTasksByTagId = async (tagId) => { const [r] = await db.query("SELECT t.* FROM task t INNER JOIN tags_task tt ON t.id = tt.task_id WHERE tt.tag_id = ?", [tagId]); return r.map(mapTaskDTOResponse); };
 export const removeTagFromAllTasks = async (tagId) => { const [, r] = await db.query("DELETE FROM tags_task WHERE tag_id = ?", [tagId]); return r.affectedRows; };
 export const removeTicketFromAllTasks = async () => 0;
+export const removeConversationFromAllTasks = async () => 0;
 export const getTaskStats = async () => {
   const [r1] = await db.query("SELECT COUNT(*) AS total FROM task");
   const total = parseInt(r1[0]?.total ?? r1[0]?.count ?? 0);

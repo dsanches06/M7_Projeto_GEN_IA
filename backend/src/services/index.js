@@ -1,0 +1,13 @@
+// ── Backend services barrel ───────────────────────────────────────────────────
+export * as chatHistoryService       from "./chatHistoryService.js";
+export * as conversationService      from "./conversationService.js";
+export * as notificationService      from "./notificationService.js";
+export * as priorityService          from "./priorityService.js";
+export * as roleService              from "./roleService.js";
+export * as tagService               from "./tagService.js";
+export * as tagTaskService           from "./tagTaskService.js";
+export * as taskAssigneesService     from "./taskAssigneesService.js";
+export * as taskService              from "./taskService.js";
+export * as taskStatusService        from "./taskStatusService.js";
+export * as ticketService            from "./ticketService.js";
+export * as userService              from "./userService.js";

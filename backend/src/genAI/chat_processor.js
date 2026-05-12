@@ -1,4 +1,4 @@
-import { BaseChatProcessor } from "../models/chat/BaseChatProcessor.js";
+import { BaseChatProcessor } from "../models/BaseChatProcessor.js";
 
 import {
   ALL_FUNCTION_DECLARATIONS,

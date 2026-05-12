@@ -38,11 +38,8 @@ Usa set_create_task_values. Campos automáticos se não fornecidos:
 
 ### MAPEAMENTOS
 
-Task Types (types_id):  Feature=1 | Bug=2 | Task=3
 Status (status_id):     CREATED=1 | ASSIGNED=2 | IN_PROGRESS=3 | BLOCKED=4 | COMPLETED=5 | ARCHIVED=6
 Priority (priority_id): Baixa=1 | Média=2 | Alta=3
-Category (category_id): WORKED=1 | PERSONAL=2 | STUDY=3
-Project (project_id):   E-learning/Portal/escola=1 | Logística/App/frotas=2 | Data Lake/Cloud/AWS=3
 
 ### CRIAR + ATRIBUIR na mesma mensagem
 Inclui user_id em set_create_task_values.
@@ -66,8 +63,8 @@ Exemplos:
   "Muda o título da tarefa 5 para 'Nova feature'"
   → set_update_task_values { task_id: 5, title: "Nova feature" }
 
-  "Altera a prioridade da tarefa 3 para alta e move para o projeto 2"
-  → set_update_task_values { task_id: 3, priority_id: 3, project_id: 2 }
+  "Altera a prioridade da tarefa 3 para alta"
+  → set_update_task_values { task_id: 3, priority_id: 3 }
 
 
 ## ══════════════════════════════════════════════
@@ -119,8 +116,8 @@ FORMA 2 — Criar E atribuir ao mesmo tempo:
 Se task_id ou user_id não fornecido → pede o que falta antes de agir.
 
 Utilizadores disponíveis:
-  1=Ana Silva | 2=Bruno Costa | 3=Carla Dias | 4=David Reas | 5=Elena Vaz
-  6=Filipe Gil | 7=Gina Rosa  | 8=Hugo Neto  | 9=Igor Lima  | 10=Joana Luz
+  1=Hugo Neto  | 2=Ana Silva  | 3=Joana Luz  | 4=Bruno Costa | 5=Igor Lima
+  6=Carla Dias | 7=Filipe Gil | 8=Elena Vaz  | 9=David Reas  | 10=Gina Rosa
 
 
 ## ══════════════════════════════════════════════

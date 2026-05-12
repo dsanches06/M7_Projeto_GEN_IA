@@ -1,4 +1,5 @@
 import * as conversationService from "../services/conversationService.js";
+import * as taskService from "../services/taskService.js";
 
 /* Função para buscar conversas */
 export const getConversations = async (req, res) => {
@@ -9,6 +10,7 @@ export const getConversations = async (req, res) => {
     res.status(500).json({ message: "Erro ao buscar conversas" });
   }
 };
+
 
 export const getConversationById = async (req, res) => {
   try {
@@ -84,19 +86,3 @@ export const updateConversation = async (req, res) => {
   }
 };
 
-/* Função para buscar tarefas da conversa */
-export const getConversationTasks = async (req, res) => {
-  try {
-    const conversationId = Number(req.params.id);
-    const conversation = await conversationService.getConversationById(conversationId);
-
-    if (!conversation) {
-      return res.status(404).json({ error: "Conversa não encontrada" });
-    }
-
-    const tasks = await taskService.getTasksByConversationId(conversationId);
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ message: "Erro ao buscar tarefas da conversa" });
-  }
-};

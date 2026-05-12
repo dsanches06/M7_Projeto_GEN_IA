@@ -1,6 +1,5 @@
 import * as taskService from "../services/taskService.js";
 import * as tagService from "../services/tagService.js";
-import * as commentService from "../services/commentService.js";
 
 /* Função para buscar tarefas */
 export const getTasks = async (req, res) => {
@@ -10,22 +9,6 @@ export const getTasks = async (req, res) => {
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: "Erro ao buscar tarefas" });
-  }
-};
-
-/* Função para buscar tarefas de um projeto específico */
-export const getTasksByProject = async (req, res) => {
-  try {
-    const { projectId } = req.params;
-    const { sort, search } = req.query;
-    const tasks = await taskService.getTasksByProjectId(
-      Number(projectId),
-      search,
-      sort,
-    );
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ error: "Erro ao buscar tarefas do projeto" });
   }
 };
 
@@ -180,127 +163,3 @@ export const getTaskTags = async (req, res) => {
   }
 };
 
-/* Função para criar comentário */
-export const createComment = async (req, res) => {
-  try {
-    const taskId = Number(req.params.id);
-
-    if (!req.body.content || req.body.content.trim().length === 0) {
-      return res
-        .status(400)
-        .json({ message: "O conteúdo do comentário não pode estar vazio" });
-    }
-
-    if (!req.body.userId) {
-      return res.status(400).json({ message: "userId é obrigatório" });
-    }
-
-    const comment = await commentService.createComment(taskId, req.body);
-    res.status(201).json(comment);
-  } catch (error) {
-    res
-      .status(400)
-      .json({ message: `Erro ao criar comentário: ${error.message}` });
-  }
-};
-
-/* Função para buscar comentários */
-export const getComments = async (req, res) => {
-  try {
-    const taskId = Number(req.params.id);
-    const comments = await commentService.getCommentsByTaskId(taskId);
-    res.json(comments);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: `Erro ao buscar comentários: ${error.message}` });
-  }
-};
-
-/* Função para deletar comentário */
-export const deleteComment = async (req, res) => {
-  try {
-    const commentId = Number(req.params.commentId);
-    const comment = await commentService.deleteComment(commentId);
-    res.json({ message: "Comentário deletado com sucesso", comment });
-  } catch (error) {
-    res
-      .status(404)
-      .json({ message: `Erro ao deletar comentário: ${error.message}` });
-  }
-};
-
-/* Função para marcar comentário como resolvido */
-export const resolveComment = async (req, res) => {
-  try {
-    const { commentId } = req.params;
-    let { resolved } = req.body;
-
-    if (!commentId) {
-      return res
-        .status(400)
-        .json({ message: "O ID do comentário é obrigatório" });
-    }
-
-    if (resolved === undefined || resolved === null) {
-      return res
-        .status(400)
-        .json({ message: "O campo 'resolved' é obrigatório" });
-    }
-
-    // Convert various formats to boolean
-    if (typeof resolved === "string") {
-      resolved = resolved.toLowerCase() === "true" || resolved === "1";
-    } else if (typeof resolved === "number") {
-      resolved = Boolean(resolved);
-    } else if (typeof resolved !== "boolean") {
-      return res
-        .status(400)
-        .json({ message: "O campo 'resolved' deve ser um booleano válido" });
-    }
-
-    const comment = await commentService.resolveComment(
-      Number(commentId),
-      resolved,
-    );
-    res.json({
-      message: `Comentário marcado como ${resolved ? "resolvido" : "não resolvido"}`,
-      comment,
-    });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ message: `Erro ao resolver comentário: ${error.message}` });
-  }
-};
-
-/* Função para atualizar comentário */
-export const updateComment = async (req, res) => {
-  try {
-    console.log("[DEBUG] updateComment called with params:", req.params);
-    console.log("[DEBUG] updateComment body:", req.body);
-    const { commentId } = req.params;
-    const { content } = req.body;
-    if (!commentId) {
-      return res
-        .status(400)
-        .json({ message: "O ID do comentário é obrigatório" });
-    }
-    if (!content || content.trim().length === 0) {
-      return res
-        .status(400)
-        .json({ message: "O conteúdo do comentário não pode estar vazio" });
-    }
-
-    const comment = await commentService.updateComment(
-      Number(commentId),
-      content.trim(),
-    );
-    res.json({ message: "Comentário atualizado com sucesso", comment });
-  } catch (error) {
-    console.error("[DEBUG] updateComment error:", error.message);
-    res
-      .status(400)
-      .json({ message: `Erro ao atualizar comentário: ${error.message}` });
-  }
-};
