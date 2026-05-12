@@ -19,14 +19,41 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-async function runSQLFile(filePath) {
+async function runSQLFile(fileName) {
+  // Tenta encontrar o arquivo em múltiplos caminhos possíveis no ambiente Vercel
+  const pathsToTry = [
+    join(__dirname, fileName),                                     // Caminho relativo ao script atual
+    join(process.cwd(), 'backend', 'neon_database', fileName),     // Caminho padrão Vercel se executado na raiz
+    join(process.cwd(), 'neon_database', fileName),               // Caso a raiz do build já seja a pasta backend
+    join(process.cwd(), 'backend', fileName),                      // Fallback pasta antiga
+    join(process.cwd(), fileName)                                  // Fallback raiz absoluta do build
+  ];
+
+  let sql = null;
+  let finalPath = '';
+
+  for (const p of pathsToTry) {
+    try {
+      sql = readFileSync(p, 'utf8');
+      finalPath = p;
+      break; // Encontrou o arquivo com sucesso
+    } catch (e) {
+      // Continua tentando os próximos caminhos
+    }
+  }
+
+  if (!sql) {
+    console.error(`❌ Erro: Não foi possível localizar o arquivo ${fileName} em nenhum dos caminhos testados.`);
+    console.error('Caminhos testados:', pathsToTry);
+    throw new Error(`ENOENT: no such file or directory, open '${fileName}'`);
+  }
+
   try {
-    console.log(`📄 Executando ${filePath}...`);
-    const sql = readFileSync(filePath, 'utf8');
+    console.log(`📄 Executando arquivo encontrado em: ${finalPath}...`);
     await pool.query(sql);
-    console.log(`✅ ${filePath} executado com sucesso`);
+    console.log(`✅ ${fileName} executado com sucesso`);
   } catch (error) {
-    console.error(`❌ Erro ao executar ${filePath}:`, error.message);
+    console.error(`❌ Erro ao executar queries do arquivo ${fileName}:`, error.message);
     throw error;
   }
 }
@@ -45,11 +72,11 @@ async function initDatabase() {
     console.log('✅ Conectado ao Neon com sucesso!');
 
     console.log('📄 Preparando para executar schema atualizado...');
-    await runSQLFile(join(__dirname, 'database-init-postgres.sql'));
+    await runSQLFile('database-init-postgres.sql');
     console.log('✅ Schema atualizado!');
 
     console.log('📄 Preparando para executar seed...');
-    await runSQLFile(join(__dirname, 'database-seed-postgres.sql'));
+    await runSQLFile('database-seed-postgres.sql');
     console.log('✅ Seed executado!');
 
     console.log('🎉 Banco de dados atualizado com sucesso!');
@@ -65,9 +92,9 @@ async function initDatabase() {
   }
 }
 
-// Verifica de forma segura se o ficheiro está a ser executado diretamente (CLI ou script npm)
+// Executa o script se chamado diretamente ou no ambiente Vercel
 const currentFilePath = fileURLToPath(import.meta.url);
-const isDirectRun = process.argv.some(arg => currentFilePath.includes(arg) || arg.endsWith('init-neon-db.js'));
+const isDirectRun = process.argv && process.argv.some(arg => currentFilePath.includes(arg) || arg.endsWith('init-neon-db.js'));
 
 if (isDirectRun || process.env.VERCEL) {
   initDatabase();
