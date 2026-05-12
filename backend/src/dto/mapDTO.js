@@ -68,18 +68,15 @@ export function mapPriorityDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de comentário */
+/* Função para mapear resposta de tarefa */
 export function mapTaskDTOResponse(data) {
   return {
     id: data.id,
     title: data.title,
     description: data.description,
-    types_id: data.types_id,
     status_id: data.status_id,
     priority_id: data.priority_id,
-    category_id: data.category_id,
     created_at: data.created_at,
-    project_id: data.project_id,
     due_date: data.due_date,
     completed_at: data.completed_at,
     estimated_hours: data.estimated_hours,

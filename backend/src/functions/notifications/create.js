@@ -4,7 +4,7 @@
 // ======================================================
 
 import { Type } from "@google/genai";
-import { BaseFunction } from "../../models/CRUD/BaseFunction.js";
+import { BaseFunction } from "../../models/BaseFunction.js";
 
 // Define a função em que o modelo pode chamar para controlar as notificações
 class CreateNotificationFunction extends BaseFunction {

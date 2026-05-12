@@ -3,7 +3,7 @@
 // ======================================================
 
 import { Type } from "@google/genai";
-import { BaseFunction } from "../../models/CRUD/BaseFunction.js";
+import { BaseFunction } from "../../models/BaseFunction.js";
 
 /**
  * Função que permite ao modelo adicionar uma ou mais etiquetas

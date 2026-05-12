@@ -1,5 +1,5 @@
 import { Type } from "@google/genai";
-import { BaseFunction } from "../../models/CRUD/BaseFunction.js";
+import { BaseFunction } from "../../models/BaseFunction.js";
 
 class PatchStatusTaskFunction extends BaseFunction {
   constructor() {

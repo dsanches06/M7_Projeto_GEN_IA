@@ -11,3 +11,6 @@ clickUp/.env
 .vercel
 .env*.local
 *.env
+
+#depois remover a apasta
+projeto_refatorado/

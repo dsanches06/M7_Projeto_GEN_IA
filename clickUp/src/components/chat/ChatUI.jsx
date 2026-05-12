@@ -20,7 +20,7 @@ import {
   AssignmentPreview,
   TagAssignmentPreview,
   TicketPreview,
-} from "@/components/chat/previews/index.js";
+} from "@/components/chat/previews";
 
 // ── ChatUI ────────────────────────────────────────────────────────────────────
 /**

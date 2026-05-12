@@ -1,3 +1,4 @@
+// Colunas de status para uso em tabelas ou listas  
 export const STATUS_COLUMNS = [
   'CREATED',
   'ASSIGNED',
@@ -7,6 +8,7 @@ export const STATUS_COLUMNS = [
   'ARCHIVED',
 ];
 
+// Cores associadas a cada status para uso em badges, etiquetas, etc. 
 export const STATUS_COLOR = {
   CREATED:     '#185FA5',
   ASSIGNED:    '#1D9E75',
@@ -16,6 +18,7 @@ export const STATUS_COLOR = {
   ARCHIVED:    '#5F5E5A',
 };
 
+// Gera um número inteiro a partir de uma string, para uso como semente de cor
 function seedFromValue(value) {
   const str = `${value}`;
   let hash = 0;
@@ -26,6 +29,7 @@ function seedFromValue(value) {
   return Math.abs(hash);
 }
 
+// Converte um número em uma cor HSL, garantindo variedade e legibilidade
 function toHSL(seed) {
   const hue = Math.floor((seed * 137.508) % 360);
   const saturation = 55 + ((seed >> 4) % 30); // 55-84%
@@ -33,6 +37,7 @@ function toHSL(seed) {
   return { hue, saturation, lightness };
 }
 
+// Gera uma paleta de cores consistente a partir de um ID (ex: user_id, project_id)
 export function getPalette(id) {
   const seed = seedFromValue(`${id}`);
   const { hue, saturation, lightness } = toHSL(seed);
@@ -42,6 +47,7 @@ export function getPalette(id) {
   return { bg, tx };
 }
 
+/* Gera as iniciais de um nome para uso em avatares ou badges */
 export function getInitials(name = '') {
   return name
     .split(' ')
