@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Componente ChatUI - Interface principal do chat com TaskBot AI.
+ * Responsável por gerenciar conversas, mensagens e previews de ações.
+ */
+
 import { useState, useRef, useEffect } from "react";
 import { chatService } from "@/services/chatService";
-import { summaryService } from "@/services/summaryService";
 import {
   ChatBubbleUI,
   ChatHeaderUI,
@@ -8,285 +12,27 @@ import {
   ChatInputUI,
   GeminiErrorCard,
 } from "@/components/chat/index.js";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-const groupConversationsByDate = (conversations) => {
-  const sorted = [...conversations].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at),
-  );
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const week = new Date(today);
-  week.setDate(week.getDate() - 7);
-  const groups = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
-  sorted.forEach((conv) => {
-    const d = new Date(conv.created_at);
-    if (d >= today) groups["Hoje"].push(conv);
-    else if (d >= yesterday) groups["Ontem"].push(conv);
-    else if (d >= week) groups["Esta Semana"].push(conv);
-    else groups["Anteriores"].push(conv);
-  });
-  return Object.entries(groups)
-    .filter(([, c]) => c.length > 0)
-    .map(([label, convs]) => ({ label, convs }));
-};
-
-const formatDate = (s) => {
-  try {
-    return new Date(s).toLocaleString("pt-PT", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
-};
-
-// ── Preview cards ─────────────────────────────────────────────────────────────
-
-function TaskCreatedPreview({ task }) {
-  return (
-    <div className="rounded-xl border border-[#D1FAE5] bg-[#F0FDF4] p-3 shadow-sm">
-      <div className="flex items-center gap-2 mb-1.5">
-        <span>✅</span>
-        <span className="text-xs font-bold text-[#065F46]">Tarefa criada</span>
-      </div>
-      <p className="text-xs font-semibold text-gray-800 truncate">
-        {task.title}
-      </p>
-      <p className="text-[10px] text-gray-400 mt-0.5">ID #{task.id}</p>
-    </div>
-  );
-}
-
-function TaskUpdatedPreview({ taskUpdated }) {
-  const STATUS_COLORS = {
-    CREATED: "#EAB308",
-    ASSIGNED: "#3B82F6",
-    IN_PROGRESS: "#8B5CF6",
-    BLOCKED: "#EF4444",
-    COMPLETED: "#22C55E",
-    ARCHIVED: "#9CA3AF",
-  };
-  const statusName = taskUpdated.status_name || "UPDATED";
-  const color = STATUS_COLORS[statusName] || "#6B7280";
-  return (
-    <div
-      className="rounded-xl p-3 shadow-sm"
-      style={{ border: `1px solid ${color}40`, background: `${color}12` }}
-    >
-      <div className="flex items-center gap-2 mb-1.5">
-        <span>🔄</span>
-        <span className="text-xs font-bold" style={{ color }}>
-          {statusName === "UPDATED" ? "Tarefa atualizada" : "Estado atualizado"}
-        </span>
-      </div>
-      <p className="text-xs font-semibold text-gray-800 truncate">
-        {taskUpdated.title || `Tarefa #${taskUpdated.id}`}
-      </p>
-      {statusName !== "UPDATED" && (
-        <div className="flex items-center gap-1.5 mt-1">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: color }}
-          />
-          <span className="text-[11px] font-bold" style={{ color }}>
-            {statusName}
-          </span>
-          <span className="text-[10px] text-gray-400 ml-auto">
-            ID #{taskUpdated.id}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TaskDeletedPreview({ taskDeleted }) {
-  return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">
-      <div className="flex items-center gap-2 mb-1.5">
-        <span>🗑️</span>
-        <span className="text-xs font-bold text-red-700">Tarefa eliminada</span>
-      </div>
-      <p className="text-xs font-semibold text-gray-700 truncate">
-        {taskDeleted.title || `Tarefa #${taskDeleted.id}`}
-      </p>
-      <p className="text-[10px] text-gray-400 mt-0.5">ID #{taskDeleted.id}</p>
-    </div>
-  );
-}
-
-function AssignmentPreview({ assignment }) {
-  const initial = (assignment.user_name || "?").charAt(0).toUpperCase();
-  return (
-    <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-3 shadow-sm">
-      <div className="flex items-center gap-2 mb-2.5">
-        <span>🔗</span>
-        <span className="text-xs font-bold text-[#1D4ED8]">
-          Atribuição confirmada
-        </span>
-      </div>
-      <div className="flex items-start gap-2">
-        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0 pt-0.5">
-          Tarefa
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-gray-800 truncate">
-            {assignment.task_title || `Tarefa #${assignment.task_id}`}
-          </p>
-          <p className="text-[10px] text-gray-400">ID #{assignment.task_id}</p>
-        </div>
-      </div>
-      <div className="border-t border-[#BFDBFE] my-2" />
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">
-          Atribuído
-        </span>
-        <div className="w-5 h-5 rounded-full bg-[#BFDBFE] flex items-center justify-center text-[9px] font-bold text-[#1D4ED8] flex-shrink-0">
-          {initial}
-        </div>
-        <p className="text-xs font-semibold text-gray-800 truncate flex-1">
-          {assignment.user_name || `Utilizador #${assignment.user_id}`}
-        </p>
-        <span className="text-[10px] text-gray-400 flex-shrink-0">
-          #{assignment.user_id}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function TagAssignmentPreview({ tagAssignment }) {
-  const { task_id, task_title, added = [] } = tagAssignment;
-  return (
-    <div className="rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] p-3 shadow-sm">
-      <div className="flex items-center gap-2 mb-2.5">
-        <span>🏷️</span>
-        <span className="text-xs font-bold text-[#7C3AED]">
-          Etiqueta{added.length !== 1 ? "s" : ""} adicionada
-          {added.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-      <div className="flex items-start gap-2 mb-2.5">
-        <span className="text-[10px] text-gray-400 w-12 flex-shrink-0 pt-0.5">
-          Tarefa
-        </span>
-        <div>
-          <p className="text-xs font-semibold text-gray-800 truncate">
-            {task_title || `Tarefa #${task_id}`}
-          </p>
-          <p className="text-[10px] text-gray-400">ID #{task_id}</p>
-        </div>
-      </div>
-      {added.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {added.map((tag) => (
-            <span
-              key={tag.tag_id}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: `${tag.tag_color}18`,
-                color: tag.tag_color,
-                border: `1px solid ${tag.tag_color}40`,
-              }}
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: tag.tag_color }}
-              />
-              {tag.tag_name}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TicketPreview({ ticket, onNavigate }) {
-  if (ticket._type === "ticket_deleted")
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span>🗑️</span>
-          <span className="text-xs font-bold text-red-700">
-            Ticket #{ticket.id} eliminado
-          </span>
-        </div>
-      </div>
-    );
-
-  if (ticket._type === "ticket_status")
-    return (
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span>🔄</span>
-          <span className="text-xs font-bold text-blue-700">
-            Ticket #{ticket.id} → {ticket.status}
-          </span>
-        </div>
-        <button
-          onClick={onNavigate}
-          className="mt-2 w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)]"
-        >
-          Ver Tickets →
-        </button>
-      </div>
-    );
-
-  const sev = ticket.severity || 5;
-  const color =
-    sev >= 8
-      ? "#DC2626"
-      : sev >= 5
-        ? "#D97706"
-        : sev >= 3
-          ? "#2563EB"
-          : "#16A34A";
-  return (
-    <div
-      className="rounded-xl border bg-white p-3 shadow-sm"
-      style={{ borderLeft: `3px solid ${color}` }}
-    >
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-mono text-gray-400">
-          Ticket #{ticket.id}
-        </span>
-        <span
-          className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-          style={{ background: `${color}18`, color }}
-        >
-          Sev. {sev}/10
-        </span>
-      </div>
-      <p className="text-xs text-gray-700 line-clamp-2 mb-2">
-        {ticket.user_report}
-      </p>
-      <button
-        onClick={onNavigate}
-        className="w-full text-xs bg-[var(--primary)] text-white rounded-lg py-1.5 hover:bg-[var(--primary-hover)]"
-      >
-        Ver página de Tickets →
-      </button>
-    </div>
-  );
-}
-
-// ── Welcome message ───────────────────────────────────────────────────────────
-const INITIAL_MESSAGE = {
-  id: "welcome",
-  text: "🤖 Olá! Sou o TaskBot AI!\n\nPosso criar, editar, eliminar e atribuir tarefas, tickets e notificações.\n\nExemplos:\n• 'Cria uma tarefa urgente para rever o login'\n• 'Atribui a tarefa 5 ao Bruno e adiciona etiqueta Urgente'\n• 'Move a tarefa 1 para em progresso'\n• 'Elimina o ticket 3'\n• 'Fecha o ticket 7'",
-  sender: "bot",
-  timestamp: new Date(),
-};
+import { groupConversationsByDate, formatConversationDate, createWelcomeMessage } from "@/utils/chatUtils";
+import {
+  TaskCreatedPreview,
+  TaskUpdatedPreview,
+  TaskDeletedPreview,
+  AssignmentPreview,
+  TagAssignmentPreview,
+  TicketPreview,
+} from "@/components/chat/previews/index.js";
 
 // ── ChatUI ────────────────────────────────────────────────────────────────────
+/**
+ * Componente principal da interface de chat.
+ * Gerencia mensagens, histórico de conversas e interações com o TaskBot AI.
+ * @param {boolean} isOpen - Indica se o chat está aberto.
+ * @param {Function} onClose - Função para fechar o chat.
+ * @param {Function} onTaskCreated - Callback quando uma tarefa é criada.
+ * @param {Function} onTaskUpdated - Callback quando uma tarefa é atualizada.
+ * @param {Function} onTaskDeleted - Callback quando uma tarefa é eliminada.
+ * @param {Function} onTicketCreated - Callback quando um ticket é criado.
+ */
 export function ChatUI({
   isOpen,
   onClose,
@@ -295,7 +41,7 @@ export function ChatUI({
   onTaskDeleted,
   onTicketCreated,
 }) {
-  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState([createWelcomeMessage()]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationHistory, setConversationHistory] = useState([]);
@@ -333,27 +79,36 @@ export function ChatUI({
     setConversationId(conv.id);
     setShowHistory(false);
     try {
-      const summary = await summaryService.getSummaryByConversationId(conv.id);
-      const text = summary?.summary
-        ? `📋 Resumo:\n\n${summary.summary}`
-        : "⏳ Resumo ainda a ser gerado.";
-      setMessages([
-        { id: `${conv.id}-s`, text, sender: "bot", timestamp: new Date() },
-      ]);
-      setConversationHistory(
-        summary?.summary
-          ? [{ role: "assistant", content: summary.summary }]
-          : [],
+      const historyRows = await chatService.getChatHistory(conv.id);
+      const rows = Array.isArray(historyRows) ? historyRows : [];
+
+      // Build AI context history (role_id 2 = user, 3 = model)
+      const history = rows.map((r) => ({
+        role:    r.role_id === 2 ? "user" : "assistant",
+        content: r.content,
+      }));
+      setConversationHistory(history);
+
+      // Show last 10 messages as preview in the chat window
+      const preview = rows.slice(-10).map((r) => ({
+        id:        r.id,
+        text:      r.content,
+        sender:    r.role_id === 2 ? "user" : "bot",
+        timestamp: new Date(r.sent_at),
+      }));
+
+      setMessages(
+        preview.length > 0
+          ? preview
+          : [{ id: `${conv.id}-empty`, text: "Conversa sem mensagens.", sender: "bot", timestamp: new Date() }],
       );
     } catch {
-      setMessages([
-        {
-          id: `${conv.id}-e`,
-          text: "Não foi possível carregar o resumo.",
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ]);
+      setMessages([{
+        id: `${conv.id}-e`,
+        text: "Não foi possível carregar o histórico.",
+        sender: "bot",
+        timestamp: new Date(),
+      }]);
       setConversationHistory([]);
     }
   };
@@ -361,7 +116,7 @@ export function ChatUI({
   const handleNewConversation = () => {
     setConversationId(null);
     setShowHistory(false);
-    setMessages([{ ...INITIAL_MESSAGE, timestamp: new Date() }]);
+    setMessages([{ ...createWelcomeMessage(), timestamp: new Date() }]);
     setConversationHistory([]);
     setLastUserMessage(null);
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -650,7 +405,7 @@ export function ChatUI({
                         {conv.title}
                       </p>
                       <p className="text-xs text-muted mt-0.5">
-                        {formatDate(conv.created_at)}
+                        {formatConversationDate(conv.created_at)}
                       </p>
                     </button>
                   ))}

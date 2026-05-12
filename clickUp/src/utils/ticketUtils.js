@@ -1,13 +1,13 @@
 
-// Configurações de tipos de erro para tickets
-
+// Configurações de tipos de erro para tickets (chaves = error_type da DB em lowercase)
 export const ERROR_TYPE_CONFIG = {
-  bug: { label: "Bug", bg: "#FFF1F2", color: "#EF4444" },
-  feature: { label: "Feature", bg: "#EFF6FF", color: "#3B82F6" },
-  improvement: { label: "Improvement", bg: "#F0FDF4", color: "#22C55E" },
-  performance: { label: "Performance", bg: "#FFF7ED", color: "#F97316" },
-  security: { label: "Segurança", bg: "#FDF4FF", color: "#A855F7" },
-  other: { label: "Outro", bg: "#F9FAFB", color: "#6B7280" },
+  api:         { label: "API",         bg: "#EFF6FF", color: "#3B82F6" },
+  database:    { label: "Database",    bg: "#FFF7ED", color: "#F97316" },
+  ui:          { label: "UI",          bg: "#F0FDF4", color: "#22C55E" },
+  network:     { label: "Network",     bg: "#FDF4FF", color: "#A855F7" },
+  auth:        { label: "Auth",        bg: "#FFF1F2", color: "#EF4444" },
+  performance: { label: "Performance", bg: "#FFFBEB", color: "#D97706" },
+  other:       { label: "Outro",       bg: "#F9FAFB", color: "#6B7280" },
 };
 
 // Configurações de status para tickets
