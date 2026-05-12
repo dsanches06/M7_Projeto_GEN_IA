@@ -173,32 +173,14 @@ INSERT INTO task (id, title, description, status_id, priority_id, estimated_hour
 INSERT INTO task_assignees (task_id, user_id) VALUES
 (1,1), (2,4), (3,7), (4,2);
 
-/* 7. Conversas (Agora vinculadas a um USER) */
-INSERT INTO conversations (id, user_id, title) VALUES
-(1, 1, 'Suporte Login'),
-(2, 2, 'Erro API Pagamentos'),
-(3, 4, 'Problema UI Dashboard');
 
-/* 8. Histórico de Chat (User vs Model) */
-INSERT INTO chat_history (conversation_id, role_id, content) VALUES
-(1, 2, 'Não consigo fazer login'), -- User fala
-(1, 3, 'Pode verificar se a senha está correta?'), -- Model responde
-(1, 2, 'Sim, mas continua a falhar'),
-(2, 2, 'API de pagamentos está a dar erro 500'),
-(2, 3, 'Verifique os logs do servidor via SSH.'),
-(3, 2, 'O gráfico do dashboard não está a carregar os dados de hoje.'),
-(3, 3, 'Pode confirmar se há algum erro na consola do navegador (F12)?'),
-(3, 2, 'Sim, aparece um erro de "Failed to fetch" no endpoint /stats.'),
-(3, 3, 'Isso indica uma falha na ligação à API. Vou verificar o estado do serviço de métricas.'),
-(3, 2, 'Obrigado, fico a aguardar.');
-
-/* 9. Tickets (Vinculados a quem reportou) */
+/* 7. Tickets (Vinculados a quem reportou) */
 INSERT INTO tickets (user_id, user_report, error_type, severity, status) VALUES
 (1, 'Sistema crasha ao fazer login', 'API', 9, 'open'),
 (2, 'Base de dados não responde', 'Database', 10, 'open'),
 (4, 'Dashboard demora a carregar', 'UI', 7, 'in_progress');
 
-/* 10. Tags */
+/* 8. Tags */
 INSERT INTO tags (id, name, color) VALUES
 (1, 'Urgente', 'Red'), (2, 'Backend', 'Green'), (3, 'Frontend', 'Blue'),
 (4, 'Bug', 'Orange'), (5, 'Revisão', 'Purple'), (6, 'Infra', 'Grey');

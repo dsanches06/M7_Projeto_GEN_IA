@@ -49,34 +49,14 @@ INSERT INTO task_assignees (task_id, user_id) VALUES
   (1, 2), (2, 4), (3, 7), (4, 1)
 ON CONFLICT (task_id) DO NOTHING;
 
--- 6. CONVERSAS (Ligadas a um Utilizador)
-INSERT INTO conversations (id, user_id, title) VALUES
-  (1, 1, 'Suporte Login'),
-  (2, 2, 'Erro API Pagamentos'),
-  (3, 4, 'Problema UI Dashboard')
-ON CONFLICT (id) DO NOTHING;
-
--- 7. HISTÓRICO DE CHAT (User vs Model)
-INSERT INTO chat_history (conversation_id, role_id, content) VALUES
-  (1, 2, 'Não consigo fazer login'),
-  (1, 3, 'Pode verificar se a senha está correta?'),
-  (1, 2, 'Sim mas continua a falhar'),
-  (2, 2, 'API de pagamentos está a dar erro 500'),
-  (2, 3, 'Verifique os logs do servidor via SSH'),
-  (3, 2, 'O dashboard não carrega'),
-  (3, 3, 'Pode confirmar se há erro na consola (F12)?'),
-  (3, 2, 'Sim, erro Failed to fetch no endpoint /stats'),
-  (3, 3, 'Vou verificar o estado do serviço de métricas.'),
-  (3, 2, 'Obrigado, fico a aguardar.');
-
--- 8. TICKETS
+-- 6. TICKETS
 INSERT INTO tickets (user_id, user_report, error_type, severity, status) VALUES
   (1, 'Sistema crasha ao fazer login', 'API', 9, 'open'),
   (2, 'Base de dados não responde', 'Database', 10, 'open'),
   (4, 'Dashboard demora a carregar', 'UI', 7, 'in_progress')
 ON CONFLICT DO NOTHING;
 
--- 9. ASSOCIAÇÃO TAGS TAREFAS
+-- 7. ASSOCIAÇÃO TAGS TAREFAS
 INSERT INTO tags_task (task_id, tag_id) VALUES
   (1, 1), (1, 3), (2, 2)
 ON CONFLICT DO NOTHING;
