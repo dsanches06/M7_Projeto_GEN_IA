@@ -135,7 +135,7 @@ const generateAIContent = async (contents, options = {}) => {
     ...extraConfig
   } = options;
   try {
-    return await genAI.models.generateContent({
+    return await genAI.chats.sendMessages({
       model: MODEL_NAME,
       contents,
       config: buildGeminiConfig(tools, {
@@ -163,7 +163,7 @@ export const generateAIContentStream = async (contents, options = {}) => {
     ...extraConfig
   } = options;
   try {
-    return await genAI.models.generateContentStream({
+    return await genAI.chats.sendMessagesStream({
       model: MODEL_NAME,
       contents,
       config: buildGeminiConfig(tools, {

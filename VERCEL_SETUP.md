@@ -30,10 +30,7 @@
 |----------|-------|
 | `DATABASE_URL` | Cole a Connection Pooler do Neon |
 | `CLIENT_URL` | https://seu-app.vercel.app |
-| `GEMINI_API_KEY` | Sua chave da Google API |
-| `MODEL_NAME` | gemini-1-5-flash (ou outro modelo) |
-
-4. Clique em **"Save"**
+| `AI_PROVIDER` | gemini |
 
 ## 4️⃣ Deploy Automático
 

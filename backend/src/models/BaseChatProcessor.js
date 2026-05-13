@@ -2,9 +2,11 @@
  * Processador Base de Chat — Loop agêntico com chamadas de funções em paralelo
  */
 
+import { createOllamaChat } from "../genAI/ollama_config.js";
 import { createGeminiChat } from "../genAI/gemini_config.js";
 
 const MAX_AGENTIC_STEPS = 5;
+const AI_PROVIDER = process.env.AI_PROVIDER?.toLowerCase() || "ollama";
 
 export class BaseChatProcessor {
   constructor({ toolConfig = [], functionHandlers = {} }) {
@@ -12,7 +14,15 @@ export class BaseChatProcessor {
     this.functionHandlers = functionHandlers;
   }
 
-  // ── Construir histórico Gemini a partir do formato de conversa ────────────────
+  async createChat(tools, history) {
+    if (AI_PROVIDER === "gemini") {
+      return createGeminiChat(tools, history);
+    }
+
+    return createOllamaChat(tools, history);
+  }
+
+  // ── Construir histórico de chat a partir do formato de conversa ──────────────
   buildHistory(conversationHistory = []) {
     return conversationHistory.map((item) => ({
       role: item.role === "assistant" ? "model" : "user",
@@ -50,15 +60,15 @@ export class BaseChatProcessor {
     return functionCalls.filter((fc) => fc.name !== "set_assign_task_values");
   }
 
-  isGeminiError(error) {
-    return !!error?.geminiType;
+  isProviderError(error) {
+    return !!error?.ollamaType || !!error?.geminiType;
   }
 
   // ── Loop agêntico (sem streaming) ────────────────────────────────────────────
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
       const history = this.buildHistory(conversationHistory);
-      const chat = createGeminiChat(this.toolConfig, history);
+      const chat = await this.createChat(this.toolConfig, history);
 
       let response = await chat.sendMessage({ message: userMessage });
       const allResults = [];
@@ -102,15 +112,15 @@ export class BaseChatProcessor {
         ),
       };
     } catch (error) {
-      if (this.isGeminiError(error)) {
-        console.error(
-          `[ChatProcessor] Gemini ${error.geminiType}:`,
-          error.message,
-        );
+      if (this.isProviderError(error)) {
+        const providerName = error.ollamaType ? "Ollama" : "Gemini";
+        const errorType = error.ollamaType ?? error.geminiType;
+
+        console.error(`[ChatProcessor] ${providerName} ${errorType}:`, error.message);
         return {
           success: false,
           geminiError: true,
-          errorType: error.geminiType,
+          errorType,
           message: error.message,
           functionResults: [],
         };
@@ -132,7 +142,7 @@ export class BaseChatProcessor {
     onChunk,
   ) {
     const history = this.buildHistory(conversationHistory);
-    const chat = createGeminiChat(this.toolConfig, history);
+    const chat = await this.createChat(this.toolConfig, history);
 
     let response = await chat.sendMessage({ message: userMessage });
     const allResults = [];
