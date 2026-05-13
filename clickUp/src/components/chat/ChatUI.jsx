@@ -44,6 +44,7 @@ export function ChatUI({
   onTaskUpdated,
   onTaskDeleted,
   onTaskAssigned,
+  onTaskTagged,
   onTicketCreated,
   onTicketUpdated,
   onNotificationCreated,
@@ -90,28 +91,33 @@ export function ChatUI({
       const historyRows = await chatService.getChatHistory(conv.id);
       const rows = Array.isArray(historyRows) ? historyRows : [];
 
-      // Build AI context history (role_id 2 = user, 3 = model)
       const history = rows.map((r) => ({
         role: r.role_id === 2 ? "user" : "assistant",
         content: r.content,
       }));
       setConversationHistory(history);
 
-      const summaryResponse = await chatService.getChatSummary(conv.id);
-      const summaryText =
-        summaryResponse?.success && summaryResponse?.summary
-          ? summaryResponse.summary
-          : "Resumo não disponível para esta conversa.";
+      const lastMessages = rows
+        .slice(-5)
+        .map((r, index) => ({
+          id: `${conv.id}-${r.id ?? index}`,
+          text: r.content,
+          sender: r.role_id === 2 ? "user" : "assistant",
+          timestamp: r.created_at ? new Date(r.created_at) : new Date(),
+        }));
 
-      setMessages([
-        {
-          id: `${conv.id}-summary`,
-          text: summaryText,
-          sender: "bot",
-          timestamp: new Date(),
-          isSummary: true,
-        },
-      ]);
+      setMessages(
+        lastMessages.length > 0
+          ? lastMessages
+          : [
+              {
+                id: `${conv.id}-empty`,
+                text: "Esta conversa ainda não contém mensagens.",
+                sender: "bot",
+                timestamp: new Date(),
+              },
+            ],
+      );
     } catch {
       setMessages([
         {
@@ -198,8 +204,8 @@ export function ChatUI({
           );
         },
         (done) => {
-          // ── Any error (Gemini, HTTP, server) → show inline ─────────────
-          if (done?.success === false || done?.geminiError) {
+          // ── Handle Gemini errors (completely failed) ─────────────────────
+          if (done?.geminiError || (done?.success === false && !done?.persistenceErrors?.length)) {
             const errorMsg = done.message || "Erro desconhecido.";
             const errType = done.errorType || "UNKNOWN";
             setMessages((p) =>
@@ -214,6 +220,20 @@ export function ChatUI({
               ),
             );
             return;
+          }
+
+          // ── Handle persistence errors (partial failure) ─────────────────
+          if (done?.persistenceErrors?.length > 0) {
+            setMessages((p) =>
+              p.map((m) =>
+                m.id === botMsgId
+                  ? {
+                      ...m,
+                      persistenceErrors: done.persistenceErrors,
+                    }
+                  : m,
+              ),
+            );
           }
 
           // ── Success ───────────────────────────────────────────────────
@@ -289,8 +309,7 @@ export function ChatUI({
             );
           }
           if (done?.tags) {
-            if (onTaskAssigned && done.tags?.task_id)
-              onTaskAssigned({ id: done.tags.task_id, ...done.tags });
+            if (onTaskTagged && done.tags?.task_id) onTaskTagged(done.tags.task_id);
             if (onUserOrTagAction) onUserOrTagAction();
             setMessages((p) =>
               p.map((m) =>

@@ -78,12 +78,13 @@ class ChatService extends BaseService {
           } else if (event === "done") {
             if (onDone) onDone(parsed);
 
-          } else if (event === "gemini_error") {
+          } else if (event === "gemini_error" || event === "provider_error") {
             if (onDone)
               onDone({
                 ...parsed,
                 success:     false,
-                geminiError: true,
+                geminiError: parsed?.geminiError ?? false,
+                providerError: parsed?.providerError ?? true,
               });
 
           } else if (event === "error") {

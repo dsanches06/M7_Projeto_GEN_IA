@@ -189,17 +189,18 @@ const persistFunctionResult = async (functionResult) => {
       if (Object.keys(updateFields).length)
         await updateTask(taskIdNum, updateFields);
       taskUpdated = await getTaskById(taskIdNum);
-      if (taskUpdated)
-        taskUpdated.status_name =
-          STATUS_NAME[taskUpdated.status_id] || "UNKNOWN";
+      if (!taskUpdated) throw new Error(`Tarefa ${taskIdNum} não encontrada`);
+      taskUpdated.status_name =
+        STATUS_NAME[taskUpdated.status_id] || "UNKNOWN";
     } else if (functionName === "set_delete_task_values") {
       const taskIdNum = Number(result.task_id);
       if (!taskIdNum) throw new Error("task_id inválido para delete");
-      const taskBefore = await getTaskById(taskIdNum).catch(() => null);
+      const taskBefore = await getTaskById(taskIdNum);
+      if (!taskBefore) throw new Error(`Tarefa ${taskIdNum} não encontrada`);
       await deleteTask(taskIdNum);
       taskDeleted = {
         id: taskIdNum,
-        title: taskBefore?.title || `Tarefa #${taskIdNum}`,
+        title: taskBefore.title,
       };
     } else if (functionName === "set_assign_task_values") {
       assignment = await upsertAssignment(result.task_id, result.user_id);
@@ -212,8 +213,8 @@ const persistFunctionResult = async (functionResult) => {
         );
       await updateStatus(taskIdNum, { status_id: statusIdNum });
       taskUpdated = await getTaskById(taskIdNum);
-      if (taskUpdated)
-        taskUpdated.status_name = STATUS_NAME[statusIdNum] || "UNKNOWN";
+      if (!taskUpdated) throw new Error(`Tarefa ${taskIdNum} não encontrada`);
+      taskUpdated.status_name = STATUS_NAME[statusIdNum] || "UNKNOWN";
     } else if (functionName === "set_tag_task_values") {
       let rawTags = [];
       if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0)
@@ -254,18 +255,21 @@ const persistFunctionResult = async (functionResult) => {
       const { ticket_id, ...updateFields } = result;
       const ticketIdNum = Number(ticket_id);
       if (!ticketIdNum) throw new Error("ticket_id inválido para update");
+      const existingTicket = await getTicketById(ticketIdNum);
+      if (!existingTicket) throw new Error(`Ticket ${ticketIdNum} não encontrado`);
       if (Object.keys(updateFields).length)
         await updateTicket(ticketIdNum, updateFields);
       // Return updated ticket as taskUpdated-style payload (reuse key)
-      const updated = {
+      ticket = {
         id: ticketIdNum,
         ...updateFields,
         _type: "ticket_updated",
       };
-      ticket = updated;
     } else if (functionName === "set_delete_ticket_values") {
       const ticketIdNum = Number(result.ticket_id);
       if (!ticketIdNum) throw new Error("ticket_id inválido para delete");
+      const existingTicket = await getTicketById(ticketIdNum);
+      if (!existingTicket) throw new Error(`Ticket ${ticketIdNum} não encontrado`);
       await deleteTicket(ticketIdNum);
       // Signal deletion via ticket key
       ticket = { id: ticketIdNum, _type: "ticket_deleted" };
@@ -283,6 +287,7 @@ const persistFunctionResult = async (functionResult) => {
     }
   } catch (err) {
     console.error(`❌ Erro ao persistir ${functionName}:`, err.message);
+    throw new Error(`Falha ao executar ${functionName}: ${err.message}`);
   }
 
   return {
@@ -371,17 +376,32 @@ const deduplicateFunctionResults = (functionResults = []) => {
 // ── Process ALL function results (sequential support) ────────────────────────
 const persistAllFunctionResults = async (functionResults) => {
   const cleanResults = deduplicateFunctionResults(functionResults || []);
-  const acc = {};
+  const acc = {
+    persistenceErrors: [],
+  };
 
   for (const functionResult of cleanResults) {
-    const v = await persistFunctionResult(functionResult);
-    if (v.task) acc.task = v.task;
-    if (v.notification) acc.notification = v.notification;
-    if (v.ticket) acc.ticket = v.ticket;
-    if (v.assignment) acc.assignment = v.assignment;
-    if (v.tags) acc.tags = v.tags;
-    if (v.taskUpdated) acc.taskUpdated = v.taskUpdated;
-    if (v.taskDeleted) acc.taskDeleted = v.taskDeleted;
+    try {
+      const v = await persistFunctionResult(functionResult);
+      if (v.task) acc.task = v.task;
+      if (v.notification) acc.notification = v.notification;
+      if (v.ticket) acc.ticket = v.ticket;
+      if (v.assignment) acc.assignment = v.assignment;
+      if (v.tags) acc.tags = v.tags;
+      if (v.taskUpdated) acc.taskUpdated = v.taskUpdated;
+      if (v.taskDeleted) acc.taskDeleted = v.taskDeleted;
+    } catch (err) {
+      // Capture individual persistence errors
+      acc.persistenceErrors.push({
+        functionName: functionResult.functionName,
+        errorMessage: err.message,
+        timestamp: new Date().toISOString(),
+      });
+      console.error(
+        `❌ Erro ao persistir ${functionResult.functionName}:`,
+        err.message,
+      );
+    }
   }
 
   return acc;
@@ -489,26 +509,47 @@ export const sendMessageToBotStream = async (req, res) => {
 
       const summary = await autoGenerateSummary(actualConversationId);
 
-      sendEvent("done", {
-        success: true,
-        message: finalAssistantText,
-        conversationId: actualConversationId,
-        functionResults: result.functionResults || [],
-        summary,
-        ...persisted,
-      });
+      // Check if there were persistence errors to report
+      const hasPersistenceErrors =
+        persisted.persistenceErrors && persisted.persistenceErrors.length > 0;
+
+      if (hasPersistenceErrors) {
+        sendEvent("done", {
+          success: false,
+          message: finalAssistantText,
+          conversationId: actualConversationId,
+          functionResults: result.functionResults || [],
+          summary,
+          persistenceErrors: persisted.persistenceErrors,
+          ...persisted,
+        });
+      } else {
+        sendEvent("done", {
+          success: true,
+          message: finalAssistantText,
+          conversationId: actualConversationId,
+          functionResults: result.functionResults || [],
+          summary,
+          ...persisted,
+        });
+      }
 
       res.end();
     } catch (streamError) {
       const isGeminiErr = !!streamError?.geminiType;
+      const isOllamaErr = !!streamError?.ollamaType;
       const errorMsg = isGeminiErr
+        ? streamError.message
+        : isOllamaErr
         ? streamError.message
         : GEMINI_ERROR_MESSAGES.UNKNOWN;
       console.error("[Controller Stream] Error:", streamError.message);
-      sendEvent("gemini_error", {
+      sendEvent("provider_error", {
         success: false,
         geminiError: isGeminiErr,
-        errorType: streamError?.geminiType || "UNKNOWN",
+        providerError: true,
+        providerType: isOllamaErr ? "OLLAMA" : isGeminiErr ? "GEMINI" : "UNKNOWN",
+        errorType: streamError?.ollamaType || streamError?.geminiType || "UNKNOWN",
         message: errorMsg,
         conversationId: actualConversationId,
       });
@@ -619,17 +660,26 @@ export const sendMessageToConversation = async (req, res) => {
 
     const summary = await autoGenerateSummary(conversationId);
 
-    return res.status(200).json({
+    // Check if there were persistence errors
+    const hasPersistenceErrors =
+      persisted.persistenceErrors && persisted.persistenceErrors.length > 0;
+    const statusCode = hasPersistenceErrors ? 207 : 200; // 207 Multi-Status for partial success
+
+    return res.status(statusCode).json({
       ...result,
       message: finalAssistantText,
       conversationId,
       summary,
+      success: !hasPersistenceErrors,
+      persistenceErrors: persisted.persistenceErrors || [],
       ...persisted,
     });
   } catch (error) {
+    console.error("[sendMessageToConversation] Error:", error.message);
     res.status(500).json({
       success: false,
       error: "Erro ao processar mensagem: " + error.message,
+      conversationId,
     });
   }
 };

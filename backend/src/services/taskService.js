@@ -39,9 +39,21 @@ export const createTask = async (data) => {
   return mapTaskDTOResponse({ id: result.insertId ?? result?.[0]?.id ?? null, ...d });
 };
 
-export const updateStatus = async (taskId, data) => { const [, r] = await db.query("UPDATE task SET status_id = ? WHERE id = ?", [data.status_id, taskId]); return r.affectedRows; };
+export const updateStatus = async (taskId, data) => {
+  const taskIdNum = Number(taskId);
+  if (!taskIdNum || taskIdNum <= 0) throw new Error(`task_id invalido: ${taskId}`);
+  const existing = await getTaskById(taskIdNum);
+  if (!existing) throw new Error(`Tarefa ${taskIdNum} nao encontrada`);
+  const [, r] = await db.query("UPDATE task SET status_id = ? WHERE id = ?", [data.status_id, taskIdNum]);
+  if (r.affectedRows === 0) throw new Error(`Falha ao atualizar status da tarefa ${taskIdNum}`);
+  return r.affectedRows;
+};
 
 export const updateTask = async (taskId, data) => {
+  const taskIdNum = Number(taskId);
+  if (!taskIdNum || taskIdNum <= 0) throw new Error(`task_id invalido: ${taskId}`);
+  const existing = await getTaskById(taskIdNum);
+  if (!existing) throw new Error(`Tarefa ${taskIdNum} nao encontrada`);
   const fields = [], values = [], add = (c, v) => { fields.push(`${c} = ?`); values.push(v); };
   if (data.title !== undefined) add("title", data.title);
   if (data.description !== undefined) add("description", data.description);
@@ -51,11 +63,20 @@ export const updateTask = async (taskId, data) => {
   if (data.due_date !== undefined) add("due_date", data.due_date);
   if (data.completed_at !== undefined) add("completed_at", data.completed_at);
   if (!fields.length) return 0;
-  values.push(taskId);
+  values.push(taskIdNum);
   const [, r] = await db.query(`UPDATE task SET ${fields.join(", ")} WHERE id = ?`, values);
+  if (r.affectedRows === 0) throw new Error(`Falha ao atualizar tarefa ${taskIdNum}`);
   return r.affectedRows;
 };
-export const deleteTask = async (taskId) => { const [, r] = await db.query("DELETE FROM task WHERE id = ?", [taskId]); return r.affectedRows; };
+export const deleteTask = async (taskId) => {
+  const taskIdNum = Number(taskId);
+  if (!taskIdNum || taskIdNum <= 0) throw new Error(`task_id invalido: ${taskId}`);
+  const existing = await getTaskById(taskIdNum);
+  if (!existing) throw new Error(`Tarefa ${taskIdNum} nao encontrada`);
+  const [, r] = await db.query("DELETE FROM task WHERE id = ?", [taskIdNum]);
+  if (r.affectedRows === 0) throw new Error(`Falha ao deletar tarefa ${taskIdNum}`);
+  return r.affectedRows;
+};
 export const getTaskById = async (taskId) => {
   const [rows] = await db.query("SELECT t.*, ta.user_id AS assigned_to FROM task t LEFT JOIN task_assignees ta ON t.id = ta.task_id WHERE t.id = ?", [taskId]);
   return rows[0] ? mapTaskDTOResponse(rows[0]) : null;

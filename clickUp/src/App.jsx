@@ -121,6 +121,13 @@ function AppContent() {
     navigate("/tickets");
   };
 
+  /** Task tagged via ChatBot → reload tasks and update dashboard */
+  const handleTaskTagged = async (taskId) => {
+    if (!taskId) return;
+    await loadTasks();
+    navigate("/dashboard");
+  };
+
   /** Notification sent via ChatBot → can stay on current page or notify */
   const handleNotificationCreated = () => {
     // Notifications don't require navigation, just showing feedback in chat
@@ -183,6 +190,7 @@ function AppContent() {
         onTaskUpdated={handleTaskUpdated}
         onTaskDeleted={handleTaskDeleted}
         onTaskAssigned={handleTaskAssigned}
+        onTaskTagged={handleTaskTagged}
         onTicketCreated={handleTicketCreated}
         onTicketUpdated={handleTicketUpdated}
         onNotificationCreated={handleNotificationCreated}

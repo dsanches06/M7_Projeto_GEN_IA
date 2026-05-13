@@ -1,6 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { Ollama, FunctionCallingConfigMode } from "ollama";
+import { Ollama } from "ollama";
 import createSystemPrompt from "./createSystemPrompt.js";
 import dotenv from "dotenv";
 
