@@ -44,7 +44,7 @@ function IconDone() {
   );
 }
 
-export default function TicketsPage() {
+export default function TicketsPage({ refreshKey = 0 }) {
   const [tickets,      setTickets]      = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
@@ -69,7 +69,7 @@ export default function TicketsPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const total     = tickets.length;
@@ -116,7 +116,7 @@ export default function TicketsPage() {
   const sortedTickets = [...filtered].sort((a, b) => {
     if (sortDir === "ASC")  return (a.severity || 0) - (b.severity || 0);
     if (sortDir === "DESC") return (b.severity || 0) - (a.severity || 0);
-    return 0;
+    return (b.id || 0) - (a.id || 0);
   });
 
   const filterLabel =

@@ -16,6 +16,7 @@ function AppContent() {
   const [tasks,        setTasks]        = useState([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError,   setTasksError]   = useState(null);
+  const [ticketRefreshKey, setTicketRefreshKey] = useState(0);
 
   const loadTasks = async () => {
     try {
@@ -70,19 +71,23 @@ function AppContent() {
   const handleTaskAssigned = (taskData) => {
     if (!taskData?.id) return;
     const transformed = taskService.transformTaskForDisplay(taskData);
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskData.id ? { ...t, ...transformed } : t))
-    );
+    setTasks((prev) => {
+      const found = prev.some((t) => t.id === taskData.id);
+      if (found) return prev.map((t) => (t.id === taskData.id ? { ...t, ...transformed } : t));
+      return [transformed, ...prev];
+    });
     navigate("/dashboard"); // navigate without closing chat
   };
 
-  /** Ticket created/updated via ChatBot → navigate to tickets (chat stays open) */
+  /** Ticket created via ChatBot → navigate to tickets (chat stays open) */
   const handleTicketCreated = () => {
+    setTicketRefreshKey((prev) => prev + 1);
     navigate("/tickets");
   };
 
   /** Ticket updated/deleted via ChatBot → navigate to tickets (chat stays open) */
   const handleTicketUpdated = () => {
+    setTicketRefreshKey((prev) => prev + 1);
     navigate("/tickets");
   };
 
@@ -91,7 +96,7 @@ function AppContent() {
     // Notifications don't require navigation, just showing feedback in chat
   };
 
-  /** User/Tag action via ChatBot → navigate to appropriate page */
+  /** User/Tag action via ChatBot → navigate to user page */
   const handleUserOrTagAction = () => {
     navigate("/utilizadores");
   };
@@ -119,7 +124,7 @@ function AppContent() {
               element={<PageSection title="Projetos" description="Gerencie seus projetos e mantenha o trabalho organizado." />}
             />
             <Route path="utilizadores" element={<UsersPage />} />
-            <Route path="tickets"      element={<TicketsPage />} />
+            <Route path="tickets"      element={<TicketsPage refreshKey={ticketRefreshKey} />} />
             <Route
               path="*"
               element={<PageSection title="Página não encontrada" description="Use o menu para voltar ao dashboard." />}
