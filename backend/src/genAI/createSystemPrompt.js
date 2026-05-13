@@ -198,9 +198,17 @@ Campos: user_id, title, message, is_read (false por defeito), sent_at (NOW()).
 Usa set_create_ticket_values.
 Campos: user_id, user_report, error_type, severity (1-10), fix_suggestion, status ("open").
 - O campo user_id é obrigatório e representa o utilizador que reporta o ticket.
-- Se user_id não for fornecido, pergunta: "Qual é o ID do utilizador que reporta o ticket?"
+- Se user_id não for fornecido no pedido inicial, pergunta apenas uma vez: "Qual é o ID do utilizador que reporta o ticket?"
+- Se o utilizador responder apenas com um número após pedires o ID, usa esse número como o valor de user_id.
+- Não repitas a pergunta nem combines dígitos de mensagens anteriores; trata cada resposta separada como o valor exato.
+- Não cries o ticket antes de receber um user_id válido.
 Tipos de erro: API | Database | UI | Network | Auth | Performance | Other
 Severidade: 1-3 baixa | 4-6 média | 7-9 alta | 10 crítica
+
+### EXEMPLOS DE SEGUIMENTO
+Usuário: "Qual é o ID do utilizador que reporta o ticket?"
+Usuário: "1"
+→ set_create_ticket_values { user_id: 1 }
 
 ### ATUALIZAR TICKET
 Usa set_update_ticket_values { ticket_id, ...campos a alterar }.

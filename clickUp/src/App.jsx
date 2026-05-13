@@ -80,13 +80,13 @@ function AppContent() {
   };
 
   /** Ticket created via ChatBot → navigate to tickets (chat stays open) */
-  const handleTicketCreated = () => {
+  const handleTicketCreated = (ticketData) => {
     setTicketRefreshKey((prev) => prev + 1);
     navigate("/tickets");
   };
 
   /** Ticket updated/deleted via ChatBot → navigate to tickets (chat stays open) */
-  const handleTicketUpdated = () => {
+  const handleTicketUpdated = (ticketData) => {
     setTicketRefreshKey((prev) => prev + 1);
     navigate("/tickets");
   };

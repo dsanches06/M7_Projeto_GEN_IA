@@ -292,12 +292,12 @@ export function ChatUI({
               done.ticket._type !== "ticket_deleted" &&
               done.ticket._type !== "ticket_status"
             ) {
-              if (onTicketCreated) onTicketCreated();
+              if (onTicketCreated) onTicketCreated(done.ticket);
             } else if (
               done.ticket._type === "ticket_deleted" ||
               done.ticket._type === "ticket_status"
             ) {
-              if (onTicketUpdated) onTicketUpdated();
+              if (onTicketUpdated) onTicketUpdated(done.ticket);
             }
             setMessages((p) =>
               p.map((m) =>
@@ -495,7 +495,7 @@ export function ChatUI({
                           <TicketPreview
                             ticket={msg.ticketData}
                             onNavigate={() => {
-                              if (onTicketCreated) onTicketCreated();
+                              if (onTicketCreated) onTicketCreated(msg.ticketData);
                             }}
                           />
                         )}
