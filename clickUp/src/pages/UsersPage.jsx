@@ -45,7 +45,7 @@ function StatCard({ label, value, icon, filter, currentFilter, onFilter, classNa
   );
 }
 
-export default function UsersPage() {
+export default function UsersPage({ refreshKey = 0, onUserViewing = () => {} }) {
   const [users,              setUsers]               = useState([]);
   const [loading,            setLoading]             = useState(true);
   const [error,              setError]               = useState(null);
@@ -85,6 +85,41 @@ export default function UsersPage() {
   };
 
   useEffect(() => { loadUsers(); }, []);
+
+  // Refresh user dashboard tasks when viewing a user
+  const refreshUserTasks = async (userId) => {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${BACKEND_URL}/tasks`);
+      if (!response.ok) throw new Error("Falha ao carregar tarefas");
+      const allTasks = await response.json();
+      const userTasks = allTasks
+        .filter((task) => task.assigned_to === userId)
+        .map((task) => ({
+          ...task,
+          status: STATUS_ID_TO_NAME[task.status_id] || "CREATED",
+        }));
+      
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, tasks: userTasks } : u))
+      );
+    } catch (err) {
+      console.error("[UsersPage] refreshUserTasks:", err?.message);
+    }
+  };
+
+  // Trigger refresh when refreshKey changes and user is being viewed
+  useEffect(() => {
+    if (refreshKey > 0 && activeDash) {
+      refreshUserTasks(activeDash.id);
+    }
+  }, [refreshKey, activeDash]);
+
+  // Keep parent aware of which user dashboard is open
+  useEffect(() => {
+    onUserViewing(activeDash ? activeDash.id : null);
+    return () => onUserViewing(null);
+  }, [activeDash, onUserViewing]);
 
   if (loading) {
     return (
@@ -174,7 +209,17 @@ export default function UsersPage() {
 
   if (activeDash) {
     const liveUser = users.find((u) => u.id === activeDash.id) || activeDash;
-    return <UserDashboard user={liveUser} onBack={() => setActiveDash(null)} />;
+
+    return (
+      <UserDashboard 
+        user={liveUser} 
+        onBack={() => {
+          setActiveDash(null);
+          onUserViewing(null);
+        }}
+        refreshKey={refreshKey}
+      />
+    );
   }
 
   return (

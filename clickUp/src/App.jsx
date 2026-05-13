@@ -12,11 +12,13 @@ const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 
 function AppContent() {
   const navigate = useNavigate();
-  const [showChat,     setShowChat]     = useState(false);
-  const [tasks,        setTasks]        = useState([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
-  const [tasksError,   setTasksError]   = useState(null);
-  const [ticketRefreshKey, setTicketRefreshKey] = useState(0);
+  const [showChat,              setShowChat]              = useState(false);
+  const [tasks,                 setTasks]                 = useState([]);
+  const [tasksLoading,          setTasksLoading]          = useState(true);
+  const [tasksError,            setTasksError]            = useState(null);
+  const [ticketRefreshKey,      setTicketRefreshKey]      = useState(0);
+  const [viewingUserId,         setViewingUserId]         = useState(null);
+  const [userDashRefreshKey,    setUserDashRefreshKey]    = useState(0);
 
   const loadTasks = async () => {
     try {
@@ -57,6 +59,16 @@ function AppContent() {
     setTasks((prev) =>
       prev.map((t) => (t.id === updatedTask.id ? { ...t, ...transformed } : t))
     );
+
+    const assignedTo = Number(
+      updatedTask.assigned_to ?? updatedTask.user_id ?? updatedTask.assignee_id,
+    );
+
+    if (viewingUserId && assignedTo === viewingUserId) {
+      setUserDashRefreshKey((prev) => prev + 1);
+      return;
+    }
+
     navigate("/dashboard"); // navigate without closing chat
   };
 
@@ -84,6 +96,15 @@ function AppContent() {
           : t,
       ),
     );
+
+    const assignedTo = Number(
+      taskData?.assigned_to ?? taskData?.user_id ?? taskData?.assignee_id,
+    );
+
+    if (viewingUserId && assignedTo === viewingUserId) {
+      setUserDashRefreshKey((prev) => prev + 1);
+      return;
+    }
 
     navigate("/dashboard"); // navigate without closing chat
   };
@@ -132,7 +153,7 @@ function AppContent() {
               path="projetos"
               element={<PageSection title="Projetos" description="Gerencie seus projetos e mantenha o trabalho organizado." />}
             />
-            <Route path="utilizadores" element={<UsersPage />} />
+            <Route path="utilizadores" element={<UsersPage refreshKey={userDashRefreshKey} onUserViewing={setViewingUserId} />} />
             <Route path="tickets"      element={<TicketsPage refreshKey={ticketRefreshKey} />} />
             <Route
               path="*"
