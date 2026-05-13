@@ -41,6 +41,22 @@ export class BaseChatProcessor {
     return { name, args, result, functionCall };
   }
 
+  extractUserIdFromArgs(rawArgs) {
+    const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs || {};
+    return args.user_id ?? args.userId ?? null;
+  }
+
+  filterFunctionCalls(functionCalls = []) {
+    const hasCreateWithUserId = functionCalls.some((fc) => {
+      if (fc.name !== "set_create_task_values") return false;
+      return this.extractUserIdFromArgs(fc.args) != null;
+    });
+
+    if (!hasCreateWithUserId) return functionCalls;
+
+    return functionCalls.filter((fc) => fc.name !== "set_assign_task_values");
+  }
+
   isGeminiError(error) {
     return !!error?.geminiType;
   }
@@ -57,11 +73,12 @@ export class BaseChatProcessor {
 
       while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
         step++;
-        console.log(`[Agentic step ${step}] calling: ${response.functionCalls.map(f => f.name).join(", ")}`);
+        const callsToExecute = this.filterFunctionCalls(response.functionCalls);
+        console.log(`[Agentic step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`);
 
-        // Execute ALL function calls in parallel
+        // Execute filtered function calls in parallel
         const execResults = await Promise.all(
-          response.functionCalls.map((fc) => this.executeFunction(fc))
+          callsToExecute.map((fc) => this.executeFunction(fc))
         );
         allResults.push(...execResults);
 
@@ -108,10 +125,11 @@ export class BaseChatProcessor {
 
     while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
       step++;
-      console.log(`[Agentic stream step ${step}] calling: ${response.functionCalls.map(f => f.name).join(", ")}`);
+      const callsToExecute = this.filterFunctionCalls(response.functionCalls);
+      console.log(`[Agentic stream step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`);
 
       const execResults = await Promise.all(
-        response.functionCalls.map((fc) => this.executeFunction(fc))
+        callsToExecute.map((fc) => this.executeFunction(fc))
       );
       allResults.push(...execResults);
 

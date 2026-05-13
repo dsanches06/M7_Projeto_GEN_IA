@@ -16,8 +16,8 @@ class AssignTaskFunction extends BaseFunction {
 
       description:
         "Atribui uma tarefa existente a um utilizador no ClickUp. " +
-        "Usa quando o utilizador pede para atribuir, delegar ou associar " +
-        "uma tarefa existente a uma pessoa específica.",
+        "Usa apenas quando a tarefa JÁ EXISTE e tem task_id válido. " +
+        "Não use para atribuição imediata se o pedido envolver criação de tarefa no mesmo texto.",
 
       properties: {
         task_id: {

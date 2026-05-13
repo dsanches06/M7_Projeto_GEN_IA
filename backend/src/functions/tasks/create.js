@@ -54,7 +54,8 @@ class CreateTaskFunction extends BaseFunction {
           type: Type.INTEGER,
           description:
             "ID do utilizador a quem atribuir a tarefa imediatamente após a criação. " +
-            "Opcional — usa apenas quando o utilizador pede criação E atribuição na mesma mensagem.",
+            "Use este campo sempre que o utilizador pede criar e atribuir no mesmo pedido. " +
+            "Não use set_assign_task_values em paralelo se já estiver presente.",
         },
       },
     });
