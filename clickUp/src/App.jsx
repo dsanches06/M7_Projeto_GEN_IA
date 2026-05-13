@@ -69,13 +69,22 @@ function AppContent() {
 
   /** Task assigned or modified via ChatBot */
   const handleTaskAssigned = (taskData) => {
-    if (!taskData?.id) return;
-    const transformed = taskService.transformTaskForDisplay(taskData);
-    setTasks((prev) => {
-      const found = prev.some((t) => t.id === taskData.id);
-      if (found) return prev.map((t) => (t.id === taskData.id ? { ...t, ...transformed } : t));
-      return [transformed, ...prev];
-    });
+    const taskId = Number(taskData?.id ?? taskData?.task_id);
+    if (!taskId) return;
+
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              assigneeName: taskData.user_name || t.assigneeName,
+              status: "atribuída",
+              statusName: "ASSIGNED",
+            }
+          : t,
+      ),
+    );
+
     navigate("/dashboard"); // navigate without closing chat
   };
 

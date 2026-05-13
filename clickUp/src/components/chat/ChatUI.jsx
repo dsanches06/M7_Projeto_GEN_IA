@@ -269,7 +269,8 @@ export function ChatUI({
             );
           }
           if (done?.assignment) {
-            if (onTaskAssigned && done.assignment?.id) onTaskAssigned({ id: done.assignment.task_id, ...done.assignment });
+            if (onTaskAssigned && done.assignment?.task_id)
+              onTaskAssigned({ id: done.assignment.task_id, ...done.assignment });
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId
