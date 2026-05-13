@@ -68,7 +68,7 @@ function TaskCard({ task, cardBorder, userName }) {
 
 /* ── Status change modal ── */
 /* ── Main component ── */
-export default function UserDashboard({ user, onBack }) {
+export default function UserDashboard({ user, onBack, refreshKey = 0 }) {
   const [tasks, setTasks] = useState(user.tasks || []);
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -77,6 +77,13 @@ export default function UserDashboard({ user, onBack }) {
 
   const c = getPalette(user.id);
   const firstName = (user.name || "").split(" ")[0];
+
+  // Reload tasks when refreshKey changes
+  useEffect(() => {
+    if (refreshKey > 0 && user?.tasks) {
+      setTasks(user.tasks);
+    }
+  }, [refreshKey, user?.tasks]);
 
 
   /* ── Stats ── */
