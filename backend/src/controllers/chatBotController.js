@@ -16,6 +16,11 @@ import {
 } from "../services/index.js";
 
 import { db } from "../db.js";
+import {
+  ROLE_USER,
+  ROLE_ASSISTANT,
+  STATUS_NAME,
+} from "../utils/chatBotUtil.js";
 
 const { createChatHistory, getChatHistoryByConversationId } =
   chatHistoryService;
@@ -32,18 +37,6 @@ const { getUserById } = userService;
 const { createTaskAssignee, deleteTaskAssignee } = taskAssigneesService;
 const { createTagTask, createTagTasks } = tagTaskService;
 const { getAllTags } = tagService;
-
-const ROLE_USER = 2;
-const ROLE_ASSISTANT = 3;
-
-const STATUS_NAME = {
-  1: "CREATED",
-  2: "ASSIGNED",
-  3: "IN_PROGRESS",
-  4: "BLOCKED",
-  5: "COMPLETED",
-  6: "ARCHIVED",
-};
 
 const buildConversationHistory = (historyRows) =>
   historyRows.map((row) => ({
@@ -471,41 +464,48 @@ export const sendMessageToBotStream = async (req, res) => {
 
       const assistantText = result.message || "";
 
-      // ── Gemini / AI error ─────────────────────────────────────────────────
-      if (result.geminiError || result.success === false) {
-        const errorMsg =
-          GEMINI_ERROR_MESSAGES[result.errorType] || result.message;
-        await createChatHistory({
-          conversation_id: actualConversationId,
-          role_id: ROLE_ASSISTANT,
-          content: errorMsg,
-        });
-        sendEvent("gemini_error", {
-          success: false,
-          geminiError: true,
-          errorType: result.errorType || "UNKNOWN",
-          message: errorMsg,
-          conversationId: actualConversationId,
-        });
-        return res.end();
-      }
+      const enrichAssistantText = (text, persisted) => {
+        const base = (text || "").trim();
+        const hasCreatedTask = persisted.task && persisted.task.id;
+        const hasAssignedTask =
+          persisted.assignment && persisted.assignment.task_id;
 
-      // ── Success — persist all function results ────────────────────────────
-      await createChatHistory({
-        conversation_id: actualConversationId,
-        role_id: ROLE_ASSISTANT,
-        content: assistantText,
-      });
+        let finalText = base;
+
+        if (hasCreatedTask) {
+          const idFragment = `ID #${persisted.task.id}`;
+          if (!finalText.includes(idFragment)) {
+            const suffix = finalText
+              ? `\n✓ Tarefa criada com ${idFragment}.`
+              : `✓ Tarefa criada com ${idFragment}.`;
+            finalText = `${finalText}${suffix}`.trim();
+          }
+        }
+
+        if (!finalText && hasAssignedTask) {
+          finalText = `✓ Tarefa #${persisted.assignment.task_id} atribuída a ${persisted.assignment.user_name}.`;
+        }
+
+        return finalText || assistantText;
+      };
 
       let persisted = {};
       if (result.functionResults?.length)
         persisted = await persistAllFunctionResults(result.functionResults);
 
+      const finalAssistantText = enrichAssistantText(assistantText, persisted);
+
+      await createChatHistory({
+        conversation_id: actualConversationId,
+        role_id: ROLE_ASSISTANT,
+        content: finalAssistantText,
+      });
+
       const summary = await autoGenerateSummary(actualConversationId);
 
       sendEvent("done", {
         success: true,
-        message: assistantText,
+        message: finalAssistantText,
         conversationId: actualConversationId,
         functionResults: result.functionResults || [],
         summary,
@@ -594,21 +594,54 @@ export const sendMessageToConversation = async (req, res) => {
       });
     }
 
-    await createChatHistory({
-      conversation_id: conversationId,
-      role_id: ROLE_ASSISTANT,
-      content: result.message,
-    });
-
     let persisted = {};
     if (result.functionResults?.length)
       persisted = await persistAllFunctionResults(result.functionResults);
+
+    const enrichAssistantText = (text, persistedData) => {
+      const base = (text || "").trim();
+      const hasCreatedTask = persistedData.task && persistedData.task.id;
+      const hasAssignedTask =
+        persistedData.assignment && persistedData.assignment.task_id;
+
+      let finalText = base;
+
+      if (hasCreatedTask) {
+        const idFragment = `ID #${persistedData.task.id}`;
+        if (!finalText.includes(idFragment)) {
+          const suffix = finalText
+            ? `\n✓ Tarefa criada com ${idFragment}.`
+            : `✓ Tarefa criada com ${idFragment}.`;
+          finalText = `${finalText}${suffix}`.trim();
+        }
+      }
+
+      if (!finalText && hasAssignedTask) {
+        finalText = `✓ Tarefa #${persistedData.assignment.task_id} atribuída a ${persistedData.assignment.user_name}.`;
+      }
+
+      return finalText || text;
+    };
+
+    const finalAssistantText = enrichAssistantText(result.message, persisted);
+
+    await createChatHistory({
+      conversation_id: conversationId,
+      role_id: ROLE_ASSISTANT,
+      content: finalAssistantText,
+    });
 
     const summary = await autoGenerateSummary(conversationId);
 
     return res
       .status(200)
-      .json({ ...result, conversationId, summary, ...persisted });
+      .json({
+        ...result,
+        message: finalAssistantText,
+        conversationId,
+        summary,
+        ...persisted,
+      });
   } catch (error) {
     res.status(500).json({
       success: false,
