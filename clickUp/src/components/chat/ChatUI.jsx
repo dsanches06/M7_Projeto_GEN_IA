@@ -12,7 +12,11 @@ import {
   ChatInputUI,
   GeminiErrorCard,
 } from "@/components/chat/index.js";
-import { groupConversationsByDate, formatConversationDate, createWelcomeMessage } from "@/utils/chatUtils";
+import {
+  groupConversationsByDate,
+  formatConversationDate,
+  createWelcomeMessage,
+} from "@/utils/chatUtils";
 import {
   TaskCreatedPreview,
   TaskUpdatedPreview,
@@ -88,7 +92,7 @@ export function ChatUI({
 
       // Build AI context history (role_id 2 = user, 3 = model)
       const history = rows.map((r) => ({
-        role:    r.role_id === 2 ? "user" : "assistant",
+        role: r.role_id === 2 ? "user" : "assistant",
         content: r.content,
       }));
       setConversationHistory(history);
@@ -109,12 +113,14 @@ export function ChatUI({
         },
       ]);
     } catch {
-      setMessages([{
-        id: `${conv.id}-e`,
-        text: "Não foi possível carregar o histórico.",
-        sender: "bot",
-        timestamp: new Date(),
-      }]);
+      setMessages([
+        {
+          id: `${conv.id}-e`,
+          text: "Não foi possível carregar o histórico.",
+          sender: "bot",
+          timestamp: new Date(),
+        },
+      ]);
       setConversationHistory([]);
     }
   };
@@ -270,7 +276,10 @@ export function ChatUI({
           }
           if (done?.assignment) {
             if (onTaskAssigned && done.assignment?.task_id)
-              onTaskAssigned({ id: done.assignment.task_id, ...done.assignment });
+              onTaskAssigned({
+                id: done.assignment.task_id,
+                ...done.assignment,
+              });
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId
@@ -280,7 +289,8 @@ export function ChatUI({
             );
           }
           if (done?.tags) {
-            if (onTaskAssigned && done.tags?.task_id) onTaskAssigned({ id: done.tags.task_id, ...done.tags });
+            if (onTaskAssigned && done.tags?.task_id)
+              onTaskAssigned({ id: done.tags.task_id, ...done.tags });
             if (onUserOrTagAction) onUserOrTagAction();
             setMessages((p) =>
               p.map((m) =>
@@ -422,7 +432,9 @@ export function ChatUI({
                         <p className="text-sm font-medium text-main truncate flex-1 group-hover:text-[var(--primary)] transition-colors">
                           {conv.title}
                         </p>
-                        <span className="text-lg flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">📋</span>
+                        <span className="text-lg flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          📋
+                        </span>
                       </div>
                       <p className="text-xs text-muted mt-0.5">
                         {formatConversationDate(conv.created_at)}
@@ -496,7 +508,8 @@ export function ChatUI({
                           <TicketPreview
                             ticket={msg.ticketData}
                             onNavigate={() => {
-                              if (onTicketCreated) onTicketCreated(msg.ticketData);
+                              if (onTicketCreated)
+                                onTicketCreated(msg.ticketData);
                             }}
                           />
                         )}
