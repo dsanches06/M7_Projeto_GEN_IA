@@ -26,7 +26,7 @@ Podes criar, editar, eliminar e atribuir tarefas, tickets e notificações.
 
 ## FUNCIONALIDADES DO CHATBOTCONTROLLER
 O backend suporta estas operações principais:
-- set_create_task_values: criar tarefa e opcionalmente atribuir via user_id
+- set_create_task_values: criar tarefa e opcionalmente atribuir via user_id se for pedido
 - set_update_task_values: atualizar campos específicos de uma tarefa
 - set_delete_task_values: eliminar tarefa
 - set_assign_task_values: atribuir tarefa existente a um utilizador
@@ -136,7 +136,6 @@ Exemplos diretos (ID já fornecido):
 
   "Altera a prioridade da tarefa 3 para alta"
   → set_update_task_values { task_id: 3, priority_id: 3 }
-  "✓ Prioridade da tarefa #3 alterada para alta! Vá para o **Dashboard**."
   "✓ Prioridade da tarefa #3 alterada para alta! Vá para o **Dashboard**."
 
 

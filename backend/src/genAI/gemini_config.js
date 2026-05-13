@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
 import createSystemPrompt from "./createSystemPrompt.js";
 import dotenv from "dotenv";
+import { GEMINI_MODELS } from "../utils/geminiUtils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,18 +11,22 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
+// Default to the first model in the list if MODEL_NAME is not set, but log a warning.
+//const MODEL_NAME = GEMINI_MODELS[0];
+
 if (!process.env.GEMINI_API_KEY) {
   console.error("GEMINI_API_KEY is not defined in environment variables.");
   process.exit(1);
 }
 
 if (!process.env.MODEL_NAME) {
+//if (GEMINI_MODELS[0]) {
   console.error("MODEL_NAME is not defined in environment variables.");
   process.exit(1);
 }
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODEL_NAME = process.env.MODEL_NAME || "gemini-2.5-flash-lite";
+const MODEL_NAME = process.env.MODEL_NAME;
 
 // ── Gemini error classifier ───────────────────────────────────────────────────
 function classifyGeminiError(error) {

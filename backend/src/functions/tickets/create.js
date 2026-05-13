@@ -45,7 +45,6 @@ class CreateTicketFunction extends BaseFunction {
           description: "Data de criação",
         },
       },
-      required: ["user_id"],
     });
   }
 

@@ -162,29 +162,32 @@ INSERT INTO task_status (id, name, flow_order) VALUES
 INSERT INTO priorities (id, name, flow_order) VALUES 
 (1,'Baixa',1), (2,'Média',2), (3,'Alta',3);
 
-/* 4. Tarefas (Apenas as mais importantes para teste) */
+/* 4. Tarefas (Apenas as mais importantes para teste) 
 INSERT INTO task (id, title, description, status_id, priority_id, estimated_hours, due_date) VALUES
 (1,'Login UI','Ecrã login',3,3,8,'2026-02-01'),
 (2,'API Auth','JWT Auth',3,3,12,'2026-02-01'),
 (3,'DB Schema','Tabelas SQL',3,2,6,'2026-01-20'),
-(4,'GPS Maps','Integração',2,3,20,'2026-02-28');
+(4,'GPS Maps','Integração',2,3,20,'2026-02-28');*/
 
-/* 6. Atribuições (1 Dev por Task) */
+/* 6. Atribuições (1 Dev por Task) 
 INSERT INTO task_assignees (task_id, user_id) VALUES
-(1,1), (2,4), (3,7), (4,2);
+(1,1), (2,4), (3,7), (4,2);*/
 
 
-/* 7. Tickets (Vinculados a quem reportou) */
+/* 7. Tickets (Vinculados a quem reportou) 
 INSERT INTO tickets (user_id, user_report, error_type, severity, status) VALUES
 (1, 'Sistema crasha ao fazer login', 'API', 9, 'open'),
 (2, 'Base de dados não responde', 'Database', 10, 'open'),
-(4, 'Dashboard demora a carregar', 'UI', 7, 'in_progress');
+(4, 'Dashboard demora a carregar', 'UI', 7, 'in_progress');*/
 
 /* 8. Tags */
 INSERT INTO tags (id, name, color) VALUES
 (1, 'Urgente', 'Red'), (2, 'Backend', 'Green'), (3, 'Frontend', 'Blue'),
 (4, 'Bug', 'Orange'), (5, 'Revisão', 'Purple'), (6, 'Infra', 'Grey');
 
+
+/*
 INSERT INTO tags_task (task_id, tag_id) VALUES 
 (1, 1), (1, 3), (2, 2);
+*/
 
