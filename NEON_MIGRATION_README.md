@@ -12,7 +12,7 @@
 No painel do Vercel, vá para:
 - **Settings** → **Environment Variables**
 - Adicione: `DATABASE_URL` = `postgresql://...`
-- Adicione: `GEMINI_API_KEY` = `your_key`
+- Adicione: `GROQ_API_KEY` = `your_key`
 - **IMPORTANTE**: Remova as variáveis MySQL antigas se existirem
 
 ### 3. Executar Scripts SQL no Neon

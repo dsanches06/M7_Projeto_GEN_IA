@@ -20,7 +20,7 @@ import {
   ROLE_USER,
   ROLE_ASSISTANT,
   STATUS_NAME,
-  GEMINI_ERROR_MESSAGES,
+  PROVIDER_ERROR_MESSAGES,
 } from "../utils/chatBotUtil.js";
 
 const { createChatHistory, getChatHistoryByConversationId } =
@@ -62,7 +62,7 @@ const autoGenerateSummary = async (conversationId) => {
     const prompt = `Resume esta conversa em 1-2 frases curtas e claras (máx. 195 caracteres). Histórico:\n${historyText}`;
     const result = await processChatMessage(prompt, []);
 
-    if (result.geminiError || !result.success) return null;
+    if (result.providerError || !result.success) return null;
 
     const summaryText =
       result.functionResults?.[0]?.result?.summary || result.message || null;
@@ -551,20 +551,16 @@ export const sendMessageToBotStream = async (req, res) => {
       res.end();
     } catch (streamError) {
       clearKeepAlive();
-      const isGeminiErr = !!streamError?.geminiType;
-      const isOllamaErr = !!streamError?.ollamaType;
-      const errorMsg = isGeminiErr
+      const isGroqErr = !!streamError?.groqType;
+      const errorMsg = isGroqErr
         ? streamError.message
-        : isOllamaErr
-        ? streamError.message
-        : GEMINI_ERROR_MESSAGES.UNKNOWN;
+        : PROVIDER_ERROR_MESSAGES.UNKNOWN;
       console.error("[Controller Stream] Error:", streamError.message);
       sendEvent("provider_error", {
         success: false,
-        geminiError: isGeminiErr,
         providerError: true,
-        providerType: isOllamaErr ? "OLLAMA" : isGeminiErr ? "GEMINI" : "UNKNOWN",
-        errorType: streamError?.ollamaType || streamError?.geminiType || "UNKNOWN",
+        providerType: isGroqErr ? "GROQ" : "UNKNOWN",
+        errorType: streamError?.groqType || "UNKNOWN",
         message: errorMsg,
         conversationId: actualConversationId,
       });
@@ -579,10 +575,10 @@ export const sendMessageToBotStream = async (req, res) => {
         .json({ success: false, error: "Erro interno do servidor." });
     try {
       res.write(
-        `event: gemini_error\ndata: ${JSON.stringify({
+        `event: provider_error\ndata: ${JSON.stringify({
           success: false,
-          geminiError: false,
-          message: GEMINI_ERROR_MESSAGES.UNKNOWN,
+          providerError: false,
+          message: PROVIDER_ERROR_MESSAGES.UNKNOWN,
         })}\n\n`,
       );
       res.end();
@@ -625,12 +621,12 @@ export const sendMessageToConversation = async (req, res) => {
 
     const result = await processChatMessage(userMessage, history);
 
-    if (result.geminiError || result.success === false) {
+    if (result.providerError || result.success === false) {
       const errorMsg =
-        GEMINI_ERROR_MESSAGES[result.errorType] || result.message;
+        PROVIDER_ERROR_MESSAGES[result.errorType] || result.message;
       return res.status(503).json({
         success: false,
-        geminiError: true,
+        providerError: true,
         errorType: result.errorType || "UNKNOWN",
         message: errorMsg,
         conversationId,

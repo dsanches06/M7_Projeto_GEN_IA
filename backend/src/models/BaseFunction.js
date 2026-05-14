@@ -5,7 +5,7 @@
 import { Type } from "@google/genai";
 
 /**
- * Classe Base para Functions do Gemini
+ * Classe Base para Functions do AI Provider
  * Reutilizável para:
  * - tasks
  * - notifications

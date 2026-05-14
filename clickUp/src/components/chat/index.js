@@ -7,4 +7,4 @@ export { ChatLoadingUI }    from "./ChatLoadingUI.jsx";
 export { ChatTaskDisplayUI }from "./ChatTaskDisplayUI.jsx";
 export { ChatMessage }      from "./ChatMessage.jsx";
 export { ChatHistory }      from "./ChatHistory.jsx";
-export { GeminiErrorCard }  from "./GeminiErrorCard.jsx";
+export { ProviderErrorCard }  from "./ProviderErrorCard.jsx";

@@ -10,7 +10,7 @@ import {
   ChatHeaderUI,
   ChatLoadingUI,
   ChatInputUI,
-  GeminiErrorCard,
+  ProviderErrorCard,
 } from "@/components/chat/index.js";
 import {
   groupConversationsByDate,
@@ -60,6 +60,7 @@ export function ChatUI({
   const [lastUserMessage, setLastUserMessage] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const messageIdCounter = useRef(1);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -145,11 +146,11 @@ export function ChatUI({
     setMessages((p) => [
       ...p,
       {
-        id: Date.now(),
+        id: messageIdCounter.current++,
         text: "",
         sender: "bot",
         timestamp: new Date(),
-        geminiError: { errorType, message },
+        providerError: { errorType, message },
       },
     ]);
   };
@@ -157,7 +158,7 @@ export function ChatUI({
   // ── Send ──────────────────────────────────────────────────────────────────
 
   const doSend = async (userMessage) => {
-    const botMsgId = Date.now() + 1;
+    const botMsgId = messageIdCounter.current++;
 
     const botMsg = {
       id: botMsgId,
@@ -171,7 +172,7 @@ export function ChatUI({
       assignmentData: null,
       tagData: null,
       ticketData: null,
-      geminiError: null,
+      providerError: null,
     };
 
     const updatedHistory = [
@@ -182,7 +183,7 @@ export function ChatUI({
     setMessages((p) => [
       ...p,
       {
-        id: Date.now(),
+        id: messageIdCounter.current++,
         text: userMessage,
         sender: "user",
         timestamp: new Date(),
@@ -204,8 +205,8 @@ export function ChatUI({
           );
         },
         (done) => {
-          // ── Handle Gemini errors (completely failed) ─────────────────────
-          if (done?.geminiError || (done?.success === false && !done?.persistenceErrors?.length)) {
+          // ── Handle Provider errors (completely failed) ─────────────────────
+          if (done?.providerError || (done?.success === false && !done?.persistenceErrors?.length)) {
             const errorMsg = done.message || "Erro desconhecido.";
             const errType = done.errorType || "UNKNOWN";
             setMessages((p) =>
@@ -214,7 +215,7 @@ export function ChatUI({
                   ? {
                       ...m,
                       text: "",
-                      geminiError: { errorType: errType, message: errorMsg },
+                      providerError: { errorType: errType, message: errorMsg },
                     }
                   : m,
               ),
@@ -340,7 +341,7 @@ export function ChatUI({
             setMessages((p) => [
               ...p,
               {
-                id: Date.now() + 3,
+                id: messageIdCounter.current++,
                 text: `✅ Notificação "${done.notification.title}" enviada!`,
                 sender: "system",
                 timestamp: new Date(),
@@ -358,7 +359,7 @@ export function ChatUI({
             ? {
                 ...m,
                 text: "",
-                geminiError: {
+                providerError: {
                   errorType: "NETWORK_ERROR",
                   message:
                     "Não foi possível ligar ao servidor. Verifique a sua ligação. 🌐",
@@ -482,13 +483,13 @@ export function ChatUI({
                     <ChatBubbleUI message={msg} sender={msg.sender} />
                   )}
 
-                  {/* Inline error card — shown for ALL error types (Gemini + HTTP + server) */}
-                  {msg.geminiError && (
+                  {/* Inline error card — shown for ALL error types (Provider + HTTP + server) */}
+                  {msg.providerError && (
                     <div className="flex justify-start mt-1">
                       <div className="max-w-[280px] w-full">
-                        <GeminiErrorCard
-                          errorType={msg.geminiError.errorType}
-                          message={msg.geminiError.message}
+                        <ProviderErrorCard
+                          errorType={msg.providerError.errorType}
+                          message={msg.providerError.message}
                           onRetry={handleRetry}
                         />
                       </div>

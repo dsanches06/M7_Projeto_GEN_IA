@@ -30,7 +30,7 @@
 |----------|-------|
 | `DATABASE_URL` | Cole a Connection Pooler do Neon |
 | `CLIENT_URL` | https://seu-app.vercel.app |
-| `AI_PROVIDER` | gemini |
+| `AI_PROVIDER` | groq |
 
 ## 4️⃣ Deploy Automático
 

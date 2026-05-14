@@ -10,7 +10,7 @@ export const STATUS_NAME = {
   6: "ARCHIVED",
 };
 
-export const GEMINI_ERROR_MESSAGES = {
+export const PROVIDER_ERROR_MESSAGES = {
   SERVICE_DOWN:
     "⚠️ O serviço de IA está temporariamente em baixo. Tente novamente em instantes.",
   RATE_LIMIT:

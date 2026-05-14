@@ -10,12 +10,27 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_POSTGRES_URL ||
+  process.env.DATABASE_POSTGRES_URL_NO_SSL ||
+  process.env.DATABASE_URL_NO_SSL ||
+  process.env.DATABASE_POSTGRES_URL_NO_POOLING ||
+  process.env.DATABASE_NEON_URL ||
+  process.env.DATABASE_URL_PROD ||
+  null;
+
 console.log('🚀 Iniciando inicialização do banco Neon...');
-console.log('DATABASE_URL configurada:', process.env.DATABASE_URL ? '✅' : '❌');
+console.log('DATABASE_URL configurada:', databaseUrl ? '✅' : '❌');
+
+if (!databaseUrl) {
+  console.error('❌ Nenhuma URL de banco de dados encontrada nas variáveis de ambiente.');
+  console.error('Variáveis verificadas: DATABASE_URL, DATABASE_POSTGRES_URL, DATABASE_POSTGRES_URL_NO_SSL, DATABASE_URL_NO_SSL, DATABASE_POSTGRES_URL_NO_POOLING, DATABASE_NEON_URL, DATABASE_URL_PROD.');
+}
 
 // Neon connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
   ssl: { rejectUnauthorized: false }
 });
 

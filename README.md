@@ -37,8 +37,7 @@ Para migração completa, veja [DEPLOYMENT_NEON.md](DEPLOYMENT_NEON.md).
    ```
    DATABASE_URL=postgresql://neondb_owner:password@host/database
    CLIENT_URL=https://your-app.vercel.app
-   MODEL_NAME=gemini_model
-   GEMINI_API_KEY=your_gemini_api_key
+   GROQ_API_KEY=your_groq_api_key
    ```
 
 4. **Deploy automático** será feito a cada push na branch main

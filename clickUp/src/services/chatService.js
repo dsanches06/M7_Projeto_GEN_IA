@@ -55,7 +55,7 @@ class ChatService extends BaseService {
         if (onDone)
           onDone({
             success:     false,
-            geminiError: false,
+            providerError: false,
             errorType,
             message:     serverMessage,
           });
@@ -79,12 +79,11 @@ class ChatService extends BaseService {
           } else if (event === "done") {
             if (onDone) onDone(parsed);
 
-          } else if (event === "gemini_error" || event === "provider_error") {
+          } else if (event === "provider_error") {
             if (onDone)
               onDone({
                 ...parsed,
                 success:     false,
-                geminiError: parsed?.geminiError ?? false,
                 providerError: parsed?.providerError ?? true,
               });
 
@@ -93,7 +92,7 @@ class ChatService extends BaseService {
             if (onDone)
               onDone({
                 success:     false,
-                geminiError: false,
+                providerError: false,
                 errorType:   parsed?.errorType || "SERVER_ERROR",
                 message:     parsed?.message || "Erro inesperado do servidor.",
               });
@@ -145,7 +144,7 @@ class ChatService extends BaseService {
       if (onDone)
         onDone({
           success:     false,
-          geminiError: false,
+          providerError: false,
           errorType:   isTimeout ? "TIMEOUT" : "NETWORK_ERROR",
           message:
             isTimeout
@@ -177,12 +176,12 @@ class ChatService extends BaseService {
     return Task.fromObject(functionResult.result)?.toPayload() || null;
   }
 
-  extractTaskData(geminiResponse) {
-    if (!geminiResponse) return null;
-    if (typeof geminiResponse === "object")
-      return Task.fromObject(geminiResponse)?.toPayload() || null;
+  extractTaskData(providerResponse) {
+    if (!providerResponse) return null;
+    if (typeof providerResponse === "object")
+      return Task.fromObject(providerResponse)?.toPayload() || null;
     try {
-      const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/);
+      const jsonMatch = providerResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch)
         return Task.fromObject(JSON.parse(jsonMatch[0]))?.toPayload() || null;
     } catch { /* ignore */ }

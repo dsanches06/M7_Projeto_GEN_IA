@@ -2,11 +2,10 @@
  * Processador Base de Chat — Loop agêntico com chamadas de funções em paralelo
  */
 
-import { createOllamaChat } from "../genAI/ollama_config.js";
-import { createGeminiChat } from "../genAI/gemini_config.js";
+import { createGroqChat } from "../genAI/groq_config.js";
 
 const MAX_AGENTIC_STEPS = 5;
-const AI_PROVIDER = process.env.AI_PROVIDER?.toLowerCase() || "ollama";
+const AI_PROVIDER = process.env.AI_PROVIDER?.toLowerCase() || "groq";
 
 export class BaseChatProcessor {
   constructor({ toolConfig = [], functionHandlers = {} }) {
@@ -15,11 +14,7 @@ export class BaseChatProcessor {
   }
 
   async createChat(tools, history) {
-    if (AI_PROVIDER === "gemini") {
-      return createGeminiChat(tools, history);
-    }
-
-    return createOllamaChat(tools, history);
+    return createGroqChat(tools, history);
   }
 
   // ── Construir histórico de chat a partir do formato de conversa ──────────────
@@ -61,7 +56,7 @@ export class BaseChatProcessor {
   }
 
   isProviderError(error) {
-    return !!error?.ollamaType || !!error?.geminiType;
+    return !!error?.groqType;
   }
 
   // ── Loop agêntico (sem streaming) ────────────────────────────────────────────
@@ -113,13 +108,13 @@ export class BaseChatProcessor {
       };
     } catch (error) {
       if (this.isProviderError(error)) {
-        const providerName = error.ollamaType ? "Ollama" : "Gemini";
-        const errorType = error.ollamaType ?? error.geminiType;
+        const providerName = "Groq";
+        const errorType = error.groqType;
 
         console.error(`[ChatProcessor] ${providerName} ${errorType}:`, error.message);
         return {
           success: false,
-          geminiError: true,
+          providerError: true,
           errorType,
           message: error.message,
           functionResults: [],
@@ -128,7 +123,7 @@ export class BaseChatProcessor {
       console.error("[ChatProcessor] Unexpected error:", error);
       return {
         success: false,
-        geminiError: false,
+        providerError: false,
         message: "Ocorreu um erro interno. Tente novamente.",
         functionResults: [],
       };

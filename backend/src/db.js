@@ -13,7 +13,16 @@ dotenv.config({ path: resolve(__dirname, "../.env") });
 // FORCE_MYSQL=true em .env.local → usa MySQL local
 // DATABASE_URL definido → usa PostgreSQL (Neon/Vercel)
 const forceMySQL = process.env.FORCE_MYSQL === "true";
-const isPostgres  = !!process.env.DATABASE_URL && !forceMySQL;
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_POSTGRES_URL ||
+  process.env.DATABASE_POSTGRES_URL_NO_SSL ||
+  process.env.DATABASE_URL_NO_SSL ||
+  process.env.DATABASE_POSTGRES_URL_NO_POOLING ||
+  process.env.DATABASE_NEON_URL ||
+  process.env.DATABASE_URL_PROD ||
+  null;
+const isPostgres  = !!databaseUrl && !forceMySQL;
 
 // ============================================================
 // CONVERSOR MySQL → PostgreSQL  (usado apenas no branch PG)
@@ -87,7 +96,7 @@ if (isPostgres) {
   const { default: pgPkg } = await import("pg");
 
   const pool = new pgPkg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false },
   });
 
