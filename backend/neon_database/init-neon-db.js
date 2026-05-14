@@ -26,6 +26,7 @@ console.log('DATABASE_URL configurada:', databaseUrl ? '✅' : '❌');
 if (!databaseUrl) {
   console.error('❌ Nenhuma URL de banco de dados encontrada nas variáveis de ambiente.');
   console.error('Variáveis verificadas: DATABASE_URL, DATABASE_POSTGRES_URL, DATABASE_POSTGRES_URL_NO_SSL, DATABASE_URL_NO_SSL, DATABASE_POSTGRES_URL_NO_POOLING, DATABASE_NEON_URL, DATABASE_URL_PROD.');
+  process.exit(1);
 }
 
 // Neon connection
