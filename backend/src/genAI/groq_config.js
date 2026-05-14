@@ -96,12 +96,39 @@ function classifyGroqError(error) {
   };
 }
 
+// ── Shared tool normalization for Groq ─────────────────────────────────────
+function normalizeGroqTools(tools) {
+  if (!Array.isArray(tools)) return undefined;
+
+  return tools.map((tool) => {
+    if (tool.type === "function" && tool.function) {
+      return tool;
+    }
+
+    if (tool.name && tool.parameters) {
+      return {
+        type: tool.type || "function",
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+        },
+      };
+    }
+
+    return {
+      type: tool.type || "function",
+      ...tool,
+    };
+  });
+}
+
 // ── Shared config builder ─────────────────────────────────────────────────────
 function buildGroqConfig(tools, extraConfig = {}) {
   return {
     messages: [{ role: "system", content: createSystemPrompt() }],
     temperature: 0.25,
-    tools: tools ? tools : undefined,
+    tools: normalizeGroqTools(tools),
     ...extraConfig,
   };
 }
@@ -120,6 +147,16 @@ export const createGroqChat = (tools, history = []) => {
       sendMessage: async (message) => {
         let normalizedMessage;
 
+        const normalizeParts = (parts) => {
+          if (!Array.isArray(parts)) return String(parts);
+          return parts.map((part) => {
+            if (part == null) return "";
+            if (typeof part === "string") return part;
+            if (typeof part === "object") return part.text ?? JSON.stringify(part);
+            return String(part);
+          });
+        };
+
         if (typeof message === "string") {
           normalizedMessage = { role: "user", content: message };
         } else if (
@@ -129,6 +166,15 @@ export const createGroqChat = (tools, history = []) => {
           (typeof message.content === "string" || Array.isArray(message.content))
         ) {
           normalizedMessage = message;
+        } else if (
+          message &&
+          typeof message === "object" &&
+          Array.isArray(message.parts)
+        ) {
+          normalizedMessage = {
+            role: message.role || "user",
+            content: normalizeParts(message.parts),
+          };
         } else if (
           message &&
           typeof message === "object" &&
@@ -148,7 +194,7 @@ export const createGroqChat = (tools, history = []) => {
           model: GROQ_MODEL, // Default Groq model
           messages,
           temperature: 0.25,
-          tools: tools ? tools : undefined,
+          tools: normalizeGroqTools(tools),
         });
 
         const assistantMessage = response.choices[0]?.message;
@@ -185,7 +231,7 @@ const generateAIContent = async (contents, options = {}) => {
       model: GROQ_MODEL,
       messages,
       temperature,
-      tools: tools ? tools : undefined,
+      tools: normalizeGroqTools(tools),
       ...extraConfig,
     });
   } catch (error) {
@@ -212,7 +258,7 @@ export const generateAIContentStream = async (contents, options = {}) => {
       model: GROQ_MODEL,
       messages,
       temperature,
-      tools: tools ? tools : undefined,
+      tools: normalizeGroqTools(tools),
       stream: true,
       ...extraConfig,
     });

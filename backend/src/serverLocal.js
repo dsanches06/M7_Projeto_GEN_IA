@@ -1,3 +1,5 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
 // Force MySQL mode before importing anything else
@@ -51,7 +53,10 @@ async function startLocalServer() {
 }
 
 // Start server if called directly
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+const __filename = path.normalize(fileURLToPath(import.meta.url));
+const __argvScript = process.argv[1] ? path.normalize(process.argv[1]) : null;
+
+if (__argvScript && __argvScript === __filename) {
   startLocalServer();
 }
 

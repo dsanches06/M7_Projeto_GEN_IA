@@ -20,8 +20,8 @@ export class BaseChatProcessor {
   // ── Construir histórico de chat a partir do formato de conversa ──────────────
   buildHistory(conversationHistory = []) {
     return conversationHistory.map((item) => ({
-      role: item.role === "assistant" ? "model" : "user",
-      parts: [{ text: item.content }],
+      role: item.role === "assistant" ? "assistant" : "user",
+      content: item.content,
     }));
   }
 
