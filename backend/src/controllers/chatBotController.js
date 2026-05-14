@@ -412,14 +412,23 @@ export const sendMessageToBotStream = async (req, res) => {
   let actualConversationId = null;
 
   try {
-    const { message, conversationHistory, conversationId, user_id } = req.body;
+    const requestBody = req.body && typeof req.body === "object" ? req.body : {};
+    let { message, conversationHistory, conversationId, user_id } = requestBody;
 
-    if (!message || message.trim().length === 0)
+    if (typeof message === "object" && message !== null) {
+      const nested = message;
+      message = nested.message ?? JSON.stringify(nested);
+      conversationHistory = conversationHistory?.length ? conversationHistory : nested.conversationHistory;
+      conversationId = conversationId ?? nested.conversationId;
+      user_id = user_id ?? nested.user_id;
+    }
+
+    if (!message || String(message).trim().length === 0)
       return res
         .status(400)
         .json({ success: false, error: "Mensagem não pode estar vazia" });
 
-    const userMessage = message.trim();
+    const userMessage = String(message).trim();
     actualConversationId = conversationId ? Number(conversationId) : null;
     let resolvedHistory = conversationHistory || [];
 

@@ -164,10 +164,12 @@ class ChatService extends BaseService {
   }
 
   async sendMessage(endpoint, payload, onChunk, onDone, conversationId = null) {
-    if (onChunk || onDone)
-      return this.sendMessageToBotStream(
-        payload, [], onChunk, onDone, conversationId,
-      );
+    if (onChunk || onDone) {
+      const message = payload && typeof payload === "object" ? payload.message ?? payload : payload;
+      const history = payload && typeof payload === "object" ? payload.conversationHistory ?? [] : [];
+      const convoId = payload && typeof payload === "object" ? payload.conversationId ?? conversationId : conversationId;
+      return this.sendMessageToBotStream(message, history, onChunk, onDone, convoId);
+    }
     return super.sendMessage(endpoint, payload);
   }
 
