@@ -24,6 +24,7 @@ class ChatService extends BaseService {
     onDone,
     conversationId = null,
     user_id = 1,
+    onLoading = null,
   ) {
     const payload = { message, conversationHistory, conversationId, user_id };
 
@@ -96,6 +97,11 @@ class ChatService extends BaseService {
                 errorType:   parsed?.errorType || "SERVER_ERROR",
                 message:     parsed?.message || "Erro inesperado do servidor.",
               });
+
+          } else if (event === "loading") {
+            if (typeof onLoading === "function") onLoading(parsed);
+          } else if (event === "ping") {
+            // Keepalive ping — no UI update.
           }
         } catch {
           /* malformed chunk — ignore */

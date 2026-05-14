@@ -15,10 +15,24 @@ async function chat() {
   console.log(response.message.content);
 }
 
+async function stream() {
+  const response = await localOllama.chat({
+    model: "llama3.2",
+    messages: [
+      { role: "user", content: "Conte uma história curta sobre robôs." },
+    ],
+    stream: true,
+  });
 
+  for await (const part of response) {
+    process.stdout.write(part.message.content);
+  }
+}
 
 // Função principal que controla o fluxo sequencial
 async function main() {
+  console.log("--- INICIANDO STREAM ---");
+  await stream();
   
   console.log("\n\n--- INICIANDO CHAT ---");
   await chat();

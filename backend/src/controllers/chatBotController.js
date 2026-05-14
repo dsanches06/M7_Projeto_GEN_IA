@@ -461,6 +461,19 @@ export const sendMessageToBotStream = async (req, res) => {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
+    // Envia evento inicial para indicar que a stream foi aberta.
+    sendEvent("loading", {
+      status: "waiting",
+      timestamp: Date.now(),
+    });
+
+    const keepAliveInterval = setInterval(() => {
+      if (res.writableEnded || res.destroyed) return;
+      res.write(`event: ping\ndata: ${JSON.stringify({ timestamp: Date.now() })}\n\n`);
+    }, 10000);
+
+    const clearKeepAlive = () => clearInterval(keepAliveInterval);
+
     try {
       const result = await processChatMessageStream(
         userMessage,
@@ -534,8 +547,10 @@ export const sendMessageToBotStream = async (req, res) => {
         });
       }
 
+      clearKeepAlive();
       res.end();
     } catch (streamError) {
+      clearKeepAlive();
       const isGeminiErr = !!streamError?.geminiType;
       const isOllamaErr = !!streamError?.ollamaType;
       const errorMsg = isGeminiErr
@@ -553,6 +568,7 @@ export const sendMessageToBotStream = async (req, res) => {
         message: errorMsg,
         conversationId: actualConversationId,
       });
+      clearKeepAlive();
       res.end();
     }
   } catch (error) {

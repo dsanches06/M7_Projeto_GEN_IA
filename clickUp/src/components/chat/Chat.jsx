@@ -100,7 +100,13 @@ export function Chat({ onTaskCreated }) {
           setMessages(prev =>
             prev.map(msg =>
               msg.id === botMsgId
-                ? { ...msg, text: `${msg.text || ''}${chunk}` }
+                ? {
+                    ...msg,
+                    text:
+                      msg.text === "Aguardando resposta..."
+                        ? chunk
+                        : `${msg.text || ''}${chunk}`,
+                  }
                 : msg
             )
           );
@@ -120,6 +126,17 @@ export function Chat({ onTaskCreated }) {
               if (onTaskCreated) onTaskCreated(taskData);
             }
           }
+        },
+        null,
+        null,
+        () => {
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === botMsgId
+                ? { ...msg, text: 'Aguardando resposta...' }
+                : msg
+            )
+          );
         }
       );
     } catch (error) {

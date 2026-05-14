@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import {
   chatRoutes,
   conversationRoutes,
@@ -17,8 +16,6 @@ import {
 } from "./routes/index.js";
 import { chatBotController } from "./controllers/index.js";
 import { loggerMiddleware } from "./middlewares/index.js";
-
-dotenv.config();
 
 const app = express();
 

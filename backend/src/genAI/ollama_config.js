@@ -73,19 +73,56 @@ function classifyOllamaError(error) {
 }
 
 // ── Shared config builder ─────────────────────────────────────────────────────
+function normalizeToolParameters(parameters = {}) {
+  if (typeof parameters !== "object" || parameters === null) return parameters;
+
+  const normalized = { ...parameters };
+
+  if (typeof normalized.type === "string") {
+    normalized.type = normalized.type.toLowerCase();
+  }
+
+  if (Array.isArray(normalized.required)) {
+    normalized.required = normalized.required.map(String);
+  }
+
+  if (normalized.properties && typeof normalized.properties === "object") {
+    normalized.properties = Object.fromEntries(
+      Object.entries(normalized.properties).map(([key, value]) => [
+        key,
+        normalizeToolParameters(value),
+      ]),
+    );
+  }
+
+  if (normalized.items) {
+    normalized.items = normalizeToolParameters(normalized.items);
+  }
+
+  return normalized;
+}
+
+function normalizeToolDeclaration(tool) {
+  return {
+    ...tool,
+    parameters: normalizeToolParameters(tool.parameters),
+  };
+}
+
 function buildOllamaConfig(tools = null, extraConfig = {}) {
+  const normalizedTools = Array.isArray(tools)
+    ? tools.map((tool) => ({
+        type: "function",
+        function: normalizeToolDeclaration(tool),
+      }))
+    : undefined;
+
   return {
     model: MODEL_NAME,
     options: {
       temperature: 0.25,
     },
-    tools: tools
-      ? tools.map((tool) => ({
-          type: "function",
-          function: tool,
-        }))
-      : undefined,
-
+    tools: normalizedTools?.length ? normalizedTools : undefined,
     ...extraConfig,
   };
 }
@@ -194,21 +231,178 @@ export const createOllamaChat = async (tools = null, history = []) => {
         }
       }
 
+      const timerLabel = `Ollama Response Time ${Date.now()}`;
+      const requestBody = {
+        ...buildOllamaConfig(tools),
+        messages: [
+          {
+            role: "system",
+            content: prompt,
+          },
+          ...conversation,
+        ],
+      };
+      const triedWithTools = Array.isArray(tools) && tools.length > 0;
+
       try {
-        const response = await ollama.chat({
-          ...buildOllamaConfig(tools),
-          messages: [
-            {
-              role: "system",
-              content: prompt,
-            },
-            ...conversation,
-          ],
-        });
+        console.log(`[Ollama] 📤 Enviando mensagem para ${MODEL_NAME} (tools=${triedWithTools})...`);
+        console.time(timerLabel);
+
+        const response = await ollama.chat(requestBody);
+
+        console.timeEnd(timerLabel);
+        console.log(`[Ollama] ✅ Resposta recebida com sucesso`);
 
         return normalizeOllamaResponse(response);
       } catch (error) {
+        console.timeEnd(timerLabel);
         const classified = classifyOllamaError(error);
+
+        if (triedWithTools) {
+          console.warn(
+            `[Ollama] Falha com tools, a tentar novamente sem tools: ${error.message}`,
+          );
+          try {
+            const retryBody = {
+              ...buildOllamaConfig(null),
+              messages: requestBody.messages,
+            };
+            console.time(`${timerLabel}-retry`);
+            const retryResponse = await ollama.chat(retryBody);
+            console.timeEnd(`${timerLabel}-retry`);
+            console.log(`[Ollama] ✅ Resposta recebida sem tools`);
+            return normalizeOllamaResponse(retryResponse);
+          } catch (retryError) {
+            const retryClassified = classifyOllamaError(retryError);
+            console.error(
+              `[Ollama Chat] Retry ${retryClassified.type}:`,
+              retryError.message,
+            );
+            const enrichedRetry = new Error(retryClassified.userMessage);
+            enrichedRetry.ollamaType = retryClassified.type;
+            enrichedRetry.originalError = retryError;
+            throw enrichedRetry;
+          }
+        }
+
+        console.error(`[Ollama Chat] ${classified.type}:`, error.message);
+
+        const enriched = new Error(classified.userMessage);
+        enriched.ollamaType = classified.type;
+        enriched.originalError = error;
+
+        throw enriched;
+      }
+    },
+
+    sendMessageStream: async ({ message }, onChunk) => {
+      const incoming = Array.isArray(message) ? message : [message];
+      for (const item of incoming) {
+        const converted = convertMessageToOllama(item);
+        if (!converted) continue;
+
+        if (Array.isArray(converted)) {
+          conversation.push(...converted);
+        } else {
+          conversation.push(converted);
+        }
+      }
+
+      const timerLabel = `Ollama Stream Time ${Date.now()}`;
+      const requestBody = {
+        ...buildOllamaConfig(tools, { stream: true }),
+        messages: [
+          {
+            role: "system",
+            content: prompt,
+          },
+          ...conversation,
+        ],
+      };
+      const triedWithTools = Array.isArray(tools) && tools.length > 0;
+      let previousText = "";
+      let lastResponse = null;
+
+      try {
+        console.log(`[Ollama] 📤 Enviando mensagem em stream para ${MODEL_NAME} (tools=${triedWithTools})...`);
+        console.time(timerLabel);
+
+        const streamResponse = await ollama.chat(requestBody);
+        for await (const part of streamResponse) {
+          if (!part) continue;
+          lastResponse = part;
+          const normalized = normalizeOllamaResponse(part);
+          const text = normalized.text || "";
+          const delta = text.startsWith(previousText)
+            ? text.slice(previousText.length)
+            : text;
+          previousText = text;
+
+          if (delta && typeof onChunk === "function") {
+            onChunk(delta);
+          }
+        }
+
+        console.timeEnd(timerLabel);
+        console.log(`[Ollama] ✅ Stream finalizado`);
+
+        if (!lastResponse) {
+          throw new Error("Ollama stream não retornou resposta válida.");
+        }
+
+        return normalizeOllamaResponse(lastResponse);
+      } catch (error) {
+        console.timeEnd(timerLabel);
+        const classified = classifyOllamaError(error);
+
+        if (triedWithTools) {
+          console.warn(
+            `[Ollama] Falha em stream com tools, a tentar novamente sem tools: ${error.message}`,
+          );
+          try {
+            const retryBody = {
+              ...buildOllamaConfig(null, { stream: true }),
+              messages: requestBody.messages,
+            };
+            console.time(`${timerLabel}-retry`);
+            const retryResponse = await ollama.chat(retryBody);
+            console.timeEnd(`${timerLabel}-retry`);
+            console.log(`[Ollama] ✅ Stream finalizado sem tools`);
+
+            let retryLastResponse = null;
+            previousText = "";
+            for await (const part of retryResponse) {
+              if (!part) continue;
+              retryLastResponse = part;
+              const normalized = normalizeOllamaResponse(part);
+              const text = normalized.text || "";
+              const delta = text.startsWith(previousText)
+                ? text.slice(previousText.length)
+                : text;
+              previousText = text;
+
+              if (delta && typeof onChunk === "function") {
+                onChunk(delta);
+              }
+            }
+
+            if (!retryLastResponse) {
+              throw new Error("Ollama stream não retornou resposta válida no retry.");
+            }
+
+            return normalizeOllamaResponse(retryLastResponse);
+          } catch (retryError) {
+            const retryClassified = classifyOllamaError(retryError);
+            console.error(
+              `[Ollama Chat] Retry ${retryClassified.type}:`,
+              retryError.message,
+            );
+            const enrichedRetry = new Error(retryClassified.userMessage);
+            enrichedRetry.ollamaType = retryClassified.type;
+            enrichedRetry.originalError = retryError;
+            throw enrichedRetry;
+          }
+        }
 
         console.error(`[Ollama Chat] ${classified.type}:`, error.message);
 
@@ -232,26 +426,54 @@ const generateAIContent = async (messages, options = {}) => {
     ...extraConfig
   } = options;
 
-  try {
-    return await ollama.chat({
-      ...buildOllamaConfig(tools, {
-        options: {
-          temperature,
-        },
-        stream,
-        ...extraConfig,
-      }),
+  const requestBody = {
+    ...buildOllamaConfig(tools, {
+      options: {
+        temperature,
+      },
+      stream,
+      ...extraConfig,
+    }),
+    messages: [
+      {
+        role: "system",
+        content: systemInstruction,
+      },
+      ...messages,
+    ],
+  };
+  const triedWithTools = Array.isArray(tools) && tools.length > 0;
 
-      messages: [
-        {
-          role: "system",
-          content: systemInstruction,
-        },
-        ...messages,
-      ],
-    });
+  try {
+    return await ollama.chat(requestBody);
   } catch (error) {
     const classified = classifyOllamaError(error);
+
+    if (triedWithTools) {
+      console.warn(
+        `[Ollama] Falha com tools, a tentar novamente sem tools: ${error.message}`,
+      );
+      try {
+        const retryBody = {
+          ...buildOllamaConfig(null, {
+            options: {
+              temperature,
+            },
+            stream,
+            ...extraConfig,
+          }),
+          messages: requestBody.messages,
+        };
+        return await ollama.chat(retryBody);
+      } catch (retryError) {
+        const retryClassified = classifyOllamaError(retryError);
+        console.error(`[Ollama] Retry ${retryClassified.type}:`, retryError.message);
+        const enrichedRetry = new Error(retryClassified.userMessage);
+        enrichedRetry.ollamaType = retryClassified.type;
+        enrichedRetry.originalError = retryError;
+        throw enrichedRetry;
+      }
+    }
 
     console.error(`[Ollama] ${classified.type}:`, error.message);
 

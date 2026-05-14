@@ -144,7 +144,14 @@ export class BaseChatProcessor {
     const history = this.buildHistory(conversationHistory);
     const chat = await this.createChat(this.toolConfig, history);
 
-    let response = await chat.sendMessage({ message: userMessage });
+    let response;
+    if (typeof chat.sendMessageStream === "function") {
+      response = await chat.sendMessageStream({ message: userMessage }, onChunk);
+    } else {
+      response = await chat.sendMessage({ message: userMessage });
+      if (response.text) onChunk(response.text);
+    }
+
     const allResults = [];
     let step = 0;
 
@@ -168,10 +175,11 @@ export class BaseChatProcessor {
           })),
         },
       });
+
+      if (response.text) onChunk(response.text);
     }
 
     const finalText = response.text || "";
-    if (finalText) onChunk(finalText);
 
     return {
       success: true,
