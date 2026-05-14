@@ -118,9 +118,30 @@ export const createGroqChat = (tools, history = []) => {
 
     return {
       sendMessage: async (message) => {
+        let normalizedMessage;
+
+        if (typeof message === "string") {
+          normalizedMessage = { role: "user", content: message };
+        } else if (
+          message &&
+          typeof message === "object" &&
+          message.role &&
+          (typeof message.content === "string" || Array.isArray(message.content))
+        ) {
+          normalizedMessage = message;
+        } else if (
+          message &&
+          typeof message === "object" &&
+          typeof message.message === "string"
+        ) {
+          normalizedMessage = { role: "user", content: message.message };
+        } else {
+          normalizedMessage = { role: "user", content: String(message) };
+        }
+
         const messages = [
           ...conversationHistory,
-          { role: "user", content: message },
+          normalizedMessage,
         ];
 
         const response = await groq.chat.completions.create({
@@ -131,7 +152,7 @@ export const createGroqChat = (tools, history = []) => {
         });
 
         const assistantMessage = response.choices[0]?.message;
-        conversationHistory.push({ role: "user", content: message });
+        conversationHistory.push(normalizedMessage);
         if (assistantMessage) {
           conversationHistory.push(assistantMessage);
         }

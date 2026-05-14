@@ -65,7 +65,7 @@ export class BaseChatProcessor {
       const history = this.buildHistory(conversationHistory);
       const chat = await this.createChat(this.toolConfig, history);
 
-      let response = await chat.sendMessage({ message: userMessage });
+      let response = await chat.sendMessage(userMessage);
       const allResults = [];
       let step = 0;
 
@@ -143,7 +143,7 @@ export class BaseChatProcessor {
     if (typeof chat.sendMessageStream === "function") {
       response = await chat.sendMessageStream({ message: userMessage }, onChunk);
     } else {
-      response = await chat.sendMessage({ message: userMessage });
+      response = await chat.sendMessage(userMessage);
       if (response.text) onChunk(response.text);
     }
 
