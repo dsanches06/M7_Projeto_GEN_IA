@@ -5,7 +5,6 @@
 export * from "./tasks/index.js";
 export * from "./tickets/index.js";
 export * from "./notifications/index.js";
-export * from "./summaries/index.js";
 
 // ── Convenience: all function declarations (for toolConfig) ──────────────────
 import { createTaskDeclarations }         from "./tasks/index.js";
@@ -19,7 +18,6 @@ import { createTicketDeclarations }       from "./tickets/index.js";
 import { deleteTicketDeclarations }       from "./tickets/index.js";
 import { patchStatusTicketDeclarations }  from "./tickets/index.js";
 import { updateTicketDeclarations }       from "./tickets/index.js";
-import { createSummaryDeclarations }      from "./summaries/index.js";
 
 export const ALL_FUNCTION_DECLARATIONS = [
   ...createTaskDeclarations,
@@ -33,5 +31,4 @@ export const ALL_FUNCTION_DECLARATIONS = [
   ...deleteTicketDeclarations,
   ...patchStatusTicketDeclarations,
   ...updateTicketDeclarations,
-  ...createSummaryDeclarations,
 ];
