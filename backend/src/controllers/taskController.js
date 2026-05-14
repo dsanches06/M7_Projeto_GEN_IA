@@ -1,4 +1,5 @@
-import { taskService, tagService } from "../services/index.js";
+import { taskService, tagService, userService } from "../services/index.js";
+import { normalizeTaskFields, normalizeTagFields } from "../utils/fieldMapper.js";
 
 /* Função para buscar tarefas */
 export const getTasks = async (req, res) => {
@@ -27,9 +28,29 @@ export const getTaskById = async (req, res) => {
 /* Função para criar tarefa */
 export const createTask = async (req, res) => {
   try {
-    const task = await taskService.createTask(req.body);
+    const normalized = normalizeTaskFields(req.body);
+    const userId = normalized.user_id != null ? Number(normalized.user_id) : null;
+
+    if (normalized.user_id != null) {
+      if (!userId || userId <= 0) {
+        return res.status(400).json({ error: "user_id inválido" });
+      }
+
+      const existingUser = await userService.getUserById(userId);
+      if (!existingUser) {
+        return res.status(404).json({ error: `Utilizador ${userId} não encontrado.` });
+      }
+    }
+
+    const task = await taskService.createTask(normalized);
     res.status(201).json(task);
   } catch (error) {
+    if (error.message.includes("não encontrada") || error.message.includes("não encontrado")) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(400).json({ error: "Erro ao criar tarefa" });
   }
 };
@@ -37,9 +58,10 @@ export const createTask = async (req, res) => {
 /* Função para atualizar tarefa */
 export const updateTask = async (req, res) => {
   try {
+    const normalized = normalizeTaskFields(req.body);
     const result = await taskService.updateTask(
       Number(req.params.id),
-      req.body,
+      normalized,
     );
     if (result === 0) {
       return res
@@ -48,6 +70,12 @@ export const updateTask = async (req, res) => {
     }
     res.json(result);
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(400).json({ error: "Erro ao atualizar tarefa" });
   }
 };
@@ -55,15 +83,22 @@ export const updateTask = async (req, res) => {
 /* Função para atualizar parcialmente tarefa (PATCH) - para datas, descrição, etc */
 export const partialUpdateTask = async (req, res) => {
   try {
+    const normalized = normalizeTaskFields(req.body);
     const result = await taskService.updateTask(
       Number(req.params.id),
-      req.body,
+      normalized,
     );
     if (result === 0) {
       return res.status(404).json({ error: "Tarefa não encontrada" });
     }
     res.json({ message: "Tarefa atualizada com sucesso" });
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(400).json({ error: "Erro ao atualizar tarefa" });
   }
 };
@@ -71,12 +106,19 @@ export const partialUpdateTask = async (req, res) => {
 /* Função para marcar tarefa como concluída */
 export const updateStatus = async (req, res) => {
   try {
+    const normalized = normalizeTaskFields(req.body);
     const task = await taskService.updateStatus(
       Number(req.params.id),
-      req.body,
+      normalized,
     );
     res.json({ message: "Status da tarefa atualizado com sucesso", task });
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(400).json({
       error: `Erro ao atualizar status da tarefa: ${error.message}`,
     });
@@ -89,8 +131,14 @@ export const deleteTask = async (req, res) => {
     await taskService.deleteTask(Number(req.params.id));
     res.status(200).json({ message: "Tarefa deletada com sucesso" });
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
     res
-      .status(404)
+      .status(500)
       .json({ message: `Erro ao deletar tarefa: ${error.message}` });
   }
 };
@@ -111,11 +159,21 @@ export const getStats = async (req, res) => {
 export const addTagToTask = async (req, res) => {
   try {
     const taskId = Number(req.params.id);
-    const tagId = Number(req.body?.tagId || 0);
+    const normalized = normalizeTagFields(req.body);
+    const tagId = Number(normalized.tag_id || 0);
 
     const relation = await taskService.addTagToTask(taskId, tagId);
     res.status(201).json(relation);
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
+    if (error.message.includes("já associada")) {
+      return res.status(409).json({ message: error.message });
+    }
     res.status(400).json({
       message: `Erro ao adicionar etiqueta à tarefa: ${error.message}`,
     });
@@ -135,10 +193,19 @@ export const removeTagFromTask = async (req, res) => {
     }
 
     const relation = await taskService.removeTagFromTask(taskId, tagId);
+    if (!relation) {
+      return res.status(404).json({ message: "Etiqueta não encontrada na tarefa" });
+    }
     res
       .status(200)
       .json({ message: "Etiqueta removida da tarefa com sucesso", relation });
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(400).json({
       message: `Erro ao remover etiqueta da tarefa: ${error.message}`,
     });

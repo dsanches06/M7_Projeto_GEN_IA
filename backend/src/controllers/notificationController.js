@@ -1,4 +1,5 @@
 import { notificationService } from "../services/index.js";
+import { normalizeNotificationFields } from "../utils/fieldMapper.js";
 
 export const getNotifications = async (req, res) => {
   try {
@@ -48,17 +49,17 @@ export const getUnreadNotifications = async (req, res) => {
 
 export const createNotification = async (req, res) => {
   try {
-    const { user_id, userId, title, message } = req.body;
-    const userId_actual = user_id || userId;
+    const normalized = normalizeNotificationFields(req.body);
+    const { user_id, title, message } = normalized;
 
     if (!message || message.trim().length === 0)
       return res.status(400).json({ message: "A mensagem não pode ser vazia" });
-    if (!userId_actual)
+    if (!user_id)
       return res.status(400).json({ message: "user_id é obrigatório" });
 
     const notification = await notificationService.createNotification({
-      user_id: userId_actual,
-      title:   title || "Notification",
+      user_id,
+      title: title || "Notification",
       message,
     });
     res.status(201).json(notification);
@@ -69,19 +70,27 @@ export const createNotification = async (req, res) => {
 
 export const updateNotification = async (req, res) => {
   try {
-    const { message } = req.body;
+    const normalized = normalizeNotificationFields(req.body);
+    const { message } = normalized;
+    
     if (message !== undefined && message.trim().length === 0)
       return res.status(400).json({ message: "A mensagem não pode ser vazia" });
 
     const affectedRows = await notificationService.updateNotification(
       Number(req.params.id),
-      req.body,
+      normalized,
     );
     if (affectedRows === 0)
       return res.status(404).json({ message: "Notificação não encontrada" });
 
     res.json({ message: "Notificação atualizada com sucesso" });
   } catch (error) {
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(400).json({ message: "Erro ao atualizar notificação" });
   }
 };
@@ -97,6 +106,12 @@ export const deleteNotification = async (req, res) => {
 
     res.json({ message: "Notificação deletada com sucesso" });
   } catch (error) {
-    res.status(400).json({ message: "Erro ao deletar notificação" });
+    if (error.message.includes("não encontrada")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Erro ao deletar notificação" });
   }
 };

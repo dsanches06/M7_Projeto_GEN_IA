@@ -1,4 +1,48 @@
 
+  // ======================================================
+  // POLYMORPHISM
+  // ======================================================
+
+  mapValues(args = {}) {
+    return {
+      task_id: this.parseNumber(args.task_id ?? args.taskId, 0),
+      user_id: this.parseNumber(args.user_id ?? args.userId, 0),
+    };
+  }
+}
+
+// Singleton
+const assignTaskFunction = new AssignTaskFunction();
+
+export const setAssignTaskValuesFunctionDeclaration =
+  assignTaskFunction.getDeclaration();
+
+export const functionDeclarations = [setAssignTaskValuesFunctionDeclaration];
+
+export const setAssignTaskValues =
+  assignTaskFunction.execute.bind(assignTaskFunction);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export default function createSystemPrompt() {
   return `
 És o ClickBot, um assistente para gerir projetos no ClickUp via linguagem natural.

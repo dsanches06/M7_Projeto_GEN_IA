@@ -14,7 +14,7 @@ const GROQ_MODEL =
   process.env.GROQ_MODEL ||
   process.env.GROQ_MODEL_NAME ||
   process.env.GROQ_MODEL_DEFAULT ||
-  "gpt-4.1-mini";
+  "openai/gpt-oss-20b";
 
 if (!process.env.GROQ_API_KEY) {
   console.error("GROQ_API_KEY is not defined in environment variables.");
@@ -133,6 +133,84 @@ function buildGroqConfig(tools, extraConfig = {}) {
   };
 }
 
+const normalizeGroqText = (message) => {
+  if (!message) return "";
+  const { content } = message;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (part == null) return "";
+        if (typeof part === "string") return part;
+        if (typeof part === "object") return part.text ?? JSON.stringify(part);
+        return String(part);
+      })
+      .join("");
+  }
+  if (typeof content === "object" && content !== null) {
+    return content.text || JSON.stringify(content);
+  }
+
+  // Fallback for Groq tool-only responses
+  return String(message.text || message.reasoning || "");
+};
+
+const parseGroqFunctionArgs = (rawArgs) => {
+  if (rawArgs == null) return null;
+  if (typeof rawArgs === "object") return rawArgs;
+  if (typeof rawArgs === "string") {
+    try {
+      return JSON.parse(rawArgs);
+    } catch {
+      return rawArgs;
+    }
+  }
+  return rawArgs;
+};
+
+const extractGroqFunctionCalls = (response) => {
+  if (!response || typeof response !== "object") return [];
+
+  const candidates = [];
+  const choice = response?.choices?.[0] || {};
+  const message = choice.message || {};
+
+  if (message.tool) candidates.push(message.tool);
+  if (message.function_call) candidates.push(message.function_call);
+  if (message.tool_call) candidates.push(message.tool_call);
+  if (message.functionCall) candidates.push(message.functionCall);
+  if (Array.isArray(message.tools)) candidates.push(...message.tools);
+  if (Array.isArray(message.tool_calls)) candidates.push(...message.tool_calls);
+
+  if (Array.isArray(choice.tool_calls)) candidates.push(...choice.tool_calls);
+  if (Array.isArray(response.tool_calls)) candidates.push(...response.tool_calls);
+
+  return candidates
+    .filter((tool) => tool && typeof tool === "object")
+    .map((tool) => {
+      const functionSource = tool.function || tool;
+      return {
+        name: functionSource.name,
+        args: parseGroqFunctionArgs(
+          functionSource.arguments ?? functionSource.args,
+        ),
+        raw: tool,
+      };
+    })
+    .filter((tool) => tool.name);
+};
+
+const normalizeGroqResponse = (response) => {
+  const choice = response?.choices?.[0] || {};
+  const assistantMessage = choice.message || {};
+
+  return {
+    ...response,
+    text: normalizeGroqText(assistantMessage),
+    functionCalls: extractGroqFunctionCalls(assistantMessage),
+  };
+};
+
 // ── createGroqChat ─────────────────────────────────────────────────────────
 // Creates a stateful chat session (used by BaseChatProcessor agentic loop).
 export const createGroqChat = (tools, history = []) => {
@@ -149,12 +227,14 @@ export const createGroqChat = (tools, history = []) => {
 
         const normalizeParts = (parts) => {
           if (!Array.isArray(parts)) return String(parts);
-          return parts.map((part) => {
-            if (part == null) return "";
-            if (typeof part === "string") return part;
-            if (typeof part === "object") return part.text ?? JSON.stringify(part);
-            return String(part);
-          });
+          return parts
+            .map((part) => {
+              if (part == null) return "";
+              if (typeof part === "string") return part;
+              if (typeof part === "object") return part.text ?? JSON.stringify(part);
+              return String(part);
+            })
+            .join("");
         };
 
         if (typeof message === "string") {
@@ -197,13 +277,13 @@ export const createGroqChat = (tools, history = []) => {
           tools: normalizeGroqTools(tools),
         });
 
-        const assistantMessage = response.choices[0]?.message;
+        const normalized = normalizeGroqResponse(response);
         conversationHistory.push(normalizedMessage);
-        if (assistantMessage) {
-          conversationHistory.push(assistantMessage);
+        if (normalized?.choices?.[0]?.message) {
+          conversationHistory.push(normalized.choices[0].message);
         }
 
-        return response;
+        return normalized;
       },
       getHistory: () => conversationHistory,
     };
@@ -227,13 +307,15 @@ const generateAIContent = async (contents, options = {}) => {
       ...contents.map((content) => ({ role: "user", content })),
     ];
 
-    return await groq.chat.completions.create({
+    const response = await groq.chat.completions.create({
       model: GROQ_MODEL,
       messages,
       temperature,
       tools: normalizeGroqTools(tools),
       ...extraConfig,
     });
+
+    return normalizeGroqResponse(response);
   } catch (error) {
     const classified = classifyGroqError(error);
     console.error(`[Groq] ${classified.type}:`, error.message);
@@ -254,7 +336,7 @@ export const generateAIContentStream = async (contents, options = {}) => {
       ...contents.map((content) => ({ role: "user", content })),
     ];
 
-    return await groq.chat.completions.create({
+    const response = await groq.chat.completions.create({
       model: GROQ_MODEL,
       messages,
       temperature,
@@ -262,6 +344,8 @@ export const generateAIContentStream = async (contents, options = {}) => {
       stream: true,
       ...extraConfig,
     });
+
+    return normalizeGroqResponse(response);
   } catch (error) {
     const classified = classifyGroqError(error);
     console.error(`[Groq Stream] ${classified.type}:`, error.message);

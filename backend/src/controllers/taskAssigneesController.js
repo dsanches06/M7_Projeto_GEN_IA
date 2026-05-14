@@ -35,13 +35,24 @@ export const getTaskAssigneeByUserId = async (req, res) => {
 /* Função para criar responsável por tarefa */
 export const createTaskAssignee = async (req, res) => {
   try {
-    const { task_id, user_id } = req.body;
+    const task_id = req.body.task_id ?? req.body.taskId;
+    const user_id = req.body.user_id ?? req.body.userId;
     if (!task_id || !user_id) {
       return res.status(400).json({ error: "task_id e user_id são obrigatórios" });
     }
     const taskAssignee = await taskAssigneesService.createTaskAssignee(req.body);
     res.status(201).json(taskAssignee);
   } catch (error) {
+    // Captura erros específicos: tarefa/user não encontrado ou já atribuído
+    if (error.message.includes("não encontrada") || error.message.includes("não encontrado")) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes("já está atribuída")) {
+      return res.status(409).json({ error: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(400).json({ error: "Erro ao criar responsável por tarefa" });
   }
 };

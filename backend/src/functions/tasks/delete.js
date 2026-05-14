@@ -1,20 +1,29 @@
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
+/**
+ * Função que permite ao modelo eliminar uma tarefa existente.
+ * Usada quando o utilizador pede para apagar uma tarefa.
+ */
 class DeleteTaskFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_delete_task_values",
-      description:
-        "Elimina (apaga permanentemente) uma tarefa existente no ClickUp. " +
-        "Usa quando o utilizador pede para apagar, remover ou eliminar uma tarefa.",
-      properties: {
-        task_id: {
-          type: Type.INTEGER,
-          description: "ID numérico da tarefa a eliminar",
+      type: "function",
+      function: {
+        name: "set_delete_task_values",
+        description:
+          "Elimina (apaga permanentemente) uma tarefa existente no ClickUp. " +
+          "Usa quando o utilizador pede para apagar, remover ou eliminar uma tarefa.",
+        parameters: {
+          type: "object",
+          properties: {
+            task_id: {
+              type: "integer",
+              description: "ID numérico da tarefa a eliminar",
+            },
+          },
+          required: ["task_id"],
         },
       },
-      required: ["task_id"],
     });
   }
 

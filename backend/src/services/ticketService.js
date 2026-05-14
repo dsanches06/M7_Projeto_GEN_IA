@@ -1,14 +1,8 @@
 import { db } from "../db.js";
 import { mapTicketDTOResponse } from "../dto/mapDTO.js";
-import { getUserById } from "./userService.js";
 export const getAllTickets = async () => { const [r] = await db.query("SELECT * FROM tickets"); return r.map(mapTicketDTOResponse); };
 export const getTicketById = async (id) => { const [r] = await db.query("SELECT * FROM tickets WHERE id = ?", [id]); return r[0] ? mapTicketDTOResponse(r[0]) : null; };
 export const createTicket = async (data) => {
-  const userId = Number(data.user_id);
-  if (!userId) throw new Error("user_id inválido para ticket");
-  const user = await getUserById(userId);
-  if (!user) throw new Error(`Utilizador com ID ${userId} não existe.`);
-
   const [result] = await db.query(
     "INSERT INTO tickets (user_id, user_report, error_type, severity, fix_suggestion, status) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
     [data.user_id, data.user_report, data.error_type, data.severity, data.fix_suggestion, data.status || "open"]

@@ -105,28 +105,33 @@ export const getConversationSummary = async (req, res) => {
 };
 
 // ── Upsert task assignment ────────────────────────────────────────────────────
-const upsertAssignment = async (task_id, user_id) => {
-  const taskIdNum = Number(task_id);
-  const userIdNum = Number(user_id);
+const upsertAssignment = async (payload) => {
+  const taskIdNum = Number(payload.task_id ?? payload.taskId);
+  const userIdNum = Number(payload.user_id ?? payload.userId);
 
   if (!taskIdNum || !userIdNum)
-    throw new Error(`IDs inválidos: task_id=${task_id}, user_id=${user_id}`);
+    throw new Error(
+      `IDs inválidos: task_id=${payload.task_id ?? payload.taskId}, user_id=${payload.user_id ?? payload.userId}`,
+    );
 
   let assignment;
   try {
     assignment = await createTaskAssignee({
       task_id: taskIdNum,
       user_id: userIdNum,
+      notification_title: payload.notification_title ?? payload.notificationTitle,
+      notification_message:
+        payload.notification_message ?? payload.notificationMessage,
     });
   } catch (err) {
     if (err.message?.includes("já está atribuída")) {
-      // Replace existing assignment — use ? placeholder (works for MySQL + PostgreSQL)
-      await db.query("DELETE FROM task_assignees WHERE task_id = ?", [
-        taskIdNum,
-      ]);
+      await db.query("DELETE FROM task_assignees WHERE task_id = ?", [taskIdNum]);
       assignment = await createTaskAssignee({
         task_id: taskIdNum,
         user_id: userIdNum,
+        notification_title: payload.notification_title ?? payload.notificationTitle,
+        notification_message:
+          payload.notification_message ?? payload.notificationMessage,
       });
     } else {
       throw err;
@@ -138,6 +143,7 @@ const upsertAssignment = async (task_id, user_id) => {
       getUserById(userIdNum),
       getTaskById(taskIdNum),
     ]);
+
     return {
       ...assignment,
       user_name: user?.name || `Utilizador #${userIdNum}`,
@@ -174,6 +180,12 @@ const persistFunctionResult = async (functionResult) => {
   try {
     // ── Tasks ────────────────────────────────────────────────────────────────
     if (functionName === "set_create_task_values") {
+      if (result.user_id != null) {
+        const userIdNum = Number(result.user_id);
+        if (!userIdNum) throw new Error("user_id inválido para task");
+        const existingUser = await getUserById(userIdNum);
+        if (!existingUser) throw new Error(`Utilizador ${userIdNum} não encontrado.`);
+      }
       task = await createTask(result);
       if (result.user_id && task?.id) {
         try {
@@ -203,7 +215,8 @@ const persistFunctionResult = async (functionResult) => {
         title: taskBefore.title,
       };
     } else if (functionName === "set_assign_task_values") {
-      assignment = await upsertAssignment(result.task_id, result.user_id);
+      assignment = await upsertAssignment(result);
+      if (assignment?.notification) notification = assignment.notification;
     } else if (functionName === "set_patch_status_task_values") {
       const taskIdNum = Number(result.task_id);
       const statusIdNum = Number(result.status_id);
@@ -250,6 +263,10 @@ const persistFunctionResult = async (functionResult) => {
 
       // ── Tickets ───────────────────────────────────────────────────────────────
     } else if (functionName === "set_create_ticket_values") {
+      const userIdNum = Number(result.user_id);
+      if (!userIdNum) throw new Error("user_id inválido para ticket");
+      const existingUser = await getUserById(userIdNum);
+      if (!existingUser) throw new Error(`Utilizador ${userIdNum} não encontrado.`);
       ticket = await createTicket(result);
     } else if (functionName === "set_update_ticket_values") {
       const { ticket_id, ...updateFields } = result;
@@ -514,6 +531,15 @@ export const sendMessageToBotStream = async (req, res) => {
           finalText = `✓ Tarefa #${persisted.assignment.task_id} atribuída a ${persisted.assignment.user_name}.`;
         }
 
+        if (hasAssignedTask && persisted.notification?.message) {
+          const notificationText = persisted.notification.message;
+          if (!finalText.includes(notificationText)) {
+            finalText = finalText
+              ? `${finalText}\n${notificationText}`
+              : notificationText;
+          }
+        }
+
         return finalText || assistantText;
       };
 
@@ -666,6 +692,15 @@ export const sendMessageToConversation = async (req, res) => {
 
       if (!finalText && hasAssignedTask) {
         finalText = `✓ Tarefa #${persistedData.assignment.task_id} atribuída a ${persistedData.assignment.user_name}.`;
+      }
+
+      if (hasAssignedTask && persistedData.notification?.message) {
+        const notificationText = persistedData.notification.message;
+        if (!finalText.includes(notificationText)) {
+          finalText = finalText
+            ? `${finalText}\n${notificationText}`
+            : notificationText;
+        }
       }
 
       return finalText || text;

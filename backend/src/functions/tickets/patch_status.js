@@ -1,29 +1,38 @@
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
+/**
+ * Função que permite ao modelo alterar o status de um ticket.
+ * Usada quando o utilizador pede para mover ou alterar o estado de um ticket.
+ */
 class PatchStatusTicketFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_patch_status_ticket_values",
-      description:
-        "Altera o estado/status de um ticket existente no ClickUp. " +
-        "Usa quando o utilizador pede para mudar, atualizar ou fechar um ticket.",
-      properties: {
-        ticket_id: {
-          type: Type.INTEGER,
-          description: "ID numérico do ticket",
-        },
-        status: {
-          type: Type.STRING,
-          description:
-            "Novo estado do ticket: " +
-            "'open' (aberto), " +
-            "'in_progress' (em progresso), " +
-            "'resolved' (resolvido), " +
-            "'closed' (fechado)",
+      type: "function",
+      function: {
+        name: "set_patch_status_ticket_values",
+        description:
+          "Altera o estado/status de um ticket existente no ClickUp. " +
+          "Usa quando o utilizador pede para mudar, atualizar ou fechar um ticket.",
+        parameters: {
+          type: "object",
+          properties: {
+            ticket_id: {
+              type: "integer",
+              description: "ID numérico do ticket",
+            },
+            status: {
+              type: "string",
+              description:
+                "Novo estado do ticket: " +
+                "'open' (aberto), " +
+                "'in_progress' (em progresso), " +
+                "'resolved' (resolvido), " +
+                "'closed' (fechado)",
+            },
+          },
+          required: ["ticket_id", "status"],
         },
       },
-      required: ["ticket_id", "status"],
     });
   }
 
@@ -39,10 +48,11 @@ class PatchStatusTicketFunction extends BaseFunction {
       open:         "open",
       in_progress:  "in_progress",
     };
-    const rawStatus = (args.status || "open").toLowerCase().trim();
+    const rawStatus =
+      (args.status || args.ticketStatus || "open").toString().toLowerCase().trim();
     return {
       ticket_id: this.parseNumber(args.ticket_id ?? args.ticketId, 0),
-      status:    STATUS_MAP[rawStatus] || rawStatus,
+      status: STATUS_MAP[rawStatus] || rawStatus,
     };
   }
 }

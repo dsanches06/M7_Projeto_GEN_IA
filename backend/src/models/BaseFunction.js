@@ -2,10 +2,8 @@
 // FILE: base_function.js
 // ======================================================
 
-import { Type } from "@google/genai";
-
 /**
- * Classe Base para Functions do AI Provider
+ * Classe Base para Functions do AI Provider (Groq, OpenAI, etc)
  * Reutilizável para:
  * - tasks
  * - notifications
@@ -15,11 +13,24 @@ import { Type } from "@google/genai";
  * - etc
  */
 export class BaseFunction {
-  constructor({ functionName, description, properties = {}, required = [] }) {
-    this.functionName = functionName;
-    this.description = description;
-    this.properties = properties;
-    this.required = required;
+  constructor(config = {}) {
+    // Suporta tanto o padrão antigo (functionName, description, properties, required)
+    // quanto o novo padrão (type, function)
+    
+    if (config.type === "function" && config.function) {
+      // Novo padrão (Groq, OpenAI)
+      this.config = config;
+      this.functionName = config.function.name;
+      this.description = config.function.description;
+      this.properties = config.function.parameters?.properties || {};
+      this.required = config.function.parameters?.required || [];
+    } else {
+      // Padrão antigo (compatibilidade)
+      this.functionName = config.functionName;
+      this.description = config.description;
+      this.properties = config.properties || {};
+      this.required = config.required || [];
+    }
   }
 
   // ======================================================
@@ -27,12 +38,18 @@ export class BaseFunction {
   // ======================================================
 
   getDeclaration() {
+    // Se foi configurado com o novo padrão, retorna a estrutura completa
+    if (this.config?.type === "function") {
+      return this.config;
+    }
+
+    // Padrão antigo (compatibilidade com Google GenAI)
     return {
       name: this.functionName,
       description: this.description,
 
       parameters: {
-        type: Type.OBJECT,
+        type: "object",
 
         properties: this.properties,
 

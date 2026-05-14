@@ -2,7 +2,6 @@
 // FILE: tag_task.js
 // ======================================================
 
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
 /**
@@ -12,27 +11,30 @@ import { BaseFunction } from "../../models/BaseFunction.js";
 class TagTaskFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_tag_task_values",
-
-      description:
-        "Adiciona uma ou mais etiquetas (tags) a uma tarefa existente no ClickUp. " +
-        "Usa quando o utilizador pede para marcar, etiquetar ou adicionar tags a uma tarefa.",
-
-      properties: {
-        task_id: {
-          type: Type.INTEGER,
-          description: "ID numérico da tarefa",
-        },
-        tag_ids: {
-          type: Type.ARRAY,
-          items: { type: Type.INTEGER },
-          description:
-            "Lista de IDs das etiquetas a adicionar. " +
-            "Ex: [1, 4] para Urgente + Bug.",
+      type: "function",
+      function: {
+        name: "set_tag_task_values",
+        description:
+          "Adiciona uma ou mais etiquetas (tags) a uma tarefa existente no ClickUp. " +
+          "Usa quando o utilizador pede para marcar, etiquetar ou adicionar tags a uma tarefa.",
+        parameters: {
+          type: "object",
+          properties: {
+            task_id: {
+              type: "integer",
+              description: "ID numérico da tarefa",
+            },
+            tag_ids: {
+              type: "array",
+              items: { type: "integer" },
+              description:
+                "Lista de IDs das etiquetas a adicionar. " +
+                "Ex: [1, 4] para Urgente + Bug.",
+            },
+          },
+          required: ["task_id", "tag_ids"],
         },
       },
-
-      required: ["task_id", "tag_ids"],
     });
   }
 

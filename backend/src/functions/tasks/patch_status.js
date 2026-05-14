@@ -1,27 +1,36 @@
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
+/**
+ * Função que permite ao modelo alterar o status de uma tarefa.
+ * Usada quando o utilizador pede para mover ou alterar o estado de uma tarefa.
+ */
 class PatchStatusTaskFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_patch_status_task_values",
-      description:
-        "Atualiza o status/estado de uma tarefa existente no ClickUp. " +
-        "Usa quando o utilizador pede para mover, alterar, mudar ou atualizar " +
-        "o estado de uma tarefa existente.",
-      properties: {
-        task_id: {
-          type: Type.INTEGER,
-          description: "ID numérico da tarefa a atualizar",
-        },
-        status_id: {
-          type: Type.INTEGER,
-          description:
-            "ID do novo status: 1=CREATED, 2=ASSIGNED, 3=IN_PROGRESS, " +
-            "4=BLOCKED, 5=COMPLETED, 6=ARCHIVED",
+      type: "function",
+      function: {
+        name: "set_patch_status_task_values",
+        description:
+          "Atualiza o status/estado de uma tarefa existente no ClickUp. " +
+          "Usa quando o utilizador pede para mover, alterar, mudar ou atualizar " +
+          "o estado de uma tarefa existente.",
+        parameters: {
+          type: "object",
+          properties: {
+            task_id: {
+              type: "integer",
+              description: "ID numérico da tarefa a atualizar",
+            },
+            status_id: {
+              type: "integer",
+              description:
+                "ID do novo status: 1=CREATED, 2=ASSIGNED, 3=IN_PROGRESS, " +
+                "4=BLOCKED, 5=COMPLETED, 6=ARCHIVED",
+            },
+          },
+          required: ["task_id", "status_id"],
         },
       },
-      required: ["task_id", "status_id"],
     });
   }
 

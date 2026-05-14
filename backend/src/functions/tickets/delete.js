@@ -1,20 +1,29 @@
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
+/**
+ * Função que permite ao modelo eliminar um ticket existente.
+ * Usada quando o utilizador pede para apagar um ticket.
+ */
 class DeleteTicketFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_delete_ticket_values",
-      description:
-        "Elimina (apaga permanentemente) um ticket existente no ClickUp. " +
-        "Usa quando o utilizador pede para apagar, remover ou eliminar um ticket.",
-      properties: {
-        ticket_id: {
-          type: Type.INTEGER,
-          description: "ID numérico do ticket a eliminar",
+      type: "function",
+      function: {
+        name: "set_delete_ticket_values",
+        description:
+          "Elimina (apaga permanentemente) um ticket existente no ClickUp. " +
+          "Usa quando o utilizador pede para apagar, remover ou eliminar um ticket.",
+        parameters: {
+          type: "object",
+          properties: {
+            ticket_id: {
+              type: "integer",
+              description: "ID numérico do ticket a eliminar",
+            },
+          },
+          required: ["ticket_id"],
         },
       },
-      required: ["ticket_id"],
     });
   }
 

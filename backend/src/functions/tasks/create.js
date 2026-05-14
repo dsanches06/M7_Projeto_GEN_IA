@@ -2,60 +2,67 @@
 // FILE: create_task.js
 // ======================================================
 
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
+/**
+ * Função que permite ao modelo criar uma tarefa no ClickUp.
+ * Usada quando o utilizador pede para criar uma nova tarefa.
+ */
 class CreateTaskFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_create_task_values",
-
-      description: "Define os valores para criar uma tarefa no ClickUp",
-
-      properties: {
-        title: {
-          type: Type.STRING,
-          description: "Título curto e objetivo da tarefa (não a descrição completa)",
-        },
-        description: {
-          type: Type.STRING,
-          description: "Descrição completa e contextualizada da tarefa, elaborada a partir do pedido do utilizador",
-        },
-        status_id: {
-          type: Type.INTEGER,
-          description: "ID do status da tarefa",
-        },
-        priority_id: {
-          type: Type.INTEGER,
-          description: "ID da prioridade",
-        },
-        created_at: {
-          type: Type.STRING,
-          format: "date-time",
-          description: "Data de criação",
-        },
-        due_date: {
-          type: Type.STRING,
-          format: "date-time",
-          description: "Data limite",
-        },
-        completed_at: {
-          type: Type.STRING,
-          format: "date-time",
-          description: "Data de conclusão",
-        },
-        estimated_hours: {
-          type: Type.NUMBER,
-          format: "decimal",
-          description: "Horas estimadas",
-        },
-        // ── Atribuição opcional ─────────────────────────────────────────
-        user_id: {
-          type: Type.INTEGER,
-          description:
-            "ID do utilizador a quem atribuir a tarefa imediatamente após a criação. " +
-            "Use este campo sempre que o utilizador pede criar e atribuir no mesmo pedido. " +
-            "Não use set_assign_task_values em paralelo se já estiver presente.",
+      type: "function",
+      function: {
+        name: "set_create_task_values",
+        description: "Cria uma nova tarefa no ClickUp com os valores fornecidos",
+        parameters: {
+          type: "object",
+          properties: {
+            title: {
+              type: "string",
+              description: "Título curto e objetivo da tarefa (não a descrição completa)",
+            },
+            description: {
+              type: "string",
+              description: "Descrição completa e contextualizada da tarefa, elaborada a partir do pedido do utilizador",
+            },
+            status_id: {
+              type: "integer",
+              description: "ID do status da tarefa",
+            },
+            priority_id: {
+              type: "integer",
+              description: "ID da prioridade",
+            },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              description: "Data de criação",
+            },
+            due_date: {
+              type: "string",
+              format: "date-time",
+              description: "Data limite",
+            },
+            completed_at: {
+              type: "string",
+              format: "date-time",
+              description: "Data de conclusão",
+            },
+            estimated_hours: {
+              type: "number",
+              format: "decimal",
+              description: "Horas estimadas",
+            },
+            user_id: {
+              type: "integer",
+              description:
+                "ID do utilizador a quem atribuir a tarefa imediatamente após a criação. " +
+                "Use este campo sempre que o utilizador pede criar e atribuir no mesmo pedido. " +
+                "Não use set_assign_task_values em paralelo se já estiver presente.",
+            },
+          },
+          required: ["title", "description"],
         },
       },
     });

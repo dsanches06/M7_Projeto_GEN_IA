@@ -1,36 +1,45 @@
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
+/**
+ * Função que permite ao modelo atualizar um ticket existente.
+ * Usada quando o utilizador pede para editar um ticket.
+ */
 class UpdateTicketFunction extends BaseFunction {
   constructor() {
     super({
-      functionName: "set_update_ticket_values",
-      description:
-        "Atualiza campos de um ticket existente no ClickUp. " +
-        "Usa quando o utilizador quer editar a descrição, tipo de erro, severidade ou sugestão de correção de um ticket.",
-      properties: {
-        ticket_id: {
-          type: Type.INTEGER,
-          description: "ID numérico do ticket a atualizar (obrigatório)",
-        },
-        user_report: {
-          type: Type.STRING,
-          description: "Novo relato do utilizador",
-        },
-        error_type: {
-          type: Type.STRING,
-          description: "Novo tipo de erro (API, Database, UI, etc.)",
-        },
-        severity: {
-          type: Type.INTEGER,
-          description: "Nova severidade (1-10)",
-        },
-        fix_suggestion: {
-          type: Type.STRING,
-          description: "Nova sugestão de correção",
+      type: "function",
+      function: {
+        name: "set_update_ticket_values",
+        description:
+          "Atualiza campos de um ticket existente no ClickUp. " +
+          "Usa quando o utilizador quer editar a descrição, tipo de erro, severidade ou sugestão de correção de um ticket.",
+        parameters: {
+          type: "object",
+          properties: {
+            ticket_id: {
+              type: "integer",
+              description: "ID numérico do ticket a atualizar (obrigatório)",
+            },
+            user_report: {
+              type: "string",
+              description: "Novo relato do utilizador",
+            },
+            error_type: {
+              type: "string",
+              description: "Novo tipo de erro (API, Database, UI, etc.)",
+            },
+            severity: {
+              type: "integer",
+              description: "Nova severidade (1-10)",
+            },
+            fix_suggestion: {
+              type: "string",
+              description: "Nova sugestão de correção",
+            },
+          },
+          required: ["ticket_id"],
         },
       },
-      required: ["ticket_id"],
     });
   }
 
@@ -38,10 +47,16 @@ class UpdateTicketFunction extends BaseFunction {
     const result = {
       ticket_id: this.parseNumber(args.ticket_id ?? args.ticketId, 0),
     };
-    if (args.user_report    !== undefined) result.user_report    = this.parseString(args.user_report);
-    if (args.error_type     !== undefined) result.error_type     = this.parseString(args.error_type);
-    if (args.severity       !== undefined) result.severity       = this.parseNumber(args.severity, 5);
-    if (args.fix_suggestion !== undefined) result.fix_suggestion = this.parseString(args.fix_suggestion);
+    if (args.user_report !== undefined || args.userReport !== undefined)
+      result.user_report = this.parseString(args.user_report ?? args.userReport);
+    if (args.error_type !== undefined || args.errorType !== undefined)
+      result.error_type = this.parseString(args.error_type ?? args.errorType);
+    if (args.severity !== undefined)
+      result.severity = this.parseNumber(args.severity, 5);
+    if (args.fix_suggestion !== undefined || args.fixSuggestion !== undefined)
+      result.fix_suggestion = this.parseString(
+        args.fix_suggestion ?? args.fixSuggestion,
+      );
     return result;
   }
 }

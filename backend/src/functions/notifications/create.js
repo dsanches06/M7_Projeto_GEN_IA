@@ -3,49 +3,45 @@
 // FILE: create_notification.js
 // ======================================================
 
-import { Type } from "@google/genai";
 import { BaseFunction } from "../../models/BaseFunction.js";
 
-// Define a função em que o modelo pode chamar para controlar as notificações
+/**
+ * Função que permite ao modelo criar notificações.
+ * Usada quando precisa notificar um utilizador.
+ */
 class CreateNotificationFunction extends BaseFunction {
   constructor() {
     super({
-      functionName:
-        "set_create_notification_values",
-
-      description:
-        "Define os valores para criar uma notificação no ClickUp",
-
-      properties: {
-        user_id: {
-          type: Type.INTEGER,
-          description:
-            "ID do utilizador",
-        },
-
-        title: {
-          type: Type.STRING,
-          description:
-            "Título da notificação",
-        },
-
-        message: {
-          type: Type.STRING,
-          description:
-            "Mensagem da notificação",
-        },
-
-        is_read: {
-          type: Type.STRING,
-          description:
-            "Se foi lida",
-        },
-
-        sent_at: {
-          type: Type.STRING,
-          format: "date-time",
-          description:
-            "Data de envio",
+      type: "function",
+      function: {
+        name: "set_create_notification_values",
+        description: "Cria uma nova notificação no ClickUp",
+        parameters: {
+          type: "object",
+          properties: {
+            user_id: {
+              type: "integer",
+              description: "ID do utilizador",
+            },
+            title: {
+              type: "string",
+              description: "Título da notificação",
+            },
+            message: {
+              type: "string",
+              description: "Mensagem da notificação",
+            },
+            is_read: {
+              type: "boolean",
+              description: "Se foi lida",
+            },
+            sent_at: {
+              type: "string",
+              format: "date-time",
+              description: "Data de envio",
+            },
+          },
+          required: ["user_id", "title", "message"],
         },
       },
     });

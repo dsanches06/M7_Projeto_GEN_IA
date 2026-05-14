@@ -1,4 +1,5 @@
-import { ticketService, taskService } from "../services/index.js";
+import { ticketService, taskService, userService } from "../services/index.js";
+import { normalizeTicketFields } from "../utils/fieldMapper.js";
 
 export const getTickets = async (req, res) => {
   try {
@@ -21,23 +22,41 @@ export const getTicketById = async (req, res) => {
 
 export const createTicket = async (req, res) => {
   try {
-    const { user_report, error_type } = req.body;
-    if (!user_report || !error_type)
+    const normalized = normalizeTicketFields(req.body);
+    const { user_id, user_report, error_type } = normalized;
+    if (!user_id || !user_report || !error_type)
       return res.status(400).json({ message: "Campos obrigatórios em falta" });
 
-    const ticket = await ticketService.createTicket(req.body);
+    const user = await userService.getUserById(user_id);
+    if (!user)
+      return res.status(404).json({ message: `Utilizador ${user_id} não encontrado.` });
+
+    const ticket = await ticketService.createTicket(normalized);
     res.status(201).json(ticket);
   } catch (error) {
+    if (error.message.includes("não encontrado")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(400).json({ message: "Erro ao criar tiquete" });
   }
 };
 
 export const updateTicket = async (req, res) => {
   try {
-    const ticket = await ticketService.updateTicket(Number(req.params.id), req.body);
+    const normalized = normalizeTicketFields(req.body);
+    const ticket = await ticketService.updateTicket(Number(req.params.id), normalized);
     if (!ticket) return res.status(404).json({ message: "Tiquete não encontrado" });
     res.status(200).json({ message: "Atualizado com sucesso" });
   } catch (error) {
+    if (error.message.includes("não encontrado")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(400).json({ message: "Erro ao atualizar tiquete" });
   }
 };
@@ -49,6 +68,12 @@ export const deleteTicket = async (req, res) => {
     await taskService.removeTicketFromAllTasks(id);
     res.status(200).json({ message: "Tiquete deletado com sucesso" });
   } catch (error) {
-    res.status(404).json({ message: "Erro ao deletar tiquete" });
+    if (error.message.includes("não encontrado")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("inválido")) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Erro ao deletar tiquete" });
   }
 };
