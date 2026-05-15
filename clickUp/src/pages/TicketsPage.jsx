@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { getBackendUrl } from "@/services/BaseService.js";
 import { TicketCard } from "@/components/ticket/index.js";
 import { STATUS_CONFIG } from "@/utils/ticketUtils.js";
@@ -45,6 +46,7 @@ function IconDone() {
 }
 
 export default function TicketsPage({ refreshKey = 0 }) {
+  const location = useLocation();
   const [tickets,      setTickets]      = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
@@ -69,7 +71,8 @@ export default function TicketsPage({ refreshKey = 0 }) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load, refreshKey]);
+  // location.key muda a cada navigate (mesmo para o mesmo path), garantindo reload após ações do bot
+  useEffect(() => { load(); }, [load, refreshKey, location.key]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const total     = tickets.length;

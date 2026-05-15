@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { getBackendUrl } from "@/services/BaseService.js";
 import { STATUS_ID_TO_NAME } from "@/services/taskService.js";
 import TrophySpin from "@/components/ui/TrophySpin";
@@ -46,6 +47,7 @@ function StatCard({ label, value, icon, filter, currentFilter, onFilter, classNa
 }
 
 export default function UsersPage({ refreshKey = 0, openUserId = null, onUserViewing = () => {} }) {
+  const location = useLocation();
   const [users,              setUsers]               = useState([]);
   const [loading,            setLoading]             = useState(true);
   const [error,              setError]               = useState(null);
@@ -84,7 +86,8 @@ export default function UsersPage({ refreshKey = 0, openUserId = null, onUserVie
     }
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  // location.key muda a cada navigate (mesmo para o mesmo path), garantindo reload após ações do bot
+  useEffect(() => { loadUsers(); }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!openUserId || users.length === 0) return;
