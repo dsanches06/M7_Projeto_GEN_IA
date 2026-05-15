@@ -223,6 +223,51 @@ export function ChatUI({
             return;
           }
 
+          // ── Separate function results: errors vs successes ─────────────────
+          // A function result is an error if it has only a `message` field (no id/task_id)
+          const fnResults = done?.functionResults || [];
+          const fnErrors = fnResults.filter(
+            (r) => r.result?.message && !r.result?.id && !r.result?.task_id,
+          );
+          const fnSuccess = fnResults.filter(
+            (r) => !(r.result?.message && !r.result?.id && !r.result?.task_id),
+          );
+
+          // Strip "Falha ao executar functionName: " prefix that comes from the backend
+          const cleanMsg = (msg) =>
+            (msg || "").replace(/^Falha ao executar \S+:\s*/i, "").trim();
+
+          // Merge backend persistence errors + errors extracted from function results
+          const allErrors = [
+            ...(done?.persistenceErrors || []).map((e) => ({
+              ...e,
+              errorMessage: cleanMsg(e.errorMessage),
+            })),
+            ...fnErrors.map((r) => ({
+              functionName: r.functionName,
+              errorMessage: r.result.message,
+            })),
+          ];
+
+          // Suppress bot text when:
+          // - it's an "out of scope" reply while a ClickUp function was called
+          // - it duplicates what the error card will already say
+          // - it's a success message but there are errors (contradictory)
+          // - a preview card will already show the result (text is redundant)
+          const outOfScopeRe = /especialidade|apenas a gest[ão]/i;
+          const successTextRe = /eliminada|✅|criada|atribuída|atribuida|conclu[ií]da/i;
+          const botMsg = done?.message || "";
+          const hasPreviewCard = !!(
+            done?.taskDeleted || done?.task || done?.taskUpdated ||
+            done?.assignment || done?.tags || done?.ticket
+          );
+          const suppressText =
+            hasPreviewCard ||
+            (allErrors.length > 0 &&
+              (outOfScopeRe.test(botMsg) ||
+                successTextRe.test(botMsg) ||
+                allErrors.some((e) => botMsg.trim() === e.errorMessage.trim())));
+
           // ── Success ───────────────────────────────────────────────────
           if (done?.conversationId) {
             setConversationId(done.conversationId);
@@ -231,33 +276,36 @@ export function ChatUI({
               .then(setConversations)
               .catch(() => {});
           }
-          if (done?.message) {
+          const displayText = suppressText ? "" : done?.message;
+          if (displayText) {
             setMessages((p) =>
               p.map((m) =>
-                m.id === botMsgId ? { ...m, text: done.message } : m,
+                m.id === botMsgId ? { ...m, text: displayText } : m,
               ),
             );
             setConversationHistory((p) => [
               ...p,
-              { role: "assistant", content: done.message },
+              { role: "assistant", content: displayText },
             ]);
           }
 
-          // ── Handle persistence errors (partial failure) — shown as error card below bot text ─────────────────
-          if (done?.persistenceErrors?.length > 0) {
+          // ── Handle all persistence / function errors ───────────────────────
+          if (allErrors.length > 0) {
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId
-                  ? { ...m, persistenceErrors: done.persistenceErrors }
+                  ? { ...m, persistenceErrors: allErrors }
                   : m,
               ),
             );
           }
-          if (done?.functionResults?.length) {
+
+          // Only show function results when there are no errors and results exist
+          if (fnSuccess.length > 0 && allErrors.length === 0) {
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId
-                  ? { ...m, functionResults: done.functionResults }
+                  ? { ...m, functionResults: fnSuccess }
                   : m,
               ),
             );
@@ -495,7 +543,7 @@ export function ChatUI({
                             key={i}
                             className="text-xs px-3 py-2 rounded-xl border border-red-300 bg-red-50 text-red-700 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400"
                           >
-                            Acao falhou: {err.errorMessage}
+                            {err.errorMessage}
                           </div>
                         ))}
                       </div>
