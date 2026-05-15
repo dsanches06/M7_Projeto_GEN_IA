@@ -16,7 +16,7 @@ export function ChatBubbleUI({ message, sender }) {
       >
         <p className="text-sm whitespace-pre-wrap">{message.text}</p>
 
-        {message.functionResults?.length > 0 && !message.persistenceErrors?.length && (
+        {message.functionResults?.length > 0 && !message.persistenceErrors?.length && !message.text && (
           <div className="mt-3 bg-surface-2 border border-surface rounded-lg p-3 text-xs text-secondary">
             {message.functionResults.map((result, index) => (
               <div key={index} className="mb-3 last:mb-0">

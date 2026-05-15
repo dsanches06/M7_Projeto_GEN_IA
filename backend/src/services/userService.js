@@ -3,7 +3,7 @@ import { mapUserDTOResponse, mapUserStatsDTOResponse } from "../dto/mapDTO.js";
 
 export const getAllUsers = async (search, sort) => {
   let q = "SELECT * FROM users"; const p = [];
-  if (search) { q += " WHERE (name LIKE ? OR email LIKE ?)"; p.push(`%${search}%`, `%${search}%`); }
+  if (search) { q += " WHERE (name LIKE ? OR name LIKE ? OR email LIKE ?)"; p.push(`${search}%`, `% ${search}%`, `%${search}%`); }
   if (sort === "asc" || sort === "desc") q += ` ORDER BY name ${sort.toUpperCase()}`;
   const [r] = await db.query(q, p); return r.map(mapUserDTOResponse);
 };

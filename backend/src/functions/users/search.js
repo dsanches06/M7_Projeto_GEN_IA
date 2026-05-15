@@ -12,7 +12,7 @@ class SearchUserFunction extends BaseFunction {
       function: {
         name: "get_user_by_name",
         description:
-          "Busca utilizadores por nome (suporta busca parcial, ex: 'Ana' encontra 'Ana Silva')",
+          "Busca utilizadores por nome (ex: 'Ana' encontra 'Ana Silva' mas não 'Joana'; 'Jo' encontra 'Joana' e 'João')",
         parameters: {
           type: "object",
           properties: {

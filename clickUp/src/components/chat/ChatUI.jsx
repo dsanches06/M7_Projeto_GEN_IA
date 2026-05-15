@@ -276,13 +276,15 @@ export function ChatUI({
               .then(setConversations)
               .catch(() => {});
           }
-          const displayText = suppressText ? "" : done?.message;
+          const displayText = suppressText ? "" : (done?.message || "");
+          // Always overwrite the accumulated stream text with the final decision.
+          // This clears any internal reasoning that leaked through streaming chunks.
+          setMessages((p) =>
+            p.map((m) =>
+              m.id === botMsgId ? { ...m, text: displayText } : m,
+            ),
+          );
           if (displayText) {
-            setMessages((p) =>
-              p.map((m) =>
-                m.id === botMsgId ? { ...m, text: displayText } : m,
-              ),
-            );
             setConversationHistory((p) => [
               ...p,
               { role: "assistant", content: displayText },
