@@ -45,6 +45,47 @@ const buildConversationHistory = (historyRows) =>
     content: row.content,
   }));
 
+// Extract most recent task_id from assistant messages ("ID #N" or "Tarefa #N")
+const extractRecentTaskIdFromHistory = (history = []) => {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role !== "assistant") continue;
+    const match = history[i].content.match(/(?:Tarefa\s+criada\s+com\s+)?ID\s*#(\d+)/i);
+    if (match) return Number(match[1]);
+  }
+  return null;
+};
+
+// Extract most recent ticket_id from assistant messages ("Ticket #N criado")
+const extractRecentTicketIdFromHistory = (history = []) => {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role !== "assistant") continue;
+    const match = history[i].content.match(/[Tt]icket\s+#(\d+)/i);
+    if (match) return Number(match[1]);
+  }
+  return null;
+};
+
+// Inject contextual IDs into the user message so the model uses them directly.
+const injectTaskContext = (userMessage, history) => {
+  const refersToTask   = /\b(esta|essa|a mesma|nesta|nessa|a anterior)\s+tarefa\b/i.test(userMessage);
+  const refersToTicket = /\b(este|esse|o mesmo|neste|nesse|o anterior)\s+ticket\b/i.test(userMessage);
+  const hasCreateIntent = /\b(cria|criar|nova\s+tarefa|adiciona\s+uma?\s+tarefa)\b/i.test(userMessage);
+
+  let msg = userMessage;
+
+  if (refersToTask && !hasCreateIntent) {
+    const taskId = extractRecentTaskIdFromHistory(history);
+    if (taskId) msg = `[task_id desta conversa = ${taskId}]\n${msg}`;
+  }
+
+  if (refersToTicket) {
+    const ticketId = extractRecentTicketIdFromHistory(history);
+    if (ticketId) msg = `[ticket_id desta conversa = ${ticketId}]\n${msg}`;
+  }
+
+  return msg;
+};
+
 // ── Gera resumo da conversa e devolve como texto (sem gravar na DB) ───────────
 const autoGenerateSummary = async (conversationId) => {
   try {
@@ -507,7 +548,7 @@ export const sendMessageToBotStream = async (req, res) => {
 
     try {
       const result = await processChatMessageStream(
-        userMessage,
+        injectTaskContext(userMessage, resolvedHistory),
         resolvedHistory,
         (chunkText) => sendEvent("message", { text: chunkText }),
       );
@@ -540,6 +581,16 @@ export const sendMessageToBotStream = async (req, res) => {
             finalText = finalText
               ? `${finalText}\n${notificationText}`
               : notificationText;
+          }
+        }
+
+        // Inject ticket ID so it can be recovered from history for contextual references
+        if (persisted.ticket?.id && !persisted.ticket._type?.includes("deleted")) {
+          const ticketFrag = `Ticket #${persisted.ticket.id}`;
+          if (!finalText.includes(ticketFrag)) {
+            finalText = finalText
+              ? `${finalText}\n✓ ${ticketFrag} criado.`
+              : `✓ ${ticketFrag} criado.`;
           }
         }
 
@@ -662,7 +713,7 @@ export const sendMessageToConversation = async (req, res) => {
       content: userMessage,
     });
 
-    const result = await processChatMessage(userMessage, history);
+    const result = await processChatMessage(injectTaskContext(userMessage, history), history);
 
     if (result.providerError || result.success === false) {
       const errorMsg =
@@ -711,6 +762,15 @@ export const sendMessageToConversation = async (req, res) => {
           finalText = finalText
             ? `${finalText}\n${notificationText}`
             : notificationText;
+        }
+      }
+
+      if (persistedData.ticket?.id && !persistedData.ticket._type?.includes("deleted")) {
+        const ticketFrag = `Ticket #${persistedData.ticket.id}`;
+        if (!finalText.includes(ticketFrag)) {
+          finalText = finalText
+            ? `${finalText}\n✓ ${ticketFrag} criado.`
+            : `✓ ${ticketFrag} criado.`;
         }
       }
 

@@ -112,7 +112,21 @@ export class BaseChatProcessor {
       return this.extractTagIdsFromArgs(fc.args);
     });
 
-    if (hasCreateWithUserId) calls = calls.filter((fc) => fc.name !== "set_assign_task_values");
+    // If there's a set_assign_task_values with a valid task_id, the model is
+    // assigning an existing task — drop any spurious set_create_task_values call.
+    const hasAssignWithTaskId = calls.some((fc) => {
+      if (fc.name !== "set_assign_task_values") return false;
+      const rawArgs = fc.args || fc.arguments || {};
+      const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs;
+      return Number(args.task_id ?? args.taskId) > 0;
+    });
+
+    if (hasAssignWithTaskId) {
+      calls = calls.filter((fc) => fc.name !== "set_create_task_values");
+    } else {
+      if (hasCreateWithUserId) calls = calls.filter((fc) => fc.name !== "set_assign_task_values");
+    }
+
     if (hasCreateWithTagIds) calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
 
     // Prevent cross-contamination from stale context:
