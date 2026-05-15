@@ -71,6 +71,10 @@ export function ChatUI({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!loading) inputRef.current?.focus();
+  }, [loading]);
+
+  useEffect(() => {
     if (!isOpen) return;
     chatService
       .getConversations()
