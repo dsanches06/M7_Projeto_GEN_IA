@@ -17,6 +17,33 @@ export class BaseChatProcessor {
     return createGroqChat(tools, history);
   }
 
+  // Return a tool config that hides tag-related capabilities when not requested.
+  // This prevents the model from ever seeing tag options, which is more reliable
+  // than post-filtering executed calls.
+  getEffectiveToolConfig(userMessage = "") {
+    if (this.userRequestedTags(userMessage)) return this.toolConfig;
+
+    return this.toolConfig
+      .filter((tool) => {
+        const name = tool?.function?.name ?? tool?.name;
+        return name !== "set_tag_task_values";
+      })
+      .map((tool) => {
+        const name = tool?.function?.name ?? tool?.name;
+        if (name !== "set_create_task_values") return tool;
+
+        // Deep-clone and strip tag_ids from the parameter schema
+        const cloned = JSON.parse(JSON.stringify(tool));
+        const props = cloned?.function?.parameters?.properties;
+        if (props) delete props.tag_ids;
+        const req = cloned?.function?.parameters?.required;
+        if (Array.isArray(req)) {
+          cloned.function.parameters.required = req.filter((r) => r !== "tag_ids");
+        }
+        return cloned;
+      });
+  }
+
   // ── Construir histórico de chat a partir do formato de conversa ──────────────
   buildHistory(conversationHistory = []) {
     return conversationHistory.map((item) => ({
@@ -109,11 +136,29 @@ export class BaseChatProcessor {
     return !!error?.groqType;
   }
 
+  // Build tool-response parts: executed results + "cancelled" placeholder for blocked calls
+  buildToolParts(allCalls, execResults) {
+    const executedNames = new Set(execResults.map((r) => r.name));
+    const blocked = allCalls.filter((fc) => !executedNames.has(fc.name));
+
+    return [
+      ...execResults.map(({ name, result }) => ({
+        functionResponse: { name, response: result },
+      })),
+      ...blocked.map((fc) => ({
+        functionResponse: {
+          name: fc.name,
+          response: { cancelled: true, message: "Ação não permitida neste contexto." },
+        },
+      })),
+    ];
+  }
+
   // ── Loop agêntico (sem streaming) ────────────────────────────────────────────
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
       const history = this.buildHistory(conversationHistory);
-      const chat = await this.createChat(this.toolConfig, history);
+      const chat = await this.createChat(this.getEffectiveToolConfig(userMessage), history);
 
       let response = await chat.sendMessage(userMessage);
       const allResults = [];
@@ -121,24 +166,23 @@ export class BaseChatProcessor {
 
       while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
         step++;
-        const callsToExecute = this.filterFunctionCalls(response.functionCalls, userMessage);
+        const allCalls = response.functionCalls;
+        const callsToExecute = this.filterFunctionCalls(allCalls, userMessage);
         console.log(
           `[Agentic step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
         );
 
-        // Execute filtered function calls in parallel
+        // Execute only allowed function calls in parallel
         const execResults = await Promise.all(
           callsToExecute.map((fc) => this.executeFunction(fc)),
         );
         allResults.push(...execResults);
 
-        // Return ALL results to the model in one message
+        // Return results for ALL original calls (blocked ones get a "cancelled" placeholder)
         response = await chat.sendMessage({
           message: {
             role: "tool",
-            parts: execResults.map(({ name, result }) => ({
-              functionResponse: { name, response: result },
-            })),
+            parts: this.buildToolParts(allCalls, execResults),
           },
         });
       }
@@ -187,7 +231,7 @@ export class BaseChatProcessor {
     onChunk,
   ) {
     const history = this.buildHistory(conversationHistory);
-    const chat = await this.createChat(this.toolConfig, history);
+    const chat = await this.createChat(this.getEffectiveToolConfig(userMessage), history);
 
     let response;
     if (typeof chat.sendMessageStream === "function") {
@@ -202,7 +246,8 @@ export class BaseChatProcessor {
 
     while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
       step++;
-      const callsToExecute = this.filterFunctionCalls(response.functionCalls, userMessage);
+      const allCalls = response.functionCalls;
+      const callsToExecute = this.filterFunctionCalls(allCalls, userMessage);
       console.log(
         `[Agentic stream step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
       );
@@ -215,9 +260,7 @@ export class BaseChatProcessor {
       response = await chat.sendMessage({
         message: {
           role: "tool",
-          parts: execResults.map(({ name, result }) => ({
-            functionResponse: { name, response: result },
-          })),
+          parts: this.buildToolParts(allCalls, execResults),
         },
       });
 

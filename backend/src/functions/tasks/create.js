@@ -65,9 +65,9 @@ class CreateTaskFunction extends BaseFunction {
               type: ["array", "null"],
               items: { type: "integer" },
               description:
-                "Lista de IDs de tags a adicionar à tarefa imediatamente após a criação. " +
-                "Use este campo para evitar uma segunda chamada a set_tag_task_values. " +
-                "Exemplo: [1, 4] para Urgente e Bug.",
+                "Lista de IDs de tags a adicionar à tarefa imediatamente após user pedir. " +
+                "APENAS preenche este campo se o utilizador pediu explicitamente tags (ex: 'com tag Backend', 'adiciona etiqueta Urgente'). " +
+                "NUNCA inferes tags a partir do contexto da tarefa. Palavras como 'urgente' indicam prioridade, não tags.",
             },
           },
           required: ["title", "description"],
