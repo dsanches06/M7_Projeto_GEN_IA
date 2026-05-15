@@ -5,7 +5,6 @@ import { getBackendUrl } from "@/services/BaseService.js";
 const BACKEND_URL = getBackendUrl();
 
 const STATUS_CONFIG = [
-  { id: "CREATED", label: "CREATED", bg: "#FEFCE8", cardBorder: "#EAB308" },
   { id: "ASSIGNED", label: "ASSIGNED", bg: "#EFF6FF", cardBorder: "#3B82F6" },
   { id: "BLOCKED", label: "BLOCKED", bg: "#FFF1F2", cardBorder: "#EF4444" },
   {
@@ -15,16 +14,13 @@ const STATUS_CONFIG = [
     cardBorder: "#8B5CF6",
   },
   { id: "COMPLETED", label: "COMPLETED", bg: "#F0FDF4", cardBorder: "#22C55E" },
-  { id: "ARCHIVED", label: "ARCHIVED", bg: "#F9FAFB", cardBorder: "#9CA3AF" },
 ];
 
 const STATUS_ICON = {
-  CREATED: "📋",
   ASSIGNED: "👤",
   IN_PROGRESS: "🔄",
   BLOCKED: "🔴",
   COMPLETED: "✅",
-  ARCHIVED: "📦",
 };
 
 /* ── Kanban task card ── */
@@ -84,7 +80,6 @@ export default function UserDashboard({ user, onBack, refreshKey = 0 }) {
       setTasks(user.tasks);
     }
   }, [refreshKey, user?.tasks]);
-
 
   /* ── Stats ── */
   const statCards = [
@@ -351,7 +346,6 @@ export default function UserDashboard({ user, onBack, refreshKey = 0 }) {
           );
         })}
       </div>
-
     </div>
   );
 }

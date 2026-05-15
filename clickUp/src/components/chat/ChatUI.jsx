@@ -223,20 +223,6 @@ export function ChatUI({
             return;
           }
 
-          // ── Handle persistence errors (partial failure) ─────────────────
-          if (done?.persistenceErrors?.length > 0) {
-            setMessages((p) =>
-              p.map((m) =>
-                m.id === botMsgId
-                  ? {
-                      ...m,
-                      persistenceErrors: done.persistenceErrors,
-                    }
-                  : m,
-              ),
-            );
-          }
-
           // ── Success ───────────────────────────────────────────────────
           if (done?.conversationId) {
             setConversationId(done.conversationId);
@@ -255,6 +241,17 @@ export function ChatUI({
               ...p,
               { role: "assistant", content: done.message },
             ]);
+          }
+
+          // ── Handle persistence errors (partial failure) — shown as error card below bot text ─────────────────
+          if (done?.persistenceErrors?.length > 0) {
+            setMessages((p) =>
+              p.map((m) =>
+                m.id === botMsgId
+                  ? { ...m, persistenceErrors: done.persistenceErrors }
+                  : m,
+              ),
+            );
           }
           if (done?.functionResults?.length) {
             setMessages((p) =>
@@ -485,6 +482,22 @@ export function ChatUI({
                           message={msg.providerError.message}
                           onRetry={handleRetry}
                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Persistence errors — action failed (e.g. task/ticket not found) */}
+                  {msg.persistenceErrors?.length > 0 && (
+                    <div className="flex justify-start mt-1">
+                      <div className="max-w-[280px] w-full space-y-1">
+                        {msg.persistenceErrors.map((err, i) => (
+                          <div
+                            key={i}
+                            className="text-xs px-3 py-2 rounded-xl border border-red-300 bg-red-50 text-red-700 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400"
+                          >
+                            Acao falhou: {err.errorMessage}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
