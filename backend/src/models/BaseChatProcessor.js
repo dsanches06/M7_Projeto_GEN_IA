@@ -13,8 +13,8 @@ export class BaseChatProcessor {
     this.functionHandlers = functionHandlers;
   }
 
-  async createChat(tools, history) {
-    return createGroqChat(tools, history);
+  async createChat(tools, history, includeTagMap = false) {
+    return createGroqChat(tools, history, includeTagMap);
   }
 
   // Return a tool config that hides tag-related capabilities when not requested.
@@ -158,7 +158,7 @@ export class BaseChatProcessor {
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
       const history = this.buildHistory(conversationHistory);
-      const chat = await this.createChat(this.getEffectiveToolConfig(userMessage), history);
+      const chat = await this.createChat(this.getEffectiveToolConfig(userMessage), history, this.userRequestedTags(userMessage));
 
       let response = await chat.sendMessage(userMessage);
       const allResults = [];
@@ -231,7 +231,7 @@ export class BaseChatProcessor {
     onChunk,
   ) {
     const history = this.buildHistory(conversationHistory);
-    const chat = await this.createChat(this.getEffectiveToolConfig(userMessage), history);
+    const chat = await this.createChat(this.getEffectiveToolConfig(userMessage), history, this.userRequestedTags(userMessage));
 
     let response;
     if (typeof chat.sendMessageStream === "function") {

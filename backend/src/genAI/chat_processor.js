@@ -1,4 +1,5 @@
 import { BaseChatProcessor } from "../models/BaseChatProcessor.js";
+import { taskService } from "../services/index.js";
 
 import {
   ALL_FUNCTION_DECLARATIONS,
@@ -20,12 +21,20 @@ import {
   getUserByName,
 } from "../functions/index.js";
 
+// Wraps set_create_task_values so the model gets back the real DB task_id
+// in the same agentic step, enabling immediate set_tag_task_values calls.
+const createTaskAndPersist = async (args) => {
+  const mapped = await setCreateTaskValues(args);
+  const task = await taskService.createTask(mapped);
+  return { ...mapped, id: task.id, task_id: task.id };
+};
+
 class ChatProcessor extends BaseChatProcessor {
   constructor() {
     super({
       toolConfig: ALL_FUNCTION_DECLARATIONS,
       functionHandlers: {
-        set_create_task_values: setCreateTaskValues,
+        set_create_task_values: createTaskAndPersist,
         set_assign_task_values: setAssignTaskValues,
         set_tag_task_values: setTagTaskValues,
         set_patch_status_task_values: setPatchStatusTaskValues,

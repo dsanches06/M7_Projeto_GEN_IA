@@ -186,29 +186,17 @@ const persistFunctionResult = async (functionResult) => {
         const existingUser = await getUserById(userIdNum);
         if (!existingUser) throw new Error(`Utilizador ${userIdNum} não encontrado.`);
       }
-      task = await createTask(result);
+      // Task was already persisted in the agentic loop (createTaskAndPersist); just fetch it.
+      if (result.id) {
+        task = await getTaskById(result.id);
+      } else {
+        task = await createTask(result);
+      }
       if (result.user_id && task?.id) {
         try {
           assignment = await upsertAssignment({ task_id: task.id, user_id: result.user_id });
         } catch (e) {
           console.warn("[persist] Auto-assign failed:", e.message);
-        }
-      }
-      if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0 && task?.id) {
-        try {
-          const rawTags = await createTagTasks({ task_id: task.id, tag_ids: result.tag_ids });
-          const allTags = await getAllTags().catch(() => []);
-          const tagMap = Object.fromEntries(allTags.map((t) => [t.id, t]));
-          tags = {
-            task_id: task.id,
-            task_title: task.title,
-            added: (rawTags || []).map((rt) => {
-              const tag = tagMap[rt.tag_id] || {};
-              return { tag_id: rt.tag_id, tag_name: tag.name || `Tag #${rt.tag_id}`, tag_color: tag.color || "#6B7280" };
-            }),
-          };
-        } catch (e) {
-          console.warn("[persist] Auto-tag failed:", e.message);
         }
       }
     } else if (functionName === "set_update_task_values") {
@@ -411,13 +399,14 @@ const deduplicateFunctionResults = (functionResults = []) => {
 const persistAllFunctionResults = async (functionResults) => {
   const cleanResults = deduplicateFunctionResults(functionResults || []);
   const acc = {
+    tasks: [],
     persistenceErrors: [],
   };
 
   for (const functionResult of cleanResults) {
     try {
       const v = await persistFunctionResult(functionResult);
-      if (v.task) acc.task = v.task;
+      if (v.task) { acc.tasks.push(v.task); acc.task = v.task; }
       if (v.notification) acc.notification = v.notification;
       if (v.ticket) acc.ticket = v.ticket;
       if (v.assignment) acc.assignment = v.assignment;
@@ -425,7 +414,6 @@ const persistAllFunctionResults = async (functionResults) => {
       if (v.taskUpdated) acc.taskUpdated = v.taskUpdated;
       if (v.taskDeleted) acc.taskDeleted = v.taskDeleted;
     } catch (err) {
-      // Capture individual persistence errors
       acc.persistenceErrors.push({
         functionName: functionResult.functionName,
         errorMessage: err.message,
@@ -528,19 +516,17 @@ export const sendMessageToBotStream = async (req, res) => {
 
       const enrichAssistantText = (text, persisted) => {
         const base = (text || "").trim();
-        const hasCreatedTask = persisted.task && persisted.task.id;
-        const hasAssignedTask =
-          persisted.assignment && persisted.assignment.task_id;
+        const createdTasks = persisted.tasks?.length ? persisted.tasks : (persisted.task ? [persisted.task] : []);
+        const hasAssignedTask = persisted.assignment && persisted.assignment.task_id;
 
         let finalText = base;
 
-        if (hasCreatedTask) {
-          const idFragment = `ID #${persisted.task.id}`;
+        for (const t of createdTasks) {
+          const idFragment = `ID #${t.id}`;
           if (!finalText.includes(idFragment)) {
-            const suffix = finalText
-              ? `\n✓ Tarefa criada com ${idFragment}.`
+            finalText = finalText
+              ? `${finalText}\n✓ Tarefa criada com ${idFragment}.`
               : `✓ Tarefa criada com ${idFragment}.`;
-            finalText = `${finalText}${suffix}`.trim();
           }
         }
 
@@ -561,8 +547,13 @@ export const sendMessageToBotStream = async (req, res) => {
       };
 
       let persisted = {};
-      if (result.functionResults?.length)
-        persisted = await persistAllFunctionResults(result.functionResults);
+      if (result.functionResults?.length) {
+        const tagsExplicitlyRequested = /\b(tag|tags|etiqueta|etiquetas|label|labels)\b/i.test(userMessage);
+        const resultsToProcess = tagsExplicitlyRequested
+          ? result.functionResults
+          : result.functionResults.filter((fr) => fr.functionName !== "set_tag_task_values");
+        persisted = await persistAllFunctionResults(resultsToProcess);
+      }
 
       const finalAssistantText = enrichAssistantText(assistantText, persisted);
 
@@ -686,24 +677,27 @@ export const sendMessageToConversation = async (req, res) => {
     }
 
     let persisted = {};
-    if (result.functionResults?.length)
-      persisted = await persistAllFunctionResults(result.functionResults);
+    if (result.functionResults?.length) {
+      const tagsExplicitlyRequested = /\b(tag|tags|etiqueta|etiquetas|label|labels)\b/i.test(userMessage);
+      const resultsToProcess = tagsExplicitlyRequested
+        ? result.functionResults
+        : result.functionResults.filter((fr) => fr.functionName !== "set_tag_task_values");
+      persisted = await persistAllFunctionResults(resultsToProcess);
+    }
 
     const enrichAssistantText = (text, persistedData) => {
       const base = (text || "").trim();
-      const hasCreatedTask = persistedData.task && persistedData.task.id;
-      const hasAssignedTask =
-        persistedData.assignment && persistedData.assignment.task_id;
+      const createdTasks = persistedData.tasks?.length ? persistedData.tasks : (persistedData.task ? [persistedData.task] : []);
+      const hasAssignedTask = persistedData.assignment && persistedData.assignment.task_id;
 
       let finalText = base;
 
-      if (hasCreatedTask) {
-        const idFragment = `ID #${persistedData.task.id}`;
+      for (const t of createdTasks) {
+        const idFragment = `ID #${t.id}`;
         if (!finalText.includes(idFragment)) {
-          const suffix = finalText
-            ? `\n✓ Tarefa criada com ${idFragment}.`
+          finalText = finalText
+            ? `${finalText}\n✓ Tarefa criada com ${idFragment}.`
             : `✓ Tarefa criada com ${idFragment}.`;
-          finalText = `${finalText}${suffix}`.trim();
         }
       }
 

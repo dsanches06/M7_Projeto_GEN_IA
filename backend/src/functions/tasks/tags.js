@@ -15,8 +15,7 @@ class TagTaskFunction extends BaseFunction {
       function: {
         name: "set_tag_task_values",
         description:
-          "Adiciona uma ou mais etiquetas (tags) a uma tarefa existente no ClickUp. " +
-          "Usa quando o utilizador pede para marcar, etiquetar ou adicionar tags a uma tarefa.",
+          "Adiciona etiquetas a uma tarefa existente. Usa APENAS quando o utilizador pediu explicitamente tags/etiquetas.",
         parameters: {
           type: "object",
           properties: {
@@ -27,9 +26,7 @@ class TagTaskFunction extends BaseFunction {
             tag_ids: {
               type: "array",
               items: { type: "integer" },
-              description:
-                "Lista de IDs das etiquetas a adicionar. " +
-                "Ex: [1, 4] para Urgente + Bug.",
+              description: "Lista de IDs das etiquetas a adicionar (fornecidos pelo utilizador).",
             },
           },
           required: ["task_id", "tag_ids"],

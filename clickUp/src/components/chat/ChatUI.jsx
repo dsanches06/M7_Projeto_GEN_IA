@@ -170,7 +170,7 @@ export function ChatUI({
       sender: "bot",
       timestamp: new Date(),
       functionResults: [],
-      taskData: null,
+      tasksData: [],
       taskUpdatedData: null,
       taskDeletedData: null,
       assignmentData: null,
@@ -262,7 +262,7 @@ export function ChatUI({
           const successTextRe = /eliminada|✅|criada|atribuída|atribuida|conclu[ií]da/i;
           const botMsg = done?.message || "";
           const hasPreviewCard = !!(
-            done?.taskDeleted || done?.task || done?.taskUpdated ||
+            done?.taskDeleted || done?.tasks?.length || done?.task || done?.taskUpdated ||
             done?.assignment || done?.tags || done?.ticket
           );
           const suppressText =
@@ -318,11 +318,16 @@ export function ChatUI({
           }
 
           // ── Persist preview cards + callbacks ─────────────────────────
-          if (done?.task) {
-            if (onTaskCreated) onTaskCreated(done.task);
+          const createdTasks = done?.tasks?.length
+            ? done.tasks
+            : done?.task
+            ? [done.task]
+            : [];
+          if (createdTasks.length > 0) {
+            createdTasks.forEach((t) => { if (onTaskCreated) onTaskCreated(t); });
             setMessages((p) =>
               p.map((m) =>
-                m.id === botMsgId ? { ...m, taskData: done.task } : m,
+                m.id === botMsgId ? { ...m, tasksData: createdTasks } : m,
               ),
             );
           }
@@ -557,7 +562,7 @@ export function ChatUI({
                   )}
 
                   {/* Action preview cards */}
-                  {(msg.taskData ||
+                  {(msg.tasksData?.length > 0 ||
                     msg.taskUpdatedData ||
                     msg.taskDeletedData ||
                     msg.assignmentData ||
@@ -565,9 +570,9 @@ export function ChatUI({
                     msg.ticketData) && (
                     <div className="flex justify-start mt-2">
                       <div className="max-w-[280px] w-full space-y-2">
-                        {msg.taskData && (
-                          <TaskCreatedPreview task={msg.taskData} />
-                        )}
+                        {msg.tasksData?.map((task) => (
+                          <TaskCreatedPreview key={task.id} task={task} />
+                        ))}
                         {msg.taskUpdatedData && (
                           <TaskUpdatedPreview
                             taskUpdated={msg.taskUpdatedData}

@@ -213,11 +213,11 @@ const normalizeGroqResponse = (response) => {
 
 // ── createGroqChat ─────────────────────────────────────────────────────────
 // Creates a stateful chat session (used by BaseChatProcessor agentic loop).
-export const createGroqChat = (tools, history = []) => {
+export const createGroqChat = (tools, history = [], includeTagMap = false) => {
   try {
     // For Groq, we need to maintain conversation history manually
     const conversationHistory = [
-      { role: "system", content: createSystemPrompt() },
+      { role: "system", content: createSystemPrompt(includeTagMap) },
       ...history,
     ];
 
