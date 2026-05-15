@@ -311,7 +311,6 @@ export function ChatUI({
           }
           if (done?.tags) {
             if (onTaskTagged && done.tags?.task_id) onTaskTagged(done.tags.task_id);
-            if (onUserOrTagAction) onUserOrTagAction();
             setMessages((p) =>
               p.map((m) =>
                 m.id === botMsgId ? { ...m, tagData: done.tags } : m,

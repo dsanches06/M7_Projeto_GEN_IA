@@ -16,6 +16,8 @@ import {
   setDeleteTicketValues,
   setPatchStatusTicketValues,
   setUpdateTicketValues,
+  // Users
+  getUserByName,
 } from "../functions/index.js";
 
 class ChatProcessor extends BaseChatProcessor {
@@ -34,6 +36,7 @@ class ChatProcessor extends BaseChatProcessor {
         set_delete_ticket_values: setDeleteTicketValues,
         set_patch_status_ticket_values: setPatchStatusTicketValues,
         set_update_ticket_values: setUpdateTicketValues,
+        get_user_by_name: getUserByName,
       },
     });
   }

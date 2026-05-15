@@ -27,35 +27,35 @@ class CreateTaskFunction extends BaseFunction {
               description: "Descrição completa e contextualizada da tarefa, elaborada a partir do pedido do utilizador",
             },
             status_id: {
-              type: "integer",
+              type: ["integer", "null"],
               description: "ID do status da tarefa",
             },
             priority_id: {
-              type: "integer",
+              type: ["integer", "null"],
               description: "ID da prioridade",
             },
             created_at: {
-              type: "string",
+              type: ["string", "null"],
               format: "date-time",
               description: "Data de criação",
             },
             due_date: {
-              type: "string",
+              type: ["string", "null"],
               format: "date-time",
               description: "Data limite",
             },
             completed_at: {
-              type: "string",
+              type: ["string", "null"],
               format: "date-time",
               description: "Data de conclusão",
             },
             estimated_hours: {
-              type: "number",
+              type: ["number", "null"],
               format: "decimal",
               description: "Horas estimadas",
             },
             user_id: {
-              type: "integer",
+              type: ["integer", "null"],
               description:
                 "ID do utilizador a quem atribuir a tarefa imediatamente após a criação. " +
                 "Use este campo sempre que o utilizador pede criar e atribuir no mesmo pedido. " +

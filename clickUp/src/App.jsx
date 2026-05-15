@@ -19,6 +19,7 @@ function AppContent() {
   const [ticketRefreshKey,      setTicketRefreshKey]      = useState(0);
   const [viewingUserId,         setViewingUserId]         = useState(null);
   const [userDashRefreshKey,    setUserDashRefreshKey]    = useState(0);
+  const [openUserId,            setOpenUserId]            = useState(null);
 
   const loadTasks = async () => {
     try {
@@ -60,9 +61,21 @@ function AppContent() {
       prev.map((t) => (t.id === updatedTask.id ? { ...t, ...transformed } : t))
     );
 
+    const previousTask = tasks.find((t) => t.id === updatedTask.id);
+    const statusChanged =
+      previousTask &&
+      updatedTask.status_id != null &&
+      Number(updatedTask.status_id) !== Number(previousTask.status_id);
+
     const assignedTo = Number(
       updatedTask.assigned_to ?? updatedTask.user_id ?? updatedTask.assignee_id,
     );
+
+    if (statusChanged && assignedTo) {
+      setOpenUserId(assignedTo);
+      navigate("/utilizadores");
+      return;
+    }
 
     if (viewingUserId && assignedTo === viewingUserId) {
       setUserDashRefreshKey((prev) => prev + 1);
@@ -160,7 +173,7 @@ function AppContent() {
               path="projetos"
               element={<PageSection title="Projetos" description="Gerencie seus projetos e mantenha o trabalho organizado." />}
             />
-            <Route path="utilizadores" element={<UsersPage refreshKey={userDashRefreshKey} onUserViewing={setViewingUserId} />} />
+            <Route path="utilizadores" element={<UsersPage refreshKey={userDashRefreshKey} openUserId={openUserId} onUserViewing={setViewingUserId} />} />
             <Route path="tickets"      element={<TicketsPage refreshKey={ticketRefreshKey} />} />
             <Route
               path="*"

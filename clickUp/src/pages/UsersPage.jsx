@@ -45,7 +45,7 @@ function StatCard({ label, value, icon, filter, currentFilter, onFilter, classNa
   );
 }
 
-export default function UsersPage({ refreshKey = 0, onUserViewing = () => {} }) {
+export default function UsersPage({ refreshKey = 0, openUserId = null, onUserViewing = () => {} }) {
   const [users,              setUsers]               = useState([]);
   const [loading,            setLoading]             = useState(true);
   const [error,              setError]               = useState(null);
@@ -85,6 +85,14 @@ export default function UsersPage({ refreshKey = 0, onUserViewing = () => {} }) 
   };
 
   useEffect(() => { loadUsers(); }, []);
+
+  useEffect(() => {
+    if (!openUserId || users.length === 0) return;
+    const targetUser = users.find((u) => u.id === openUserId);
+    if (targetUser) {
+      setActiveDash(targetUser);
+    }
+  }, [openUserId, users]);
 
   // Refresh user dashboard tasks when viewing a user
   const refreshUserTasks = async (userId) => {

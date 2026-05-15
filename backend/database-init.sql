@@ -183,7 +183,8 @@ INSERT INTO tickets (user_id, user_report, error_type, severity, status) VALUES
 /* 8. Tags */
 INSERT INTO tags (id, name, color) VALUES
 (1, 'Urgente', 'Red'), (2, 'Backend', 'Green'), (3, 'Frontend', 'Blue'),
-(4, 'Bug', 'Orange'), (5, 'Revisão', 'Purple'), (6, 'Infra', 'Grey');
+(4, 'Bug', 'Orange'), (5, 'Revisão', 'Purple'), (6, 'Infra', 'Grey'), 
+(7, 'Segurança', 'Black');
 
 
 /*
