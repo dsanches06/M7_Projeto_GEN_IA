@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "init-db": "node backend/init-neon-db.js"
+    "init-db": "node backend/neon_database/init-neon-db.js"
   }
 }

@@ -5,6 +5,8 @@ import pkg from 'pg';
 import dotenv from 'dotenv';
 
 const { Pool } = pkg;
+// Load from backend/.env first (when running from project root), then fallback to cwd/.env
+dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), '..', '.env') });
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);

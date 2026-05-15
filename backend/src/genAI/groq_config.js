@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import Groq from "groq-sdk";
 import createSystemPrompt from "./createSystemPrompt.js";
 import dotenv from "dotenv";
+import { MODEL_QUEUE, chatWithFallback } from "../utils/groqUtils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +16,12 @@ const GROQ_MODEL =
   process.env.GROQ_MODEL_NAME ||
   process.env.GROQ_MODEL_DEFAULT ||
   "openai/gpt-oss-20b";
+
+// Coloca GROQ_MODEL como primeiro da fila e remove duplicatas
+const EFFECTIVE_MODEL_QUEUE = [
+  GROQ_MODEL,
+  ...MODEL_QUEUE.filter((m) => m !== GROQ_MODEL),
+];
 
 if (!process.env.GROQ_API_KEY) {
   console.error("GROQ_API_KEY is not defined in environment variables.");
@@ -262,12 +269,12 @@ export const createGroqChat = (tools, history = [], includeTagMap = false) => {
             }
 
             // Call Groq with tool results already in history (no extra user message)
-            const toolRespResult = await groq.chat.completions.create({
-              model: GROQ_MODEL,
-              messages: [...conversationHistory],
-              temperature: 0.25,
-              tools: normalizeGroqTools(tools),
-            });
+            const toolRespResult = await chatWithFallback(
+              groq,
+              [...conversationHistory],
+              { temperature: 0.25, tools: normalizeGroqTools(tools) },
+              EFFECTIVE_MODEL_QUEUE
+            );
 
             const toolRespNormalized = normalizeGroqResponse(toolRespResult);
             if (toolRespNormalized?.choices?.[0]?.message) {
@@ -325,12 +332,12 @@ export const createGroqChat = (tools, history = [], includeTagMap = false) => {
             normalizedMessage,
           ];
 
-          const response = await groq.chat.completions.create({
-            model: GROQ_MODEL,
+          const response = await chatWithFallback(
+            groq,
             messages,
-            temperature: 0.25,
-            tools: normalizeGroqTools(tools),
-          });
+            { temperature: 0.25, tools: normalizeGroqTools(tools) },
+            EFFECTIVE_MODEL_QUEUE
+          );
 
           const normalized = normalizeGroqResponse(response);
           conversationHistory.push(normalizedMessage);
@@ -370,13 +377,12 @@ const generateAIContent = async (contents, options = {}) => {
       ...contents.map((content) => ({ role: "user", content })),
     ];
 
-    const response = await groq.chat.completions.create({
-      model: GROQ_MODEL,
+    const response = await chatWithFallback(
+      groq,
       messages,
-      temperature,
-      tools: normalizeGroqTools(tools),
-      ...extraConfig,
-    });
+      { temperature, tools: normalizeGroqTools(tools), ...extraConfig },
+      EFFECTIVE_MODEL_QUEUE
+    );
 
     return normalizeGroqResponse(response);
   } catch (error) {
