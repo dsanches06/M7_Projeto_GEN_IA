@@ -49,20 +49,59 @@ export class BaseChatProcessor {
     return Array.isArray(args.tag_ids) && args.tag_ids.length > 0;
   }
 
-  filterFunctionCalls(functionCalls = []) {
-    const hasCreateWithUserId = functionCalls.some((fc) => {
+  // Tags are only allowed when the user explicitly mentioned them
+  userRequestedTags(userMessage = "") {
+    return /\b(tag|tags|etiqueta|etiquetas|label|labels)\b/i.test(userMessage);
+  }
+
+  filterFunctionCalls(functionCalls = [], userMessage = "") {
+    const tagsRequested = this.userRequestedTags(userMessage);
+
+    // Strip tag_ids from set_create_task_values when user did not ask for tags
+    let calls = functionCalls.map((fc) => {
+      if (fc.name === "set_create_task_values" && !tagsRequested) {
+        const rawArgs = fc.args || fc.arguments || {};
+        const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : { ...rawArgs };
+        if (args.tag_ids) {
+          delete args.tag_ids;
+          return { ...fc, args };
+        }
+      }
+      return fc;
+    });
+
+    // Remove set_tag_task_values entirely when user did not ask for tags
+    if (!tagsRequested) {
+      calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
+    }
+
+    const hasCreateWithUserId = calls.some((fc) => {
       if (fc.name !== "set_create_task_values") return false;
       return this.extractUserIdFromArgs(fc.args) != null;
     });
 
-    const hasCreateWithTagIds = functionCalls.some((fc) => {
+    const hasCreateWithTagIds = calls.some((fc) => {
       if (fc.name !== "set_create_task_values") return false;
       return this.extractTagIdsFromArgs(fc.args);
     });
 
-    let calls = functionCalls;
     if (hasCreateWithUserId) calls = calls.filter((fc) => fc.name !== "set_assign_task_values");
     if (hasCreateWithTagIds) calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
+
+    // Prevent cross-contamination from stale context:
+    // If creating a task, remove unrelated ticket mutation calls (and vice-versa).
+    // Both creations together are allowed (e.g. "cria tarefa e ticket").
+    const TICKET_MUTATIONS = ["set_delete_ticket_values", "set_update_ticket_values", "set_patch_status_ticket_values"];
+    const TASK_MUTATIONS   = ["set_delete_task_values",   "set_update_task_values",   "set_patch_status_task_values"];
+
+    const isCreatingTask   = calls.some((fc) => fc.name === "set_create_task_values");
+    const isCreatingTicket = calls.some((fc) => fc.name === "set_create_ticket_values");
+
+    if (isCreatingTask && !isCreatingTicket)
+      calls = calls.filter((fc) => !TICKET_MUTATIONS.includes(fc.name));
+    if (isCreatingTicket && !isCreatingTask)
+      calls = calls.filter((fc) => !TASK_MUTATIONS.includes(fc.name));
+
     return calls;
   }
 
@@ -82,7 +121,7 @@ export class BaseChatProcessor {
 
       while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
         step++;
-        const callsToExecute = this.filterFunctionCalls(response.functionCalls);
+        const callsToExecute = this.filterFunctionCalls(response.functionCalls, userMessage);
         console.log(
           `[Agentic step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
         );
@@ -163,7 +202,7 @@ export class BaseChatProcessor {
 
     while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
       step++;
-      const callsToExecute = this.filterFunctionCalls(response.functionCalls);
+      const callsToExecute = this.filterFunctionCalls(response.functionCalls, userMessage);
       console.log(
         `[Agentic stream step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
       );
