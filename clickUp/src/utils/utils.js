@@ -49,6 +49,7 @@ export const getPriorityLabel = (priorityId) => {
   return priorities[priorityId] || "Média";
 };
 
+// Retorna classe Tailwind para badge de prioridade
 export const getPriorityBadgeClass = (priority) => {
   return priority === 'alta'
     ? 'bg-red-900 text-red-300'
@@ -57,6 +58,7 @@ export const getPriorityBadgeClass = (priority) => {
       : 'bg-green-900 text-green-300';
 };
 
+// Retorna estilo inline para badge de prioridade
 export const getPriorityBadgeStyle = (priority) => {
   return priority === 'alta'
     ? { backgroundColor: '#7f1d1d', color: '#fca5a5' }
@@ -65,6 +67,7 @@ export const getPriorityBadgeStyle = (priority) => {
       : { backgroundColor: '#166534', color: '#86efac' };
 };
 
+// Retorna classe Tailwind para badge de estado
 export const getStatusBadgeClass = (status) => {
   return status === 'concluída'
     ? 'bg-green-900 text-green-300'
@@ -73,6 +76,7 @@ export const getStatusBadgeClass = (status) => {
       : 'bg-gray-800 text-gray-300';
 };
 
+// Retorna estilo inline para badge de estado
 export const getStatusBadgeStyle = (status) => {
   return status === 'concluída'
     ? { backgroundColor: '#166534', color: '#86efac' }

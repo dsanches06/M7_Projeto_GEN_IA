@@ -1,11 +1,13 @@
 import BaseService from "../services/BaseService.js";
 import Notification from "../models/Notification.js";
 
+// Serviço de notificações — herda métodos HTTP de BaseService
 class NotificationService extends BaseService {
   constructor() {
     super("/notifications");
   }
 
+  // Devolve notificações não lidas de um utilizador (ou globais)
   async getUnreadNotifications(userId) {
     try {
       if (userId) {
@@ -24,6 +26,7 @@ class NotificationService extends BaseService {
     }
   }
 
+  // Devolve todas as notificações de um utilizador (ou globais)
   async getNotificationsByUser(userId) {
     try {
       const endpoint = userId ? `/users/${userId}/notifications` : `/notifications`;
@@ -37,11 +40,13 @@ class NotificationService extends BaseService {
     }
   }
 
+  // Ponto de entrada único: delega para getNotificationsByUser ou getUnreadNotifications
   async getNotifications(userId) {
     if (userId) return this.getNotificationsByUser(userId);
     return this.getUnreadNotifications();
   }
 
+  // Devolve todas as notificações sem filtro
   async getAllNotifications() {
     try {
       const data = await this.fetchData(`/notifications`);
@@ -71,6 +76,7 @@ class NotificationService extends BaseService {
     return res.json();
   }
 
+  // Marca como lida usando PATCH (com userId) ou PUT (sem userId)
   async markNotificationAsRead(userId, notificationId) {
     try {
       const endpoint = userId
@@ -89,6 +95,7 @@ class NotificationService extends BaseService {
     }
   }
 
+  // Actualiza campos de uma notificação existente
   async updateNotification(notificationId, updateData) {
     try {
       const response = await fetch(
@@ -107,6 +114,7 @@ class NotificationService extends BaseService {
     }
   }
 
+  // Cria uma nova notificação e devolve instância do modelo
   async createNotification(notificationData) {
     try {
       const response = await this.sendMessage("/notifications", notificationData);
@@ -120,6 +128,7 @@ class NotificationService extends BaseService {
     }
   }
 
+  // Extrai dados de notificação de um function result (tool call da IA)
   extractNotificationDataFromFunctionResult(functionResult) {
     if (!functionResult?.result) return null;
     const data = functionResult.result;
@@ -133,4 +142,5 @@ class NotificationService extends BaseService {
   }
 }
 
+// Singleton exportado para uso em toda a aplicação
 export const notificationService = new NotificationService();

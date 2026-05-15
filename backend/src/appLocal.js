@@ -21,18 +21,20 @@ import { loggerMiddleware } from "./middlewares/index.js";
 
 dotenv.config();
 
-// Singleton pattern for local app
+// Classe singleton que gere a app Express e a ligação MySQL em desenvolvimento local
 class AppLocal {
   constructor() {
+    // Devolve a instância existente se já foi criada
     if (AppLocal.instance) {
       return AppLocal.instance;
     }
 
-    this.app = null;
-    this.db = null;
+    this.app = null; // Instância Express
+    this.db = null;  // Pool de ligações MySQL
     AppLocal.instance = this;
   }
 
+  // Cria e testa o pool de ligações MySQL
   async initializeDatabase() {
     try {
       // Force MySQL for local development (ignore DATABASE_URL)
@@ -64,7 +66,9 @@ class AppLocal {
     }
   }
 
+  // Inicializa a app Express com middlewares e rotas
   async initializeApp() {
+    // Evita reinicialização se a app já existe
     if (this.app) {
       return this.app;
     }
@@ -102,7 +106,7 @@ class AppLocal {
       });
     });
 
-    // API Routes
+    // Router agregador de todas as rotas da API
     const apiRouter = express.Router();
 
     apiRouter.use("/chat", chatRoutes);
@@ -120,7 +124,7 @@ class AppLocal {
 
     this.app.use("/api", apiRouter);
 
-    // Error handling middleware
+    // Middleware de tratamento de erros global
     this.app.use((err, req, res, next) => {
       console.error('Error:', err);
       res.status(500).json({
@@ -129,7 +133,7 @@ class AppLocal {
       });
     });
 
-    // 404 handler
+    // Resposta padrão para rotas não encontradas
     this.app.use((req, res) => {
       res.status(404).json({
         error: 'Not Found',
@@ -141,14 +145,17 @@ class AppLocal {
     return this.app;
   }
 
+  // Devolve a instância Express actual
   getApp() {
     return this.app;
   }
 
+  // Devolve o pool de ligações à base de dados
   getDatabase() {
     return this.db;
   }
 
+  // Encerra o pool e limpa a instância singleton
   async close() {
     if (this.db) {
       await this.db.end();
@@ -158,22 +165,22 @@ class AppLocal {
   }
 }
 
-// Export singleton instance
+// Instância singleton exportada
 const appLocalInstance = new AppLocal();
 
 export default appLocalInstance;
 
-// Convenience function to get initialized app
+// Inicializa e devolve a app Express local
 export const getLocalApp = async () => {
   return await appLocalInstance.initializeApp();
 };
 
-// Convenience function to get database
+// Devolve o pool de base de dados local
 export const getLocalDatabase = () => {
   return appLocalInstance.getDatabase();
 };
 
-// Cleanup function
+// Encerra a app local e liberta ligações
 export const closeLocalApp = async () => {
   return await appLocalInstance.close();
 };

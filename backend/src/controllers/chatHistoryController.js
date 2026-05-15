@@ -1,6 +1,6 @@
 import { chatHistoryService } from "../services/index.js";
 
-/* Função para buscar histórico de chat */
+/* Devolve todas as mensagens do histórico de chat */
 export const getChatHistories = async (req, res) => {
   try {
     const chatHistory = await chatHistoryService.getAllChatHistory();
@@ -10,6 +10,7 @@ export const getChatHistories = async (req, res) => {
   }
 };
 
+/* Devolve uma mensagem de chat pelo ID */
 export const getChatHistoryById = async (req, res) => {
   try {
     const chatHistory = await chatHistoryService.getChatHistoryById(Number(req.params.id));
@@ -22,6 +23,7 @@ export const getChatHistoryById = async (req, res) => {
   }
 };
 
+/* Devolve o histórico de mensagens de uma conversa específica */
 export const getChatHistoryByConversationId = async (req, res) => {
   try {
     const conversationId = Number(req.params.conversationId);
@@ -32,10 +34,11 @@ export const getChatHistoryByConversationId = async (req, res) => {
   }
 };
 
+/* Cria uma nova mensagem de chat na conversa indicada */
 export const createChatHistory = async (req, res) => {
   try {
     const { conversation_id, role_id, content } = req.body;
-    const conversationIdNum = Number(conversation_id);
+    const conversationIdNum = Number(conversation_id); // Garante tipo numérico
 
     if (!conversationIdNum || !role_id || !content || content.trim().length === 0) {
       return res.status(400).json({ message: "conversation_id, role_id e content são obrigatórios e conversation_id deve ser válido" });
@@ -53,7 +56,7 @@ export const createChatHistory = async (req, res) => {
 
 
 
-/* Função para deletar mensagem de chat */
+/* Elimina uma mensagem de chat pelo ID */
 export const deleteChatHistory = async (req, res) => {
   try {
     const chatHistory = await chatHistoryService.deleteChatHistory(Number(req.params.id));
@@ -63,7 +66,7 @@ export const deleteChatHistory = async (req, res) => {
   }
 };
 
-/* Função para atualizar mensagem de chat */
+/* Actualiza o conteúdo de uma mensagem de chat */
 export const updateChatHistory = async (req, res) => {
   try {
     const chatHistoryId = Number(req.params.id);

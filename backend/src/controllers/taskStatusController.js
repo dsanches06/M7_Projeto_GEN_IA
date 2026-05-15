@@ -1,7 +1,7 @@
 import { taskStatusService } from "../services/index.js";
 
 
-/* Função para obter todos os status de tarefa */
+/* Devolve todos os estados de tarefa */
 export const getTaskStatuses = async (req, res) => {
   try {
     const taskStatuses = await taskStatusService.getAllTaskStatuses();
@@ -12,7 +12,7 @@ export const getTaskStatuses = async (req, res) => {
 };
 
 
-/* Função para obter status de tarefa por ID */
+/* Devolve um estado de tarefa pelo ID */
 export const getTaskStatusById = async (req, res) => {
   try {
     const taskStatus = await taskStatusService.getTaskStatusById(Number(req.params.id));
@@ -26,7 +26,7 @@ export const getTaskStatusById = async (req, res) => {
 };
 
 
-/* Função para criar status de tarefa */
+/* Cria um novo estado de tarefa */
 export const createTaskStatus = async (req, res) => {
   try {
     const { name } = req.body;
@@ -41,7 +41,7 @@ export const createTaskStatus = async (req, res) => {
 };
 
 
-/* Função para atualizar status de tarefa */
+/* Actualiza um estado de tarefa pelo ID */
 export const updateTaskStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,7 +56,7 @@ export const updateTaskStatus = async (req, res) => {
 };
 
 
-/* Função para deletar status de tarefa */
+/* Elimina um estado de tarefa pelo ID */
 export const deleteTaskStatus = async (req, res) => {
   try {
     const { id } = req.params;

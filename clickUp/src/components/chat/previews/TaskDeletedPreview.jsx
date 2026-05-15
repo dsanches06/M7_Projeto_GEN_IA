@@ -1,12 +1,4 @@
-/**
- * Componente de Preview de Tarefa Eliminada
- * Exibe um cartão visual confirmando a eliminação de uma tarefa pelo bot.
- */
-
-/**
- * Mostra o título e ID da tarefa que foi eliminada
- * @param {Object} props.taskDeleted - Objeto com id e title da tarefa eliminada
- */
+// Cartão de confirmação exibido após a eliminação de uma tarefa pelo bot
 export function TaskDeletedPreview({ taskDeleted }) {
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">

@@ -1,10 +1,11 @@
+// Modelo de dados para uma tarefa
 export class Task {
   constructor({
     title = "",
     description = "",
     types_id = 1,
-    status_id = 1,
-    priority_id = 1,
+    status_id = 1,       // 1 = CREATED
+    priority_id = 1,     // 1 = Baixa
     category_id = 1,
     project_id = 1,
     created_at = new Date().toISOString(),
@@ -27,6 +28,7 @@ export class Task {
     this.assignee = assignee;
   }
 
+  // Resolve o primeiro campo válido de uma lista de chaves alternativas
   static resolveField(data, keys, fallback) {
     for (const key of keys) {
       if (data?.[key] !== undefined && data?.[key] !== null) {
@@ -36,6 +38,7 @@ export class Task {
     return fallback;
   }
 
+  // Constrói uma Task a partir de um objecto genérico (API, IA, etc.)
   static fromObject(data = {}) {
     if (!data || typeof data !== "object") {
       return null;
@@ -70,6 +73,7 @@ export class Task {
     });
   }
 
+  // Serializa a tarefa para envio ao backend
   toPayload() {
     return {
       title: this.title,

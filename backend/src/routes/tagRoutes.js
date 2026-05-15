@@ -1,9 +1,9 @@
 import express from "express";
 import * as tagController from "../controllers/tagController.js";
 
-const router = express.Router();
+const router = express.Router(); // Router de etiquetas
 
-// Tags routes
+// Rotas CRUD de etiquetas
 router.get("/", tagController.getTags);
 router.get("/:id", tagController.getTagById);
 router.post("/", tagController.createTag);

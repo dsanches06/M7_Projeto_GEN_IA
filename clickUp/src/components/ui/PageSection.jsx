@@ -1,3 +1,4 @@
+// Secção genérica de página com título e descrição — usada para rotas em construção
 export function PageSection({ title, description }) {
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-6">
@@ -6,6 +7,7 @@ export function PageSection({ title, description }) {
         <p className="text-muted">{description}</p>
       </div>
 
+      {/* Conteúdo provisório até a página estar implementada */}
       <div className="bg-surface-2 border border-surface rounded-lg p-8 shadow-sm">
         <p className="text-main text-lg">
           Página de <span className="font-semibold">{title}</span>. Conteúdo específico será adicionado em breve.

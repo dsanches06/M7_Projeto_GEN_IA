@@ -1,15 +1,8 @@
-/**
- * Componente de Preview de Ticket
- * Exibe cartões visuais para criação, atualização de estado e eliminação de tickets.
- */
+// Cartão visual para acções sobre tickets: criado, eliminado ou estado alterado
 
 import { getSeverityColor } from "@/utils/chatUtils";
 
-/**
- * Mostra o resultado de uma ação sobre um ticket (criado, eliminado ou estado alterado)
- * @param {Object} props.ticket   - Objeto do ticket com _type, id, status, severity e user_report
- * @param {Function} props.onNavigate - Callback para navegar para a página de tickets
- */
+// Exibe o resultado de uma acção sobre um ticket com variantes visuais por tipo
 export function TicketPreview({ ticket, onNavigate }) {
 
   /* Cartão para ticket eliminado */
@@ -46,8 +39,9 @@ export function TicketPreview({ ticket, onNavigate }) {
     );
   }
 
-  /* Cartão padrão para ticket criado ou atualizado */
+  /* Cartão padrão para ticket criado ou actualizado */
   const sev   = ticket.severity || 5;
+  // Cor determinada pela severidade (1-10)
   const color = getSeverityColor(sev);
 
   return (
@@ -66,7 +60,7 @@ export function TicketPreview({ ticket, onNavigate }) {
         </span>
       </div>
 
-      {/* Descrição do problema */}
+      {/* Descrição do problema reportado */}
       <p className="text-xs text-gray-700 line-clamp-2 mb-2">{ticket.user_report}</p>
 
       {/* Botão de navegação para a página de tickets */}

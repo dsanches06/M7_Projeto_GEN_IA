@@ -10,15 +10,15 @@ export const ERROR_TYPE_CONFIG = {
   other:       { label: "Outro",       bg: "#F9FAFB", color: "#6B7280" },
 };
 
-// Configurações de status para tickets
+// Configurações de estado para tickets
 export const STATUS_CONFIG = {
-  open: { label: "Aberto", bg: "#FFF1F2", color: "#EF4444" },
-  in_progress: { label: "Em curso", bg: "#FFF7ED", color: "#F97316" },
-  resolved: { label: "Resolvido", bg: "#F0FDF4", color: "#22C55E" },
-  closed: { label: "Fechado", bg: "#F9FAFB", color: "#6B7280" },
+  open:        { label: "Aberto",    bg: "#FFF1F2", color: "#EF4444" },
+  in_progress: { label: "Em curso",  bg: "#FFF7ED", color: "#F97316" },
+  resolved:    { label: "Resolvido", bg: "#F0FDF4", color: "#22C55E" },
+  closed:      { label: "Fechado",   bg: "#F9FAFB", color: "#6B7280" },
 };
 
-// obtém estilo de severidade baseado no valor (1-10)
+// Obtém estilo de severidade baseado no valor (1-10)
 export function getSeverityStyle(sev) {
   if (sev >= 8) return { color: "#DC2626", bg: "#FEE2E2", label: "Crítica" };
   if (sev >= 5) return { color: "#D97706", bg: "#FEF3C7", label: "Alta" };

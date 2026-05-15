@@ -1,9 +1,9 @@
 import { userService, notificationService } from "../services/index.js";
 
-/* Função para buscar usuários */
+/* Devolve todos os utilizadores com suporte a pesquisa e ordenação */
 export const getUsers = async (req, res) => {
   try {
-    const { sort, search } = req.query;
+    const { sort, search } = req.query; // Parâmetros opcionais de filtragem
     const users = await userService.getAllUsers(search, sort);
     res.json(users);
   } catch (error) {
@@ -13,7 +13,7 @@ export const getUsers = async (req, res) => {
   }
 };
 
-/* Função para buscar usuário por ID */
+/* Devolve um utilizador pelo ID */
 export const getUserById = async (req, res) => {
   try {
     const user = await userService.getUserById(Number(req.params.id));
@@ -28,7 +28,7 @@ export const getUserById = async (req, res) => {
   }
 };
 
-/* Função para criar usuário */
+/* Cria um novo utilizador com os dados do corpo do pedido */
 export const createUser = async (req, res) => {
   try {
     const user = await userService.createUser(req.body);
@@ -40,10 +40,10 @@ export const createUser = async (req, res) => {
   }
 };
 
-/* Função para atualizar usuário */
+/* Actualiza os dados de um utilizador existente */
 export const updateUser = async (req, res) => {
   try {
-    const userId = req.params.id || req.user?.id;
+    const userId = req.params.id || req.user?.id; // Aceita ID de rota ou do token
 
     if (!userId) {
       return res
@@ -67,7 +67,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
-/* Função para deletar utilizador */
+/* Elimina um utilizador pelo ID */
 export const deleteUser = async (req, res) => {
   try {
     const userId = req.user?.id || req.params.id;
@@ -92,7 +92,7 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-/* Função para alternar status ativo/inativo do utilizador */
+/* Alterna o estado activo/inactivo de um utilizador */
 export const toggleUserActive = async (req, res) => {
   try {
     const userId = req.user?.id || req.params.id;
@@ -121,7 +121,7 @@ export const toggleUserActive = async (req, res) => {
   }
 };
 
-/* Função para buscar estatísticas dos utilizadores */
+/* Devolve estatísticas agregadas dos utilizadores */
 export const getStats = async (req, res) => {
   try {
     const stats = await userService.getUserStats();
@@ -133,7 +133,7 @@ export const getStats = async (req, res) => {
   }
 };
 
-/* Função para buscar notificações não lidas de um usuário */
+/* Devolve as notificações não lidas de um utilizador */
 export const getUnreadNotifications = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -146,7 +146,7 @@ export const getUnreadNotifications = async (req, res) => {
   }
 };
 
-/* Função para buscar notificações de um usuário */
+/* Devolve todas as notificações de um utilizador */
 export const getNotificationsByUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -159,7 +159,7 @@ export const getNotificationsByUser = async (req, res) => {
   }
 };
 
-/* Função para marcar notificação como lida */
+/* Marca uma notificação específica como lida */
 export const markAsRead = async (req, res) => {
   try {
     const { notificationId } = req.params;

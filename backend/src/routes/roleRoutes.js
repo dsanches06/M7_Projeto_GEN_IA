@@ -1,8 +1,9 @@
 import express from "express";
 import * as roleController from "../controllers/roleController.js";
 
-const router = express.Router();
+const router = express.Router(); // Router de papéis
 
+// Rotas CRUD de papéis
 router.get("/", roleController.getRoles);
 router.get("/:id", roleController.getRoleById);
 router.post("/", roleController.createRole);

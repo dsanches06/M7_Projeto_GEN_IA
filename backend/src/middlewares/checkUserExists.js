@@ -1,8 +1,8 @@
 import { userService } from "../services/index.js";
 
-/* Função para verificar se o usuário existe */
+// Middleware que verifica a existência do utilizador e anexa-o a req.user
 export const checkUserExists = async (req, res, next) => {
-  // Se não houver ID nos parâmetros, continua sem validar
+  // Sem ID no parâmetro — avança sem validar
   if (!req.params.id) {
     return next();
   }
@@ -15,7 +15,7 @@ export const checkUserExists = async (req, res, next) => {
       return res.status(404).json({ error: "Utilizador não encontrado" });
     }
 
-    req.user = user;
+    req.user = user; // Torna o utilizador acessível nos handlers seguintes
     next();
   } catch (error) {
     console.error(`Erro ao verificar usuário com ID ${req.params.id}:`, error);

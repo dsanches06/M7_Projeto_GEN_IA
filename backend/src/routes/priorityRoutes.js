@@ -1,8 +1,9 @@
 import express from "express";
 import * as priorityController from "../controllers/priorityController.js";
 
-const router = express.Router();
+const router = express.Router(); // Router de prioridades
 
+// Rotas CRUD de prioridades
 router.get("/", priorityController.getPriorities);
 router.get("/:id", priorityController.getPriorityById);
 router.post("/", priorityController.createPriority);

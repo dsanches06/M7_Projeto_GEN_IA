@@ -1,16 +1,14 @@
-/**
- * ChatHistory.jsx
- * Componente para exibir o histórico de mensagens
- * Padrão: Container com scroll automático para última mensagem
- */
+// Histórico de mensagens com scroll automático para a última mensagem
 
 import { useEffect, useRef } from 'react';
 import { ChatMessage } from '@/components/chat';
 
+// Contentor com lista de mensagens e indicador de carregamento
 export function ChatHistory({ messages = [], loading = false }) {
+  // Ref para o elemento âncora no fim da lista
   const messagesEndRef = useRef(null);
 
-  // Auto scroll para última mensagem
+  // Faz scroll suave até ao fim sempre que as mensagens mudam
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -29,9 +27,9 @@ export function ChatHistory({ messages = [], loading = false }) {
       ) : (
         <>
           {messages.map((msg) => (
-            <ChatMessage 
-              key={msg.id} 
-              message={msg.text} 
+            <ChatMessage
+              key={msg.id}
+              message={msg.text}
               sender={msg.sender}
               timestamp={msg.timestamp}
             />
@@ -39,6 +37,7 @@ export function ChatHistory({ messages = [], loading = false }) {
         </>
       )}
 
+      {/* Indicador de "a processar" enquanto aguarda resposta */}
       {loading && (
         <div className="flex justify-start mb-4">
           <div className="bg-surface-3 text-secondary px-4 py-3 rounded-lg rounded-bl-none">
@@ -54,6 +53,7 @@ export function ChatHistory({ messages = [], loading = false }) {
         </div>
       )}
 
+      {/* Elemento âncora invisível para scroll automático */}
       <div ref={messagesEndRef} />
     </div>
   );

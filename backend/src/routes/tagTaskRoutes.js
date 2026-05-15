@@ -1,8 +1,9 @@
 import express from "express";
 import * as tagTaskController from "../controllers/tagTaskController.js";
 
-const router = express.Router();
+const router = express.Router(); // Router de associações tarefa-etiqueta
 
+// Rotas CRUD de associações entre tarefas e etiquetas
 router.get("/", tagTaskController.getTagTasks);
 router.get("/:id", tagTaskController.getTagTaskById);
 router.post("/", tagTaskController.createTagTask);

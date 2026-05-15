@@ -1,3 +1,4 @@
+// Resolve o URL base do backend consoante o ambiente (produção vs. desenvolvimento)
 export function getBackendUrl() {
   if (import.meta.env.PROD) {
     return "/api";
@@ -13,17 +14,21 @@ export function getBackendUrl() {
   return "http://localhost:3001/api";
 }
 
+// URL base do backend, calculado uma única vez ao arranque
 export const BACKEND_URL = getBackendUrl();
 
+// Classe base com métodos genéricos de comunicação HTTP e SSE
 class BaseService {
   constructor(baseEndpoint) { this.BACKEND_URL = BACKEND_URL; this.baseEndpoint = baseEndpoint; }
 
+  // Envia POST e consome a resposta como stream SSE (Server-Sent Events)
   async sendStreamMessage(endpoint, payload, onChunk, onDone) {
     try {
       const response = await fetch(`${this.BACKEND_URL}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!response.ok) throw new Error(`API error: ${response.status} ${response.statusText}`);
       const reader = response.body.getReader(), decoder = new TextDecoder();
       let buffer = "", event = null, data = "", donePayload = null;
+      // Processa cada evento SSE recebido
       const flush = () => {
         if (!event) return;
         if (event === "message") { try { const p = JSON.parse(data); if (p?.text) onChunk(p.text); } catch {} }
@@ -47,20 +52,25 @@ class BaseService {
     } catch (err) { console.error(`[${this.baseEndpoint}] stream error:`, err); throw err; }
   }
 
+  // Envia POST simples e devolve JSON
   async sendMessage(endpoint, payload) {
     const res = await fetch(`${this.BACKEND_URL}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
+  // Executa GET e devolve JSON
   async fetchData(endpoint) {
     const res = await fetch(`${this.BACKEND_URL}${endpoint}`);
     if (!res.ok) throw new Error(`Erro ao buscar dados: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
+  // Verifica se a resposta contém resultados de funções (tool calls)
   hasFunctionResults(r) { return r && r.success && Array.isArray(r.functionResults) && r.functionResults.length > 0; }
+  // Devolve o primeiro resultado de função
   getFirstFunctionResult(r) { return this.hasFunctionResults(r) ? r.functionResults[0] : null; }
+  // Extrai o campo result de um function result
   extractDataFromFunctionResult(fr) { return fr?.result ? { ...fr.result } : null; }
 }
 

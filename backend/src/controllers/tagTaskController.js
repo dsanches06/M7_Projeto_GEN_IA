@@ -1,7 +1,7 @@
 import { tagTaskService } from "../services/index.js";
 
 
-/* Função para obter todas as tarefas de etiqueta */
+/* Devolve todas as associações tarefa-etiqueta */
 export const getTagTasks = async (req, res) => {
   try {
     const tagTasks = await tagTaskService.getAllTagTasks();
@@ -12,7 +12,7 @@ export const getTagTasks = async (req, res) => {
 };
 
 
-/* Função para obter tarefa de etiqueta por ID */
+/* Devolve uma associação tarefa-etiqueta pelo ID */
 export const getTagTaskById = async (req, res) => {
   try {
     const tagTask = await tagTaskService.getTagTaskById(Number(req.params.id));
@@ -26,7 +26,7 @@ export const getTagTaskById = async (req, res) => {
 };
 
 
-/* Função para criar tarefa de etiqueta */
+/* Cria uma nova associação entre tarefa e etiqueta */
 export const createTagTask = async (req, res) => {
   try {
     const { task_id, tag_id } = req.body;
@@ -41,7 +41,7 @@ export const createTagTask = async (req, res) => {
 };
 
 
-/* Função para atualizar tarefa de etiqueta */
+/* Actualiza uma associação tarefa-etiqueta pelo ID */
 export const updateTagTask = async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,7 +56,7 @@ export const updateTagTask = async (req, res) => {
 };
 
 
-/* Função para deletar tarefa de etiqueta */
+/* Elimina uma associação tarefa-etiqueta pelo ID */
 export const deleteTagTask = async (req, res) => {
   try {
     const { id } = req.params;

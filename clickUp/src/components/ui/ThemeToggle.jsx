@@ -1,7 +1,4 @@
-/**
- * ThemeToggle - Botão para alternar entre tema dark e light
- * Integrado com ThemeContext
- */
+// Botão que alterna entre tema dark (sol) e light (lua)
 export function ThemeToggle({ theme, onToggle }) {
   return (
     <button
@@ -13,6 +10,7 @@ export function ThemeToggle({ theme, onToggle }) {
       }`}
       title={`Alternar para ${theme === 'dark' ? 'light' : 'dark'} theme`}
     >
+      {/* Ícone de sol no tema dark, lua no tema light */}
       {theme === 'dark' ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"

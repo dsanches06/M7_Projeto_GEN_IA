@@ -3,11 +3,14 @@ import { Task } from "../models/Task.js";
 
 export const BACKEND_URL = getBackendUrl();
 
-// ── Status / priority maps ────────────────────────────────────────────────────
+// ── Mapas de status / prioridade ──────────────────────────────────────────────
+
+// Converte ID de prioridade para label em português
 function getPriorityLabel(priorityId) {
   return { 1: "baixa", 2: "média", 3: "alta" }[priorityId] || "média";
 }
 
+// Converte ID de estado para label em português
 function getStatusLabel(statusId) {
   return (
     {
@@ -31,13 +34,17 @@ export const STATUS_ID_TO_NAME = {
   6: "ARCHIVED",
 };
 
-// ── Payload normaliser ────────────────────────────────────────────────────────
+// ── Normalização de payload ───────────────────────────────────────────────────
+
+// Normaliza dados de tarefa usando o modelo Task antes de enviar ao backend
 function normalizeTaskPayload(taskData) {
   const task = Task.fromObject(taskData);
   return task ? task.toPayload() : Task.fromObject({}).toPayload();
 }
 
-// ── Display transform ─────────────────────────────────────────────────────────
+// ── Transformação para exibição ───────────────────────────────────────────────
+
+// Enriquece uma tarefa com campos calculados (prioridade, estado, data, etc.)
 export function transformTaskForDisplay(task) {
   const createdAt = task.created_at || task.createdAt || new Date().toISOString();
 
@@ -56,7 +63,9 @@ export function transformTaskForDisplay(task) {
   };
 }
 
-// ── Fetch all tasks enriched with user names + tags ───────────────────────────
+// ── Busca todas as tarefas com utilizadores e etiquetas ───────────────────────
+
+// Carrega tarefas em paralelo com utilizadores e etiquetas; devolve lista enriquecida
 export async function fetchTasks() {
   const [tasksRes, usersRes, tagsTaskRes, tagsRes] = await Promise.all([
     fetch(`${BACKEND_URL}/tasks`),
@@ -74,14 +83,15 @@ export async function fetchTasks() {
   const tagsTasks = tagsTaskRes.ok ? await tagsTaskRes.json() : [];
   const tags      = tagsRes.ok     ? await tagsRes.json()     : [];
 
-  // Build look-up maps
+  // Mapa de id → nome de utilizador
   const userMap = {};
   users.forEach((u) => { userMap[u.id] = u.name; });
 
+  // Mapa de id → objecto de etiqueta
   const tagMap = {};
   tags.forEach((t) => { tagMap[t.id] = t; });
 
-  // Group tags by task_id
+  // Agrupa etiquetas por task_id
   const taskTagsMap = {};
   tagsTasks.forEach((tt) => {
     if (!taskTagsMap[tt.task_id]) taskTagsMap[tt.task_id] = [];
@@ -98,6 +108,7 @@ export async function fetchTasks() {
   }));
 }
 
+// Cria uma nova tarefa no backend
 export async function createTask(taskData) {
   const payload = normalizeTaskPayload(taskData);
   const response = await fetch(`${BACKEND_URL}/tasks`, {

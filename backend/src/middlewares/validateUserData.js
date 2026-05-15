@@ -1,14 +1,15 @@
 ﻿import { userService } from "../services/index.js";
 
+// Middleware de validação dos dados de utilizador (criação e actualização)
 export const validateUserData = async (req, res, next) => {
   try {
     const { name, email, phone } = req.body;
-    const isUpdate = Boolean(req.params.id || req.user?.id);
+    const isUpdate = Boolean(req.params.id || req.user?.id); // Distingue criação de actualização
 
     if (isUpdate) {
-      // Verificar se pelo menos um campo válido foi fornecido
+      // Verifica se pelo menos um campo válido foi fornecido
       const fieldsToUpdate = [];
-      
+
       if (name !== undefined) fieldsToUpdate.push("name");
       if (email !== undefined) fieldsToUpdate.push("email");
       if (phone !== undefined) fieldsToUpdate.push("phone");
@@ -17,7 +18,7 @@ export const validateUserData = async (req, res, next) => {
         return res.status(400).json({ message: "Nenhum campo para atualizar" });
       }
 
-      // Validar campos fornecidos
+      // Valida individualmente cada campo fornecido
       if (name !== undefined && (typeof name !== "string" || name.length < 3)) {
         return res
           .status(400)
@@ -35,6 +36,7 @@ export const validateUserData = async (req, res, next) => {
         return res.status(400).json({ message: "Phone must be a string" });
       }
     } else {
+      // Validação de campos obrigatórios na criação
       if (!name || typeof name !== "string" || name.length < 3) {
         return res
           .status(400)
@@ -48,7 +50,7 @@ export const validateUserData = async (req, res, next) => {
 
     if (email !== undefined) {
       const userId = isUpdate ? Number(req.params.id || req.user?.id) : null;
-      const emailAlreadyExists = await userService.emailExists(email, userId);
+      const emailAlreadyExists = await userService.emailExists(email, userId); // Previne emails duplicados
 
       if (emailAlreadyExists) {
         const msg = isUpdate

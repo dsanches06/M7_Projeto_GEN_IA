@@ -1,14 +1,6 @@
-/**
- * Componente de Preview de Atribuição de Tarefa
- * Exibe um cartão visual confirmando a atribuição de uma tarefa a um utilizador.
- */
-
-/**
- * Mostra a tarefa atribuída e o utilizador destinatário
- * @param {Object} props.assignment - Objeto com task_id, task_title, user_id e user_name
- */
+// Cartão de confirmação de atribuição de uma tarefa a um utilizador
 export function AssignmentPreview({ assignment }) {
-  /* Inicial do nome do utilizador para o avatar circular */
+  // Inicial do nome do utilizador para o avatar circular
   const initial = (assignment.user_name || "?").charAt(0).toUpperCase();
 
   return (
@@ -32,7 +24,7 @@ export function AssignmentPreview({ assignment }) {
 
       <div className="border-t border-[#BFDBFE] my-2" />
 
-      {/* Linha do utilizador com avatar */}
+      {/* Linha do utilizador com avatar de inicial */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">Atribuído</span>
         <div className="w-5 h-5 rounded-full bg-[#BFDBFE] flex items-center justify-center text-[9px] font-bold text-[#1D4ED8] flex-shrink-0">

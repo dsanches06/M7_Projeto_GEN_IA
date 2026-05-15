@@ -3,12 +3,15 @@ import { useTheme } from "@/context/ThemeContext";
 import { ThemeToggle } from "@/components/ui";
 import NotificationButton from "../notifications/NotificationButton.jsx";
 
+// Cabeçalho fixo com logo, navegação desktop, toggle de tema e notificações
 export function Header() {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
+  // Utilizador autenticado (null = sem autenticação implementada ainda)
   const user = null;
 
+  // Itens do menu de navegação desktop
   const menuItems = [
     { id: "dashboard",    path: "/dashboard",    label: "Dashboard" },
     { id: "utilizadores", path: "/utilizadores", label: "Utilizadores" },
@@ -29,7 +32,7 @@ export function Header() {
           : "0 1px 0 rgba(0,0,0,0.08)",
       }}
     >
-      {/* Logo */}
+      {/* Logo / nome da aplicação */}
       <div className="flex-shrink-0 mr-auto">
         <h1
           className="text-xl sm:text-2xl font-bold tracking-tight"
@@ -39,7 +42,7 @@ export function Header() {
         </h1>
       </div>
 
-      {/* Desktop Navigation (hidden on mobile) */}
+      {/* Navegação desktop (oculta em mobile) */}
       <nav className="hidden md:flex flex-1 justify-center">
         <ul className="flex gap-4 items-center">
           {menuItems.map((item) => (
@@ -65,10 +68,11 @@ export function Header() {
         </ul>
       </nav>
 
-      {/* Right Actions */}
+      {/* Acções à direita: tema, notificações e avatar */}
       <div className="flex items-center gap-1 sm:gap-2 ml-auto md:ml-0">
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         <NotificationButton user={user} />
+        {/* Avatar do utilizador (placeholder) */}
         <div
           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all"
           style={{

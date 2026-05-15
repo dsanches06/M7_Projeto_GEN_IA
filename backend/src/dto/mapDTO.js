@@ -1,4 +1,4 @@
-/* Função para mapear resposta de usuário */
+// Mapeia o registo de utilizador para o formato de resposta da API
 export function mapUserDTOResponse(data) {
   return {
     id: data.id,
@@ -11,7 +11,7 @@ export function mapUserDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de status de tarefa */
+// Mapeia o estado de tarefa para o formato de resposta da API
 export function mapTaskStatusDTOResponse(data) {
   return {
     id: data.id,
@@ -20,7 +20,7 @@ export function mapTaskStatusDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de prioridade */
+// Mapeia a prioridade para o formato de resposta da API
 export function mapPriorityDTOResponse(data) {
   return {
     id: data.id,
@@ -29,7 +29,7 @@ export function mapPriorityDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de tarefa */
+// Mapeia a tarefa para o formato de resposta da API
 export function mapTaskDTOResponse(data) {
   return {
     id: data.id,
@@ -45,7 +45,7 @@ export function mapTaskDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de comentário */
+// Mapeia a atribuição de tarefa a utilizador para o formato de resposta da API
 export function mapTaskAssigneeDTOResponse(data) {
   return {
     task_id: data.task_id,
@@ -54,7 +54,7 @@ export function mapTaskAssigneeDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de comentário */
+// Mapeia a etiqueta para o formato de resposta da API
 export function mapTagDTOResponse(data) {
   return {
     id: data.id,
@@ -63,7 +63,7 @@ export function mapTagDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de comentário */
+// Mapeia a associação tarefa-etiqueta para o formato de resposta da API
 export function mapTagTaskDTOResponse(data) {
   return {
     task_id: data.task_id,
@@ -71,7 +71,7 @@ export function mapTagTaskDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de comentário */
+// Mapeia a notificação para o formato de resposta da API
 export function mapNotificationDTOResponse(data) {
   return {
     id: data.id,
@@ -83,7 +83,7 @@ export function mapNotificationDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de estatísticas de tarefa */
+// Mapeia as estatísticas de tarefas para o formato de resposta da API
 export function mapTaskStatsDTOResponse(data) {
   return {
     totalTasks: data.totalTasks,
@@ -92,17 +92,18 @@ export function mapTaskStatsDTOResponse(data) {
     completedPercentage: data.completedPercentage,
   };
 }
-/* Função para mapear resposta de estatísticas de usuário */
+
+// Mapeia as estatísticas de utilizadores para o formato de resposta da API
 export function mapUserStatsDTOResponse(data) {
   return {
     totalUsers: data.totalUsers,
     activeUsers: data.activeUsers,
     inactiveUsers: data.inactiveUsers,
-    activePercentage: data.activePercentage + "%",
+    activePercentage: data.activePercentage + "%", // Sufixo de percentagem adicionado aqui
   };
 }
 
-/* Função para mapear resposta de estatísticas de projetos */
+// Mapeia as estatísticas de projectos para o formato de resposta da API
 export function mapProjectStatsDTOResponse(data) {
   return {
     totalProjects: data.totalProjects,
@@ -114,21 +115,21 @@ export function mapProjectStatsDTOResponse(data) {
   };
 }
 
-/* Função para mapear resposta de estatísticas de sprints */
+// Mapeia as estatísticas de sprints para o formato de resposta da API
 export function mapSprintStatsDTOResponse(data) {
   return {
     totalSprints: data.totalSprints,
   };
 }
 
-/* Função para mapear resposta de estatísticas de teams */
+// Mapeia as estatísticas de equipas para o formato de resposta da API
 export function mapTeamStatsDTOResponse(data) {
   return {
     totalTeams: data.totalTeams,
   };
 }
 
-// Função para mapear resposta de histórico de chat
+// Mapeia a mensagem de histórico de chat para o formato de resposta da API
 export function mapChatHistoryDTOResponse(data) {
   return {
     id: data.id,
@@ -139,7 +140,7 @@ export function mapChatHistoryDTOResponse(data) {
   };
 }
 
-// Função para mapear resposta de histórico de conversa
+// Mapeia a conversa para o formato de resposta da API
 export function mapConversationDTOResponse(data) {
   return {
     id: data.id,
@@ -148,7 +149,7 @@ export function mapConversationDTOResponse(data) {
   };
 }
 
-// Função para mapear resposta de tiquete
+// Mapeia o tíquete de suporte para o formato de resposta da API
 export function mapTicketDTOResponse(data) {
   return {
     id: data.id,

@@ -1,4 +1,4 @@
-// Colunas de status para uso em tabelas ou listas  
+// Colunas de status para uso em tabelas ou listas
 export const STATUS_COLUMNS = [
   'CREATED',
   'ASSIGNED',
@@ -8,7 +8,7 @@ export const STATUS_COLUMNS = [
   'ARCHIVED',
 ];
 
-// Cores associadas a cada status para uso em badges, etiquetas, etc. 
+// Cores associadas a cada status para uso em badges, etiquetas, etc.
 export const STATUS_COLOR = {
   CREATED:     '#185FA5',
   ASSIGNED:    '#1D9E75',
@@ -42,6 +42,7 @@ export function getPalette(id) {
   const seed = seedFromValue(`${id}`);
   const { hue, saturation, lightness } = toHSL(seed);
   const bg = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  // Texto escuro ou claro consoante a luminosidade do fundo
   const tx = lightness > 58 ? '#111827' : '#F8FAFC';
 
   return { bg, tx };

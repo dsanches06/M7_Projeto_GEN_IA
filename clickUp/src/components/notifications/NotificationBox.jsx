@@ -3,16 +3,21 @@ import NotificationItem from './NotificationItem.jsx';
 import { notificationService } from '../../services/notificationService.js';
 import { useTheme } from "../../context/ThemeContext.jsx";
 
+// Painel dropdown com lista de notificações — fecha ao clicar fora
 const NotificationBox = ({ user, isOpen, onClose, onRefreshBadge }) => {
+  // Lista de notificações carregadas da API
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  // Ref para detectar cliques fora do painel
   const boxRef = useRef(null);
 
+  // Carrega notificações sempre que o painel abre ou o utilizador muda
   useEffect(() => {
     if (isOpen) fetchNotifications();
   }, [isOpen, user]);
 
+  // Fecha o painel ao clicar fora dele
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (boxRef.current && !boxRef.current.contains(e.target)) onClose();
@@ -21,6 +26,7 @@ const NotificationBox = ({ user, isOpen, onClose, onRefreshBadge }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
 
+  // Busca notificações do utilizador (ou globais se não houver userId)
   const fetchNotifications = async () => {
     setLoading(true);
     try {
@@ -44,11 +50,12 @@ const NotificationBox = ({ user, isOpen, onClose, onRefreshBadge }) => {
       zIndex: 1000, overflow: 'hidden', display: 'flex', flexDirection: 'column',
       border: `1px solid ${theme === "dark" ? "#333" : "#eee"}`
     }}>
+      {/* Cabeçalho com contagem total */}
       <div style={{ padding: '15px', borderBottom: `1px solid ${theme === "dark" ? "#333" : "#eee"}`, fontWeight: 'bold' }}>
         Notificações ({notifications.length})
       </div>
       <div style={{ overflowY: 'auto', flex: 1, padding: '8px' }}>
-        {loading ? <p style={{ textAlign: 'center', padding: '20px' }}>Carregando...</p> : 
+        {loading ? <p style={{ textAlign: 'center', padding: '20px' }}>Carregando...</p> :
          notifications.length === 0 ? <p style={{ textAlign: 'center', padding: '20px', opacity: 0.5 }}>Vazio</p> :
          notifications.map(n => (
            <NotificationItem key={n.id} notification={n} onRefreshBadge={onRefreshBadge} />

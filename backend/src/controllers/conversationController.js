@@ -1,6 +1,6 @@
 import { conversationService, taskService } from "../services/index.js";
 
-/* Função para buscar conversas */
+/* Devolve todas as conversas existentes */
 export const getConversations = async (req, res) => {
   try {
     const conversations = await conversationService.getAllConversations();
@@ -10,7 +10,7 @@ export const getConversations = async (req, res) => {
   }
 };
 
-
+/* Devolve uma conversa pelo ID */
 export const getConversationById = async (req, res) => {
   try {
     const conversation = await conversationService.getConversationById(
@@ -25,7 +25,7 @@ export const getConversationById = async (req, res) => {
   }
 };
 
-/* Função para criar conversa */
+/* Cria uma nova conversa com o título fornecido */
 export const createConversation = async (req, res) => {
   try {
     const { title } = req.body;
@@ -43,22 +43,22 @@ export const createConversation = async (req, res) => {
   }
 };
 
-/* Função para deletar conversa */
+/* Elimina a conversa e desvincula-a de todas as tarefas associadas */
 export const deleteConversation = async (req, res) => {
   try {
     const id = Number(req.params.id);
     const conversation = await conversationService.deleteConversation(id);
-    
-    // Certifique-se de que taskService esteja importado no topo do arquivo
+
+    // Remove a referência da conversa em todas as tarefas
     await taskService.removeConversationFromAllTasks(id);
-    
+
     res.status(200).json({ message: "Conversa deletada com sucesso", conversation });
   } catch (error) {
     res.status(404).json({ message: "Erro ao deletar conversa" });
   }
 };
 
-/* Função para atualizar conversa */
+/* Actualiza o título de uma conversa existente */
 export const updateConversation = async (req, res) => {
   try {
     const conversationId = Number(req.params.id);

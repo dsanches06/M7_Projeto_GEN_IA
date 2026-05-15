@@ -1,8 +1,9 @@
 import express from "express";
 import * as ticketController from "../controllers/ticketController.js";
 
-const router = express.Router();
+const router = express.Router(); // Router de tíquetes de suporte
 
+// Rotas CRUD de tíquetes
 router.get("/",       ticketController.getTickets);
 router.get("/:id",    ticketController.getTicketById);
 router.post("/",      ticketController.createTicket);

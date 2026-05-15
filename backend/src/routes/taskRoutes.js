@@ -2,9 +2,9 @@ import express from "express";
 import * as taskController from "../controllers/taskController.js";
 import { validateTaskData } from "../middlewares/validateTaskData.js";
 
-const router = express.Router();
+const router = express.Router(); // Router de tarefas
 
-//Taks routes
+// Rotas principais de tarefas
 router.get("/", taskController.getTasks);
 router.get("/stats", taskController.getStats);
 router.get("/:id", taskController.getTaskById);
@@ -14,7 +14,7 @@ router.patch("/:id/status", taskController.updateStatus);
 router.put("/:id", validateTaskData, taskController.updateTask);
 router.delete("/:id", taskController.deleteTask);
 
-// Tags routes (must come before /:id routes)
+// Rotas de etiquetas de tarefa (devem vir antes das rotas /:id)
 router.post("/:id/tags", taskController.addTagToTask);
 router.delete("/:id/tags/:tagId", taskController.removeTagFromTask);
 router.get("/:id/tags", taskController.getTaskTags);

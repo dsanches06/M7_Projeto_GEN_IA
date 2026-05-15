@@ -1,17 +1,17 @@
 import mysql from "mysql2/promise";
 
-// MySQL connection pool for local development
+// Pool de ligações MySQL para desenvolvimento local
 const dbLocal = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'clickup_db',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 10, // Máximo de ligações simultâneas
   queueLimit: 0
 });
 
-// Test connection
+// Valida a ligação ao iniciar o módulo
 try {
   const connection = await dbLocal.getConnection();
   await connection.query('SELECT 1');
@@ -23,4 +23,4 @@ try {
 }
 
 export { dbLocal as db };
-export const isPostgres = false;
+export const isPostgres = false; // Sinaliza modo MySQL

@@ -9,13 +9,20 @@ import woman2 from "../../assets/woman-2.png";
 import woman3 from "../../assets/woman-3.png";
 import woman4 from "../../assets/woman-4.png";
 
+// Conjunto de avatares disponíveis para distribuição pelos utilizadores
 const AVATARS = [man1, woman1, man2, woman2, man3, woman3, man4, woman4];
 
+// Cartão de utilizador com efeito de flip (frente/verso) ao clicar
 export default function UserCard({ user, onDashboard, onToggle, onDelete, delay = 0 }) {
+  // Controla se o cartão está virado (verso visível)
   const [flipped, setFlipped] = useState(false);
+  // Controla o efeito de escala ao passar o rato
   const [hovered, setHovered] = useState(false);
+  // Paleta de cores determinística baseada no ID do utilizador
   const c = getPalette(user.id);
+  // Avatar: usa o fornecido ou selecciona um da lista por ID
   const avatar = user.avatar || AVATARS[(user.id - 1) % AVATARS.length];
+  // Número de tarefas pendentes (excluindo concluídas e arquivadas)
   const pending = (user.tasks || []).filter(
     (t) => t.status !== "COMPLETED" && t.status !== "ARCHIVED",
   ).length;
@@ -48,7 +55,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
           transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
         }}
       >
-        {/* ── FRONT ── */}
+        {/* ── FRENTE: avatar, nome, papel e estado ── */}
         <div
           style={{
             backfaceVisibility: "hidden",
@@ -59,6 +66,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
           }}
           className="absolute inset-0 rounded-xl border border-surface flex flex-col items-center justify-center gap-2 px-4 py-4 overflow-hidden"
         >
+          {/* Imagem do avatar com opacidade reduzida */}
           <div className="relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 border border-white/20 bg-white/10 shadow-lg">
             <img
               src={avatar}
@@ -80,6 +88,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
             </p>
           </div>
 
+          {/* Badge de estado activo/inactivo */}
           <span
             className={`inline-flex items-center gap-1 text-xs px-3 py-0.5 rounded-full font-medium ${
               user.active
@@ -90,6 +99,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
             ● {user.active ? "Ativo" : "Inativo"}
           </span>
 
+          {/* Contador de tarefas pendentes (oculto se zero) */}
           {pending > 0 && (
             <p className="text-xs text-muted">
               {pending} tarefa{pending !== 1 ? "s" : ""} pendente
@@ -102,7 +112,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
           </p>
         </div>
 
-        {/* ── BACK ── */}
+        {/* ── VERSO: detalhes e acções ── */}
         <div
           style={{
             backfaceVisibility: "hidden",
@@ -111,7 +121,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
           }}
           className="absolute inset-0 rounded-xl border border-surface bg-surface-2 flex flex-col gap-1 p-3 overflow-hidden"
         >
-          {/* Back header */}
+          {/* Cabeçalho do verso com iniciais e email */}
           <div className="flex items-center gap-2 mb-1">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
@@ -127,7 +137,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
             </div>
           </div>
 
-          {/* Details */}
+          {/* Lista de detalhes do utilizador */}
           <ul className="flex flex-col gap-1 text-xs">
             {[
               { label: "ID", value: `#${user.id}` },
@@ -157,7 +167,7 @@ export default function UserCard({ user, onDashboard, onToggle, onDelete, delay 
             </li>
           </ul>
 
-          {/* Actions */}
+          {/* Botões de acção: dashboard, activar/desactivar, eliminar */}
           <div className="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-surface">
             {[
               {

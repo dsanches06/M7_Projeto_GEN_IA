@@ -16,6 +16,7 @@ class TicketService extends BaseService {
   async getTickets() {
     try {
       const data = await this.fetchData("/tickets");
+      // Mapeia os dados crus para instâncias do modelo Ticket
       return data.map(
         (ticket) =>
           new Ticket(
@@ -116,7 +117,7 @@ class TicketService extends BaseService {
   }
 
   /**
-   * Deleta ticket
+   * Elimina ticket pelo ID
    */
   async deleteTicket(ticketId) {
     try {

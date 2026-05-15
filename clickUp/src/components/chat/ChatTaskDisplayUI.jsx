@@ -1,7 +1,4 @@
-/**
- * ChatTaskDisplayUI - Exibe dados de tarefa detectada
- * Padrão: Componente UI reutilizável
- */
+// Painel que exibe os dados de uma tarefa detectada pela IA na conversa
 export function ChatTaskDisplayUI({ taskData }) {
   if (!taskData) return null;
 
@@ -15,6 +12,7 @@ export function ChatTaskDisplayUI({ taskData }) {
         </p>
         <p>
           <strong>Prioridade:</strong>{' '}
+          {/* Cor da prioridade: vermelho=alta, amarelo=média, verde=baixa */}
           <span className={
             taskData.priority?.toUpperCase() === 'ALTA' || taskData.priority?.toUpperCase() === 'URGENT'
               ? 'text-red-400'

@@ -1,10 +1,14 @@
 import { createContext, useContext, useState, useEffect } from "react";
 
+// Contexto global de tema (dark/light)
 const ThemeContext = createContext();
 
+// Fornecedor de tema — envolve toda a aplicação
 export function ThemeProvider({ children }) {
+  // Tema activo; "dark" por omissão
   const [theme, setTheme] = useState("dark");
 
+  // Aplica classe CSS no elemento raiz quando o tema muda
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -16,6 +20,7 @@ export function ThemeProvider({ children }) {
     }
   }, [theme]);
 
+  // Alterna entre dark e light
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };

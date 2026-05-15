@@ -1,16 +1,10 @@
-/**
- * Componente de Preview de Tarefa Atualizada
- * Exibe um cartão visual confirmando a atualização do estado de uma tarefa.
- */
+// Cartão de confirmação após actualização do estado de uma tarefa pelo bot
 
 import { TASK_STATUS_COLORS } from "@/utils/chatUtils";
 
-/**
- * Mostra o novo estado da tarefa após atualização pelo bot
- * @param {Object} props.taskUpdated - Objeto com id, title e status_name da tarefa
- */
+// Exibe o novo estado da tarefa com cor dinâmica por status
 export function TaskUpdatedPreview({ taskUpdated }) {
-  /* Determina cor com base no estado atual */
+  // Determina cor com base no estado actual
   const statusName = taskUpdated.status_name || "UPDATED";
   const color      = TASK_STATUS_COLORS[statusName] || "#6B7280";
 

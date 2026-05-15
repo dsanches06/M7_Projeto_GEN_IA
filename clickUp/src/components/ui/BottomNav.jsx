@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
 
+// Itens de navegação com ícones SVG e rotas associadas
 const NAV_ITEMS = [
   {
     id: "dashboard",
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   },
 ];
 
+// Barra de navegação inferior fixa — visível apenas em mobile
 export function BottomNav() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -76,6 +78,7 @@ export function BottomNav() {
             <>
               <span className="relative">
                 {item.icon(isActive)}
+                {/* Ponto indicador de rota activa */}
                 {isActive && (
                   <span
                     className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"

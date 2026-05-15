@@ -1,18 +1,10 @@
-/**
- * Componente de Preview de Adição de Etiquetas
- * Exibe um cartão visual confirmando as etiquetas adicionadas a uma tarefa.
- */
-
-/**
- * Mostra as etiquetas adicionadas a uma tarefa pelo bot
- * @param {Object} props.tagAssignment - Objeto com task_id, task_title e added (array de tags)
- */
+// Cartão de confirmação das etiquetas adicionadas a uma tarefa pelo bot
 export function TagAssignmentPreview({ tagAssignment }) {
   const { task_id, task_title, added = [] } = tagAssignment;
 
   return (
     <div className="rounded-xl border border-[#E9D5FF] bg-[#FAF5FF] p-3 shadow-sm">
-      {/* Cabeçalho com contagem de etiquetas */}
+      {/* Cabeçalho com contagem dinâmica de etiquetas */}
       <div className="flex items-center gap-2 mb-2.5">
         <span>🏷️</span>
         <span className="text-xs font-bold text-[#7C3AED]">

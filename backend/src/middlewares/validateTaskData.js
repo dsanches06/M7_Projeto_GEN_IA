@@ -1,4 +1,5 @@
-﻿export const validateTaskData = (req, res, next) => {
+﻿// Middleware de validação dos dados de tarefa (criação e actualização)
+export const validateTaskData = (req, res, next) => {
   const {
     title,
     description,
@@ -9,9 +10,10 @@
     completed_at,
   } = req.body;
 
-  const isUpdate = Boolean(req.params.id);
+  const isUpdate = Boolean(req.params.id); // Distingue criação de actualização
 
   if (isUpdate) {
+    // Recolhe os campos enviados para actualização
     const fieldsToUpdate = [];
 
     if (title !== undefined) fieldsToUpdate.push("title");
@@ -55,6 +57,7 @@
       return res.status(400).json({ error: "Estimated hours must be valid" });
     }
   } else {
+    // Validação de campos obrigatórios na criação
     if (!title || title.toString().trim().length === 0) {
       return res.status(400).json({ error: "Title is required" });
     }

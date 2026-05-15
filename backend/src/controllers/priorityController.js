@@ -1,7 +1,7 @@
 import { priorityService } from "../services/index.js";
 
 
-/* Função para obter todas as prioridades */
+/* Devolve todas as prioridades disponíveis */
 export const getPriorities = async (req, res) => {
   try {
     const priorities = await priorityService.getAllPriorities();
@@ -12,7 +12,7 @@ export const getPriorities = async (req, res) => {
 };
 
 
-/* Função para obter prioridade por ID */
+/* Devolve uma prioridade pelo ID */
 export const getPriorityById = async (req, res) => {
   try {
     const priority = await priorityService.getPriorityById(Number(req.params.id));
@@ -26,7 +26,7 @@ export const getPriorityById = async (req, res) => {
 };
 
 
-/* Função para criar prioridade */
+/* Cria uma nova prioridade */
 export const createPriority = async (req, res) => {
   try {
     const { name } = req.body;
@@ -41,7 +41,7 @@ export const createPriority = async (req, res) => {
 };
 
 
-/* Função para atualizar prioridade */
+/* Actualiza uma prioridade pelo ID */
 export const updatePriority = async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,7 +56,7 @@ export const updatePriority = async (req, res) => {
 };
 
 
-/* Função para deletar prioridade */
+/* Elimina uma prioridade pelo ID */
 export const deletePriority = async (req, res) => {
   try {
     const { id } = req.params;

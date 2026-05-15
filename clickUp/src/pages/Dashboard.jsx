@@ -7,7 +7,7 @@ import completedIcon from "../assets/tarefa-concluida.png";
 import todoIcon      from "../assets/filtrar-tarefas.png";
 import filterIcon    from "../assets/filtrar-tarefas.png";
 
-// ── Stat Card atom ────────────────────────────────────────────────────────────
+// Cartão de estatística clicável para filtrar tarefas
 function StatCard({ label, value, icon, filter, currentFilter, onFilter, delay, className = "" }) {
   const isSelected = filter && currentFilter === filter;
   return (
@@ -33,6 +33,7 @@ function StatCard({ label, value, icon, filter, currentFilter, onFilter, delay, 
   );
 }
 
+// Componente principal do dashboard de tarefas
 export function Dashboard({
   tasks            = [],
   onTasksUpdate    = () => {},
@@ -40,9 +41,13 @@ export function Dashboard({
   tasksError       = null,
   onRetryLoadTasks = () => {},
 }) {
+  // Filtro de estado activo
   const [statusFilter, setStatusFilter] = useState("ALL");
+  // Texto de pesquisa
   const [search,       setSearch]       = useState("");
+  // Visibilidade do campo de pesquisa
   const [showSearch,   setShowSearch]   = useState(false);
+  // Direcção de ordenação por prioridade
   const [sortDir,      setSortDir]      = useState("NONE");
 
   const allTasks   = tasks || [];
@@ -50,6 +55,7 @@ export function Dashboard({
   const completed  = allTasks.filter((t) => t.status === "concluída").length;
   const todo       = allTasks.filter((t) => t.status === "a fazer").length;
 
+  // Definição dos cartões de estatística do topo
   const statCards = [
     { label: "Total",        value: allTasks.length, icon: totalIcon,     filter: "ALL"         },
     { label: "Em Progresso", value: inProgress,       icon: progressIcon,  filter: "IN_PROGRESS" },
@@ -58,6 +64,7 @@ export function Dashboard({
     { label: "Filtradas",    value: 0,                 icon: filterIcon,    filter: null          },
   ];
 
+  // Filtra por estado seleccionado
   const byStatus = statusFilter === "ALL"
     ? allTasks
     : allTasks.filter((t) => {
@@ -67,12 +74,14 @@ export function Dashboard({
         return true;
       });
 
+  // Filtra por texto de pesquisa (título ou descrição)
   const bySearch = search.trim()
     ? byStatus.filter((t) =>
         (t.title || "").toLowerCase().includes(search.toLowerCase()) ||
         (t.description || "").toLowerCase().includes(search.toLowerCase()))
     : byStatus;
 
+  // Mapa de prioridade para ordenação numérica
   const PRIORITY_ORDER = { alta: 3, média: 2, baixa: 1 };
   const sorted = [...bySearch].sort((a, b) => {
     if (sortDir === "ASC")  return (PRIORITY_ORDER[a.priority] || 0) - (PRIORITY_ORDER[b.priority] || 0);
@@ -85,8 +94,10 @@ export function Dashboard({
     return bd - ad;
   });
 
+  // Actualiza contador do cartão "Filtradas" com o resultado final
   statCards[4].value = sorted.length;
 
+  // Label legível do filtro activo
   const filterLabel =
     statusFilter === "IN_PROGRESS" ? "Em Progresso"
     : statusFilter === "COMPLETED" ? "Concluídas"
@@ -121,15 +132,15 @@ export function Dashboard({
 
       <div className="flex flex-col gap-3 mb-4 sm:mb-6">
 
-        {/* ── MOBILE: row 1 → 3 cards, row 2 → 2 cards (each = 50% width) ── */}
+        {/* ── MOBILE: linha 1 → 3 cartões, linha 2 → 2 cartões ── */}
         <div className="sm:hidden space-y-2">
-          {/* Row 1: 3 equal cards */}
+          {/* Linha 1: 3 cartões iguais */}
           <div className="grid grid-cols-3 gap-2">
             {statCards.slice(0, 3).map((c, i) => (
               <StatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} delay={i * 60} />
             ))}
           </div>
-          {/* Row 2: 2 cards, each half-width → fills the same total width as row 1 */}
+          {/* Linha 2: 2 cartões, cada um com metade da largura */}
           <div className="grid grid-cols-2 gap-2">
             {statCards.slice(3).map((c, i) => (
               <StatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} delay={(3 + i) * 60} />
@@ -137,14 +148,14 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* ── DESKTOP: all 5 in one row ── */}
+        {/* ── DESKTOP: 5 cartões numa única linha ── */}
         <div className="hidden sm:grid sm:grid-cols-5 gap-2">
           {statCards.map((c, i) => (
             <StatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} delay={i * 70} />
           ))}
         </div>
 
-        {/* Filter controls */}
+        {/* Controlos de filtro e ordenação */}
         <div className="flex items-center gap-2 justify-end">
           {showSearch && (
             <input autoFocus
@@ -157,6 +168,7 @@ export function Dashboard({
           <span className="hidden sm:inline-flex text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2">
             Filtro: {filterLabel}
           </span>
+          {/* Botão para mostrar/ocultar campo de pesquisa */}
           <button
             type="button"
             onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
@@ -164,6 +176,7 @@ export function Dashboard({
           >
             ⌕
           </button>
+          {/* Botão de ordenação por prioridade (nenhuma → ASC → DESC) */}
           <button
             type="button"
             onClick={() => setSortDir((d) => d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE")}
@@ -174,7 +187,7 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Tasks section */}
+      {/* Secção de lista de tarefas */}
       <section className="bg-surface-2 border border-surface rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6">
           <div>

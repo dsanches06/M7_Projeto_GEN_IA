@@ -1,5 +1,6 @@
 import { useTheme } from "@/context/ThemeContext";
 
+// Rodapé com copyright, créditos do módulo e links sociais
 export function Footer() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -10,8 +11,9 @@ export function Footer() {
     >
       <div className="container mx-auto px-4 text-center text-sm text-muted">
         <p>&copy; 2026 ClickUp </p>
-        <p>M7: Introdução a GenAI & GenAI no Browser </p>
+        <p>M7: Introdução a GenAI &amp; GenAI no Browser </p>
         <p>Front End + AI - Upskill 2025 - 2026</p>
+        {/* Links para LinkedIn e GitHub do autor */}
         <div className="mt-4 flex justify-center gap-4">
           <a
             href="https://www.linkedin.com/in/danilson-sanches/"

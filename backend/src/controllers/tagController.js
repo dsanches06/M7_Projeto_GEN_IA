@@ -1,6 +1,6 @@
 import { tagService, taskService } from "../services/index.js";
 
-/* Função para buscar etiquetas */
+/* Devolve todas as etiquetas */
 export const getTags = async (req, res) => {
   try {
     const tags = await tagService.getAllTags();
@@ -10,6 +10,7 @@ export const getTags = async (req, res) => {
   }
 };
 
+/* Devolve uma etiqueta pelo ID */
 export const getTagById = async (req, res) => {
   try {
     const tag = await tagService.getTagById(Number(req.params.id));
@@ -22,7 +23,7 @@ export const getTagById = async (req, res) => {
   }
 };
 
-/* Função para criar etiqueta */
+/* Cria uma etiqueta após validar unicidade do nome */
 export const createTag = async (req, res) => {
   try {
     const { name } = req.body;
@@ -35,6 +36,7 @@ export const createTag = async (req, res) => {
       return res.status(400).json({ message: "O nome da etiqueta deve ter pelo menos 2 caracteres" });
     }
 
+    // Impede nomes duplicados
     const tagExists = await tagService.tagNameExists(name.trim());
     if (tagExists) {
       return res.status(400).json({ message: "Já existe uma etiqueta com este nome" });
@@ -47,18 +49,18 @@ export const createTag = async (req, res) => {
   }
 };
 
-/* Função para deletar etiqueta */
+/* Elimina a etiqueta e remove-a de todas as tarefas associadas */
 export const deleteTag = async (req, res) => {
   try {
     const tag = await tagService.deleteTag(Number(req.params.id));
-    await taskService.removeTagFromAllTasks(Number(req.params.id));
+    await taskService.removeTagFromAllTasks(Number(req.params.id)); // Limpeza em cascata
     res.status(200).json({ message: "Etiqueta deletada com sucesso", tag });
   } catch (error) {
     res.status(404).json({ message: "Erro ao deletar etiqueta" });
   }
 };
 
-/* Função para atualizar etiqueta */
+/* Actualiza o nome de uma etiqueta existente */
 export const updateTag = async (req, res) => {
   try {
     const tagId = Number(req.params.id);
@@ -72,6 +74,7 @@ export const updateTag = async (req, res) => {
       return res.status(400).json({ message: "O nome da etiqueta deve ter pelo menos 2 caracteres" });
     }
 
+    // Exclui o próprio registo da verificação de duplicado
     const tagExists = await tagService.tagNameExists(name.trim(), tagId);
     if (tagExists) {
       return res.status(400).json({ message: "Já existe uma etiqueta com este nome" });
@@ -88,7 +91,7 @@ export const updateTag = async (req, res) => {
   }
 };
 
-/* Função para buscar tarefas da etiqueta */
+/* Devolve todas as tarefas associadas a uma etiqueta */
 export const getTagTasks = async (req, res) => {
   try {
     const tagId = Number(req.params.id);

@@ -9,6 +9,7 @@
  * @returns {Array} Array de objetos com label e convs (conversas agrupadas).
  */
 export const groupConversationsByDate = (conversations) => {
+  // Ordena da mais recente para a mais antiga
   const sorted = [...conversations].sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at),
   );
@@ -18,6 +19,7 @@ export const groupConversationsByDate = (conversations) => {
   yesterday.setDate(yesterday.getDate() - 1);
   const week = new Date(today);
   week.setDate(week.getDate() - 7);
+  // Grupos temporais para o histórico de conversas
   const groups = { Hoje: [], Ontem: [], "Esta Semana": [], Anteriores: [] };
   sorted.forEach((conv) => {
     const d = new Date(conv.created_at);
@@ -26,6 +28,7 @@ export const groupConversationsByDate = (conversations) => {
     else if (d >= week) groups["Esta Semana"].push(conv);
     else groups["Anteriores"].push(conv);
   });
+  // Remove grupos vazios antes de devolver
   return Object.entries(groups)
     .filter(([, c]) => c.length > 0)
     .map(([label, convs]) => ({ label, convs }));

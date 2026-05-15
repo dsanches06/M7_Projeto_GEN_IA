@@ -1,6 +1,6 @@
 import { roleService } from "../services/index.js";
 
-/* Função para buscar papéis */
+/* Devolve todos os papéis disponíveis */
 export const getRoles = async (req, res) => {
   try {
     const roles = await roleService.getAllRoles();
@@ -10,6 +10,7 @@ export const getRoles = async (req, res) => {
   }
 };
 
+/* Devolve um papel pelo ID */
 export const getRoleById = async (req, res) => {
   try {
     const role = await roleService.getRoleById(Number(req.params.id));
@@ -22,7 +23,7 @@ export const getRoleById = async (req, res) => {
   }
 };
 
-/* Função para criar papel */
+/* Cria um novo papel após validar unicidade do nome */
 export const createRole = async (req, res) => {
   try {
     const { name } = req.body;
@@ -35,6 +36,7 @@ export const createRole = async (req, res) => {
       return res.status(400).json({ message: "O nome do papel deve ter pelo menos 2 caracteres" });
     }
 
+    // Verifica duplicado antes de inserir
     const roleExists = await roleService.roleNameExists(name.trim());
     if (roleExists) {
       return res.status(400).json({ message: "Já existe um papel com este nome" });
@@ -47,7 +49,7 @@ export const createRole = async (req, res) => {
   }
 };
 
-/* Função para deletar papel */
+/* Elimina um papel pelo ID */
 export const deleteRole = async (req, res) => {
   try {
     const role = await roleService.deleteRole(Number(req.params.id));
@@ -60,7 +62,7 @@ export const deleteRole = async (req, res) => {
   }
 };
 
-/* Função para atualizar papel */
+/* Actualiza o nome e/ou ordem de um papel existente */
 export const updateRole = async (req, res) => {
   try {
     const roleId = Number(req.params.id);
@@ -74,6 +76,7 @@ export const updateRole = async (req, res) => {
       return res.status(400).json({ message: "O nome do papel deve ter pelo menos 2 caracteres" });
     }
 
+    // Exclui o próprio registo da verificação de duplicado
     const roleExists = await roleService.roleNameExists(name.trim(), roleId);
     if (roleExists) {
       return res.status(400).json({ message: "Já existe um papel com este nome" });
@@ -90,7 +93,7 @@ export const updateRole = async (req, res) => {
   }
 };
 
-/* Função para buscar tarefas do papel */
+/* Devolve as tarefas associadas a um papel */
 export const getRoleTasks = async (req, res) => {
   try {
     const roleId = Number(req.params.id);

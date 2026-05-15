@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Header, Footer, BottomNav } from "@/components/ui";
 
+// Layout principal — envolve todas as páginas com cabeçalho, rodapé e navegação
 export default function MainLayout() {
   return (
     <div className="min-h-screen bg-page flex flex-col">
@@ -14,12 +15,12 @@ export default function MainLayout() {
         <Outlet />
       </main>
 
-      {/* Desktop footer – hidden on mobile */}
+      {/* Rodapé visível apenas em desktop */}
       <div className="hidden md:block">
         <Footer />
       </div>
 
-      {/* Mobile bottom navigation */}
+      {/* Navegação inferior para mobile */}
       <BottomNav />
     </div>
   );

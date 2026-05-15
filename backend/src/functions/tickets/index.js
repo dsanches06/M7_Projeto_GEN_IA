@@ -1,24 +1,24 @@
-// ── Tickets function barrel ───────────────────────────────────────────────────
+// Barrel de funções de tíquetes para o agente de IA
 export {
-  setTicketValuesFunctionDeclaration,
+  setTicketValuesFunctionDeclaration,              // Declaração para criar tíquete
   functionDeclarations as createTicketDeclarations,
-  setCreateTicketValues,
+  setCreateTicketValues,                            // Preenche valores de criação
 } from "./create.js";
 
 export {
-  setDeleteTicketValuesFunctionDeclaration,
+  setDeleteTicketValuesFunctionDeclaration,        // Declaração para eliminar tíquete
   functionDeclarations as deleteTicketDeclarations,
-  setDeleteTicketValues,
+  setDeleteTicketValues,                            // Preenche valores de eliminação
 } from "./delete.js";
 
 export {
-  setPatchStatusTicketValuesFunctionDeclaration,
+  setPatchStatusTicketValuesFunctionDeclaration,   // Declaração para alterar estado do tíquete
   functionDeclarations as patchStatusTicketDeclarations,
-  setPatchStatusTicketValues,
+  setPatchStatusTicketValues,                       // Preenche valores de estado
 } from "./patch_status.js";
 
 export {
-  setUpdateTicketValuesFunctionDeclaration,
+  setUpdateTicketValuesFunctionDeclaration,        // Declaração para actualizar tíquete
   functionDeclarations as updateTicketDeclarations,
-  setUpdateTicketValues,
+  setUpdateTicketValues,                            // Preenche valores de actualização
 } from "./update.js";
