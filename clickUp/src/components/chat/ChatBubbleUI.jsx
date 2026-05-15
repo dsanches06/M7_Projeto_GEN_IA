@@ -3,7 +3,7 @@
  * Padrão: Componente UI reutilizável
  */
 export function ChatBubbleUI({ message, sender }) {
-  const isBot = sender === 'bot';
+  const isBot = sender !== 'user';
 
   return (
     <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} animate-fadeIn`}>

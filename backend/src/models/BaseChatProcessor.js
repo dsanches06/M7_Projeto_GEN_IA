@@ -44,15 +44,26 @@ export class BaseChatProcessor {
     return args.user_id ?? args.userId ?? null;
   }
 
+  extractTagIdsFromArgs(rawArgs) {
+    const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs || {};
+    return Array.isArray(args.tag_ids) && args.tag_ids.length > 0;
+  }
+
   filterFunctionCalls(functionCalls = []) {
     const hasCreateWithUserId = functionCalls.some((fc) => {
       if (fc.name !== "set_create_task_values") return false;
       return this.extractUserIdFromArgs(fc.args) != null;
     });
 
-    if (!hasCreateWithUserId) return functionCalls;
+    const hasCreateWithTagIds = functionCalls.some((fc) => {
+      if (fc.name !== "set_create_task_values") return false;
+      return this.extractTagIdsFromArgs(fc.args);
+    });
 
-    return functionCalls.filter((fc) => fc.name !== "set_assign_task_values");
+    let calls = functionCalls;
+    if (hasCreateWithUserId) calls = calls.filter((fc) => fc.name !== "set_assign_task_values");
+    if (hasCreateWithTagIds) calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
+    return calls;
   }
 
   isProviderError(error) {

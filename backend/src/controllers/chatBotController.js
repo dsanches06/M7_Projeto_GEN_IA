@@ -31,7 +31,7 @@ const { createConversation, getConversationById } = conversationService;
 const { createTask, updateStatus, updateTask, deleteTask, getTaskById } =
   taskService;
 
-const { createTicket, updateTicket, deleteTicket } = ticketService;
+const { createTicket, updateTicket, deleteTicket, getTicketById } = ticketService;
 
 const { createNotification } = notificationService;
 const { getUserById } = userService;
@@ -189,9 +189,26 @@ const persistFunctionResult = async (functionResult) => {
       task = await createTask(result);
       if (result.user_id && task?.id) {
         try {
-          assignment = await upsertAssignment(task.id, result.user_id);
+          assignment = await upsertAssignment({ task_id: task.id, user_id: result.user_id });
         } catch (e) {
           console.warn("[persist] Auto-assign failed:", e.message);
+        }
+      }
+      if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0 && task?.id) {
+        try {
+          const rawTags = await createTagTasks({ task_id: task.id, tag_ids: result.tag_ids });
+          const allTags = await getAllTags().catch(() => []);
+          const tagMap = Object.fromEntries(allTags.map((t) => [t.id, t]));
+          tags = {
+            task_id: task.id,
+            task_title: task.title,
+            added: (rawTags || []).map((rt) => {
+              const tag = tagMap[rt.tag_id] || {};
+              return { tag_id: rt.tag_id, tag_name: tag.name || `Tag #${rt.tag_id}`, tag_color: tag.color || "#6B7280" };
+            }),
+          };
+        } catch (e) {
+          console.warn("[persist] Auto-tag failed:", e.message);
         }
       }
     } else if (functionName === "set_update_task_values") {

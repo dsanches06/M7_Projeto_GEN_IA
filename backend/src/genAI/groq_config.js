@@ -223,67 +223,130 @@ export const createGroqChat = (tools, history = []) => {
 
     return {
       sendMessage: async (message) => {
-        let normalizedMessage;
+        try {
+          // ── Handle tool response format (BaseChatProcessor → Groq) ──────────
+          // BaseChatProcessor sends: { message: { role: "tool", parts: [{ functionResponse: { name, response } }] } }
+          // Groq expects: { role: "tool", content: "...", tool_call_id: "..." }
+          if (
+            message &&
+            typeof message === "object" &&
+            message.message &&
+            typeof message.message === "object" &&
+            message.message.role === "tool" &&
+            Array.isArray(message.message.parts)
+          ) {
+            // Map function names → tool_call_ids from the last assistant message
+            const lastAssistantMsg = [...conversationHistory]
+              .reverse()
+              .find((m) => m.role === "assistant");
+            const toolCallIdMap = {};
+            if (Array.isArray(lastAssistantMsg?.tool_calls)) {
+              for (const tc of lastAssistantMsg.tool_calls) {
+                if (tc.function?.name) toolCallIdMap[tc.function.name] = tc.id;
+              }
+            }
 
-        const normalizeParts = (parts) => {
-          if (!Array.isArray(parts)) return String(parts);
-          return parts
-            .map((part) => {
-              if (part == null) return "";
-              if (typeof part === "string") return part;
-              if (typeof part === "object") return part.text ?? JSON.stringify(part);
-              return String(part);
-            })
-            .join("");
-        };
+            // Add each tool result to conversation history
+            for (const part of message.message.parts) {
+              if (part?.functionResponse) {
+                const { name, response: toolResponse } = part.functionResponse;
+                conversationHistory.push({
+                  role: "tool",
+                  content:
+                    typeof toolResponse === "string"
+                      ? toolResponse
+                      : JSON.stringify(toolResponse),
+                  tool_call_id: toolCallIdMap[name] || name,
+                });
+              }
+            }
 
-        if (typeof message === "string") {
-          normalizedMessage = { role: "user", content: message };
-        } else if (
-          message &&
-          typeof message === "object" &&
-          message.role &&
-          (typeof message.content === "string" || Array.isArray(message.content))
-        ) {
-          normalizedMessage = message;
-        } else if (
-          message &&
-          typeof message === "object" &&
-          Array.isArray(message.parts)
-        ) {
-          normalizedMessage = {
-            role: message.role || "user",
-            content: normalizeParts(message.parts),
+            // Call Groq with tool results already in history (no extra user message)
+            const toolRespResult = await groq.chat.completions.create({
+              model: GROQ_MODEL,
+              messages: [...conversationHistory],
+              temperature: 0.25,
+              tools: normalizeGroqTools(tools),
+            });
+
+            const toolRespNormalized = normalizeGroqResponse(toolRespResult);
+            if (toolRespNormalized?.choices?.[0]?.message) {
+              conversationHistory.push(toolRespNormalized.choices[0].message);
+            }
+
+            return toolRespNormalized;
+          }
+
+          // ── Regular message normalization ────────────────────────────────────
+          let normalizedMessage;
+
+          const normalizeParts = (parts) => {
+            if (!Array.isArray(parts)) return String(parts);
+            return parts
+              .map((part) => {
+                if (part == null) return "";
+                if (typeof part === "string") return part;
+                if (typeof part === "object") return part.text ?? JSON.stringify(part);
+                return String(part);
+              })
+              .join("");
           };
-        } else if (
-          message &&
-          typeof message === "object" &&
-          typeof message.message === "string"
-        ) {
-          normalizedMessage = { role: "user", content: message.message };
-        } else {
-          normalizedMessage = { role: "user", content: String(message) };
+
+          if (typeof message === "string") {
+            normalizedMessage = { role: "user", content: message };
+          } else if (
+            message &&
+            typeof message === "object" &&
+            message.role &&
+            (typeof message.content === "string" || Array.isArray(message.content))
+          ) {
+            normalizedMessage = message;
+          } else if (
+            message &&
+            typeof message === "object" &&
+            Array.isArray(message.parts)
+          ) {
+            normalizedMessage = {
+              role: message.role || "user",
+              content: normalizeParts(message.parts),
+            };
+          } else if (
+            message &&
+            typeof message === "object" &&
+            typeof message.message === "string"
+          ) {
+            normalizedMessage = { role: "user", content: message.message };
+          } else {
+            normalizedMessage = { role: "user", content: String(message) };
+          }
+
+          const messages = [
+            ...conversationHistory,
+            normalizedMessage,
+          ];
+
+          const response = await groq.chat.completions.create({
+            model: GROQ_MODEL,
+            messages,
+            temperature: 0.25,
+            tools: normalizeGroqTools(tools),
+          });
+
+          const normalized = normalizeGroqResponse(response);
+          conversationHistory.push(normalizedMessage);
+          if (normalized?.choices?.[0]?.message) {
+            conversationHistory.push(normalized.choices[0].message);
+          }
+
+          return normalized;
+        } catch (error) {
+          const classified = classifyGroqError(error);
+          console.error(`[Groq SendMessage] ${classified.type}:`, error.message);
+          const enriched = new Error(classified.userMessage);
+          enriched.groqType = classified.type;
+          enriched.originalError = error;
+          throw enriched;
         }
-
-        const messages = [
-          ...conversationHistory,
-          normalizedMessage,
-        ];
-
-        const response = await groq.chat.completions.create({
-          model: GROQ_MODEL, // Default Groq model
-          messages,
-          temperature: 0.25,
-          tools: normalizeGroqTools(tools),
-        });
-
-        const normalized = normalizeGroqResponse(response);
-        conversationHistory.push(normalizedMessage);
-        if (normalized?.choices?.[0]?.message) {
-          conversationHistory.push(normalized.choices[0].message);
-        }
-
-        return normalized;
       },
       getHistory: () => conversationHistory,
     };

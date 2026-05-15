@@ -103,7 +103,7 @@ export function ChatUI({
         .map((r, index) => ({
           id: `${conv.id}-${r.id ?? index}`,
           text: r.content,
-          sender: r.role_id === 2 ? "user" : "assistant",
+          sender: r.role_id === 2 ? "user" : "bot",
           timestamp: r.created_at ? new Date(r.created_at) : new Date(),
         }));
 

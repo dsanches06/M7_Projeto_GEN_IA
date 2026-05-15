@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatService, BACKEND_URL } from '@/services/chatService';
+import { chatService } from '@/services/chatService';
+import { BACKEND_URL } from '@/services/BaseService.js';
 
 /**
  * Componente de Chat com Bot GenAI

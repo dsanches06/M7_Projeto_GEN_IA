@@ -73,6 +73,7 @@ function AppContent() {
 
     if (statusChanged && assignedTo) {
       setOpenUserId(assignedTo);
+      setUserDashRefreshKey((prev) => prev + 1);
       navigate("/utilizadores");
       return;
     }

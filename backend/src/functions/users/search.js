@@ -38,6 +38,11 @@ class SearchUserFunction extends BaseFunction {
     };
   }
 
+  async execute(args = {}) {
+    const mapped = this.mapValues(args);
+    return this.executeMapped(mapped);
+  }
+
   async executeMapped(args) {
     const { name } = args;
     if (!name) {

@@ -61,6 +61,14 @@ class CreateTaskFunction extends BaseFunction {
                 "Use este campo sempre que o utilizador pede criar e atribuir no mesmo pedido. " +
                 "Não use set_assign_task_values em paralelo se já estiver presente.",
             },
+            tag_ids: {
+              type: ["array", "null"],
+              items: { type: "integer" },
+              description:
+                "Lista de IDs de tags a adicionar à tarefa imediatamente após a criação. " +
+                "Use este campo para evitar uma segunda chamada a set_tag_task_values. " +
+                "Exemplo: [1, 4] para Urgente e Bug.",
+            },
           },
           required: ["title", "description"],
         },
@@ -83,6 +91,7 @@ class CreateTaskFunction extends BaseFunction {
       completed_at,
       estimated_hours,
       user_id,
+      tag_ids,
     } = args;
 
     // user_id: preserva null se não fornecido (não usa parseNumber que retorna 0)
@@ -91,6 +100,11 @@ class CreateTaskFunction extends BaseFunction {
         ? this.parseNumber(user_id, null)
         : args.userId != null
         ? this.parseNumber(args.userId, null)
+        : null;
+
+    const resolvedTagIds =
+      Array.isArray(tag_ids) && tag_ids.length > 0
+        ? tag_ids.map(Number).filter(Boolean)
         : null;
 
     return {
@@ -109,8 +123,8 @@ class CreateTaskFunction extends BaseFunction {
         this.parseNumber(args.estimatedHours, 0)
       ),
 
-      // Passado para o controller tratar automaticamente a atribuição
       user_id: resolvedUserId,
+      tag_ids: resolvedTagIds,
     };
   }
 }
