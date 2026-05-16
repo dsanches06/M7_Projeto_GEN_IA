@@ -39,7 +39,7 @@ class CreateTicketFunction extends BaseFunction {
               description: "Sugestão de correção",
             },
             created_at: {
-              type: "string",
+              type: ["string", "null"],
               format: "date-time",
               description: "Data de criação",
             },

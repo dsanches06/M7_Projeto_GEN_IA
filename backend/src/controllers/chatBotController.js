@@ -86,64 +86,6 @@ const injectTaskContext = (userMessage, history) => {
   return msg;
 };
 
-// ── Gera resumo da conversa e devolve como texto (sem gravar na DB) ───────────
-const autoGenerateSummary = async (conversationId) => {
-  try {
-    const historyRows = await getChatHistoryByConversationId(conversationId);
-    if (!historyRows || historyRows.length < 2) return null;
-
-    const historyText = historyRows
-      .slice(-12)
-      .map(
-        (r) =>
-          `${r.role_id === ROLE_USER ? "Utilizador" : "Assistente"}: ${r.content.substring(0, 120)}`,
-      )
-      .join("\n");
-
-    const prompt = `Resume esta conversa em 1-2 frases curtas e claras (máx. 195 caracteres). Histórico:\n${historyText}`;
-    const result = await processChatMessage(prompt, []);
-
-    if (result.providerError || !result.success) return null;
-
-    const summaryText =
-      result.functionResults?.[0]?.result?.summary || result.message || null;
-
-    return summaryText ? summaryText.substring(0, 195) : null;
-  } catch (err) {
-    console.warn("[AutoSummary] Non-critical error:", err.message);
-    return null;
-  }
-};
-
-export const getConversationSummary = async (req, res) => {
-  try {
-    const conversationId = Number(req.params.conversationId);
-    if (!conversationId)
-      return res
-        .status(400)
-        .json({ success: false, error: "conversationId inválido" });
-
-    const existing = await getConversationById(conversationId);
-    if (!existing)
-      return res
-        .status(404)
-        .json({ success: false, error: "Conversation não encontrada" });
-
-    const summary = await autoGenerateSummary(conversationId);
-    if (!summary)
-      return res
-        .status(200)
-        .json({ success: true, conversationId, summary: null });
-
-    return res.status(200).json({ success: true, conversationId, summary });
-  } catch (error) {
-    console.error("[getConversationSummary] Error:", error.message);
-    return res.status(500).json({
-      success: false,
-      error: "Erro ao gerar resumo da conversa",
-    });
-  }
-};
 
 // ── Upsert task assignment ────────────────────────────────────────────────────
 const upsertAssignment = async (payload) => {
@@ -234,10 +176,20 @@ const persistFunctionResult = async (functionResult) => {
         task = await createTask(result);
       }
       if (result.user_id && task?.id) {
-        try {
-          assignment = await upsertAssignment({ task_id: task.id, user_id: result.user_id });
-        } catch (e) {
-          console.warn("[persist] Auto-assign failed:", e.message);
+        if (result._assignmentPersisted) {
+          const user = await getUserById(Number(result.user_id)).catch(() => null);
+          assignment = {
+            task_id: task.id,
+            user_id: Number(result.user_id),
+            user_name: user?.name || `Utilizador #${result.user_id}`,
+            task_title: task.title || `Tarefa #${task.id}`,
+          };
+        } else {
+          try {
+            assignment = await upsertAssignment({ task_id: task.id, user_id: result.user_id });
+          } catch (e) {
+            console.warn("[persist] Auto-assign failed:", e.message);
+          }
         }
       }
     } else if (functionName === "set_update_task_values") {
@@ -261,8 +213,21 @@ const persistFunctionResult = async (functionResult) => {
         title: taskBefore.title,
       };
     } else if (functionName === "set_assign_task_values") {
-      assignment = await upsertAssignment(result);
-      if (assignment?.notification) notification = assignment.notification;
+      if (!result._persisted) {
+        assignment = await upsertAssignment(result);
+        if (assignment?.notification) notification = assignment.notification;
+      } else {
+        const [user, taskRow] = await Promise.all([
+          getUserById(Number(result.user_id)).catch(() => null),
+          getTaskById(Number(result.task_id)).catch(() => null),
+        ]);
+        assignment = {
+          task_id: Number(result.task_id),
+          user_id: Number(result.user_id),
+          user_name: user?.name || `Utilizador #${result.user_id}`,
+          task_title: taskRow?.title || `Tarefa #${result.task_id}`,
+        };
+      }
     } else if (functionName === "set_patch_status_task_values") {
       const taskIdNum = Number(result.task_id);
       const statusIdNum = Number(result.status_id);
@@ -276,9 +241,13 @@ const persistFunctionResult = async (functionResult) => {
       taskUpdated.status_name = STATUS_NAME[statusIdNum] || "UNKNOWN";
     } else if (functionName === "set_tag_task_values") {
       let rawTags = [];
-      if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0)
+      if (result._persisted) {
+        rawTags = (result.tag_ids || []).map((id) => ({ tag_id: id }));
+      } else if (Array.isArray(result.tag_ids) && result.tag_ids.length > 0) {
         rawTags = await createTagTasks(result);
-      else if (result.tag_id) rawTags = [await createTagTask(result)];
+      } else if (result.tag_id) {
+        rawTags = [await createTagTask(result)];
+      }
 
       let allTags = [];
       try {
@@ -614,7 +583,7 @@ export const sendMessageToBotStream = async (req, res) => {
         content: finalAssistantText,
       });
 
-      const summary = await autoGenerateSummary(actualConversationId);
+      const summary = null;
 
       // Check if there were persistence errors to report
       const hasPersistenceErrors =
@@ -785,7 +754,7 @@ export const sendMessageToConversation = async (req, res) => {
       content: finalAssistantText,
     });
 
-    const summary = await autoGenerateSummary(conversationId);
+    const summary = null;
 
     // Check if there were persistence errors
     const hasPersistenceErrors =
