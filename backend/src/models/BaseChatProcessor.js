@@ -81,7 +81,7 @@ export class BaseChatProcessor {
     return /\b(tag|tags|etiqueta|etiquetas|label|labels)\b/i.test(userMessage);
   }
 
-  filterFunctionCalls(functionCalls = [], userMessage = "") {
+  filterFunctionCalls(functionCalls = [], userMessage = "", assignedTaskIds = new Set()) {
     const tagsRequested = this.userRequestedTags(userMessage);
 
     // Strip tag_ids from set_create_task_values when user did not ask for tags
@@ -128,6 +128,17 @@ export class BaseChatProcessor {
     }
 
     if (hasCreateWithTagIds) calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
+
+    // Drop set_assign_task_values for tasks already assigned in a previous agentic step
+    // (e.g. via user_id embedded in set_create_task_values → _assignmentPersisted).
+    if (assignedTaskIds.size > 0) {
+      calls = calls.filter((fc) => {
+        if (fc.name !== "set_assign_task_values") return true;
+        const rawArgs = fc.args || fc.arguments || {};
+        const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs;
+        return !assignedTaskIds.has(Number(args.task_id ?? args.taskId));
+      });
+    }
 
     // Prevent cross-contamination from stale context:
     // If creating a task, remove unrelated ticket mutation calls (and vice-versa).
@@ -177,11 +188,12 @@ export class BaseChatProcessor {
       let response = await chat.sendMessage(userMessage);
       const allResults = [];
       let step = 0;
+      const assignedTaskIds = new Set();
 
       while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
         step++;
         const allCalls = response.functionCalls;
-        const callsToExecute = this.filterFunctionCalls(allCalls, userMessage);
+        const callsToExecute = this.filterFunctionCalls(allCalls, userMessage, assignedTaskIds);
         console.log(
           `[Agentic step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
         );
@@ -191,6 +203,12 @@ export class BaseChatProcessor {
           callsToExecute.map((fc) => this.executeFunction(fc)),
         );
         allResults.push(...execResults);
+
+        for (const r of execResults) {
+          if (r.name === "set_create_task_values" && r.result?._assignmentPersisted) {
+            assignedTaskIds.add(Number(r.result.task_id ?? r.result.id));
+          }
+        }
 
         // Return results for ALL original calls (blocked ones get a "cancelled" placeholder)
         response = await chat.sendMessage({
@@ -257,11 +275,12 @@ export class BaseChatProcessor {
 
     const allResults = [];
     let step = 0;
+    const assignedTaskIds = new Set();
 
     while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
       step++;
       const allCalls = response.functionCalls;
-      const callsToExecute = this.filterFunctionCalls(allCalls, userMessage);
+      const callsToExecute = this.filterFunctionCalls(allCalls, userMessage, assignedTaskIds);
       console.log(
         `[Agentic stream step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
       );
@@ -271,6 +290,12 @@ export class BaseChatProcessor {
       );
       allResults.push(...execResults);
 
+      for (const r of execResults) {
+        if (r.name === "set_create_task_values" && r.result?._assignmentPersisted) {
+          assignedTaskIds.add(Number(r.result.task_id ?? r.result.id));
+        }
+      }
+
       response = await chat.sendMessage({
         message: {
           role: "tool",
@@ -278,7 +303,8 @@ export class BaseChatProcessor {
         },
       });
 
-      if (response.text) onChunk(response.text);
+      // Only emit intermediate text if there are no more tool calls (final step)
+      if (response.text && !response.functionCalls?.length) onChunk(response.text);
     }
 
     const finalText = response.text || "";
