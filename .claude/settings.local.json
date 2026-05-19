@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3001/api/tasks)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:3001/api/chat/message/stream -H 'Content-Type: application/json' -d '{\"message\": \"cria uma tarefa chamada Testar autenticação com descrição verificar fluxo de login e registo\", \"user_id\": 1}' --max-time 30)"
+    ]
+  }
+}

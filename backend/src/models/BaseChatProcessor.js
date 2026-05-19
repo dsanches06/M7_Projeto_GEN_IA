@@ -65,12 +65,6 @@ export class BaseChatProcessor {
     return { name, args, result, functionCall };
   }
 
-  extractUserIdFromArgs(rawArgs) {
-    const args =
-      typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs || {};
-    return args.user_id ?? args.userId ?? null;
-  }
-
   extractTagIdsFromArgs(rawArgs) {
     const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs || {};
     return Array.isArray(args.tag_ids) && args.tag_ids.length > 0;
@@ -81,8 +75,16 @@ export class BaseChatProcessor {
     return /\b(tag|tags|etiqueta|etiquetas|label|labels)\b/i.test(userMessage);
   }
 
-  filterFunctionCalls(functionCalls = [], userMessage = "", assignedTaskIds = new Set()) {
+  filterFunctionCalls(functionCalls = [], userMessage = "") {
     const tagsRequested = this.userRequestedTags(userMessage);
+
+    // Prevent spurious task creation when the user only wants to assign an existing task.
+    // "criar tarefa e atribuir" is allowed; pure "atribuir" suppresses set_create_task_values.
+    const hasAssignVerb = /\b(atribui|atribuir|assign)\b/i.test(userMessage);
+    const hasCreateVerb = /\b(cri(a|ar)\s+(tarefa|task)|nova\s+(tarefa|task)|adiciona\s+uma?\s+(tarefa|task))\b/i.test(userMessage);
+    if (hasAssignVerb && !hasCreateVerb) {
+      functionCalls = functionCalls.filter((fc) => fc.name !== "set_create_task_values");
+    }
 
     // Strip tag_ids from set_create_task_values when user did not ask for tags
     let calls = functionCalls.map((fc) => {
@@ -102,18 +104,13 @@ export class BaseChatProcessor {
       calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
     }
 
-    const hasCreateWithUserId = calls.some((fc) => {
-      if (fc.name !== "set_create_task_values") return false;
-      return this.extractUserIdFromArgs(fc.args) != null;
-    });
-
     const hasCreateWithTagIds = calls.some((fc) => {
       if (fc.name !== "set_create_task_values") return false;
       return this.extractTagIdsFromArgs(fc.args);
     });
 
-    // If there's a set_assign_task_values with a valid task_id, the model is
-    // assigning an existing task — drop any spurious set_create_task_values call.
+    // If set_assign_task_values has a valid task_id, it's assigning an existing task —
+    // drop any spurious set_create_task_values in the same step.
     const hasAssignWithTaskId = calls.some((fc) => {
       if (fc.name !== "set_assign_task_values") return false;
       const rawArgs = fc.args || fc.arguments || {};
@@ -124,21 +121,14 @@ export class BaseChatProcessor {
     if (hasAssignWithTaskId) {
       calls = calls.filter((fc) => fc.name !== "set_create_task_values");
     } else {
-      if (hasCreateWithUserId) calls = calls.filter((fc) => fc.name !== "set_assign_task_values");
+      // If creating and assigning in the same step, drop assign — task_id is not yet
+      // known. The model will call set_assign_task_values in the next step with the
+      // real task_id returned by set_create_task_values.
+      const hasCreate = calls.some((fc) => fc.name === "set_create_task_values");
+      if (hasCreate) calls = calls.filter((fc) => fc.name !== "set_assign_task_values");
     }
 
     if (hasCreateWithTagIds) calls = calls.filter((fc) => fc.name !== "set_tag_task_values");
-
-    // Drop set_assign_task_values for tasks already assigned in a previous agentic step
-    // (e.g. via user_id embedded in set_create_task_values → _assignmentPersisted).
-    if (assignedTaskIds.size > 0) {
-      calls = calls.filter((fc) => {
-        if (fc.name !== "set_assign_task_values") return true;
-        const rawArgs = fc.args || fc.arguments || {};
-        const args = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs;
-        return !assignedTaskIds.has(Number(args.task_id ?? args.taskId));
-      });
-    }
 
     // Prevent cross-contamination from stale context:
     // If creating a task, remove unrelated ticket mutation calls (and vice-versa).
@@ -188,12 +178,11 @@ export class BaseChatProcessor {
       let response = await chat.sendMessage(userMessage);
       const allResults = [];
       let step = 0;
-      const assignedTaskIds = new Set();
 
       while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
         step++;
         const allCalls = response.functionCalls;
-        const callsToExecute = this.filterFunctionCalls(allCalls, userMessage, assignedTaskIds);
+        const callsToExecute = this.filterFunctionCalls(allCalls, userMessage);
         console.log(
           `[Agentic step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
         );
@@ -203,12 +192,6 @@ export class BaseChatProcessor {
           callsToExecute.map((fc) => this.executeFunction(fc)),
         );
         allResults.push(...execResults);
-
-        for (const r of execResults) {
-          if (r.name === "set_create_task_values" && r.result?._assignmentPersisted) {
-            assignedTaskIds.add(Number(r.result.task_id ?? r.result.id));
-          }
-        }
 
         // Return results for ALL original calls (blocked ones get a "cancelled" placeholder)
         response = await chat.sendMessage({
@@ -273,14 +256,16 @@ export class BaseChatProcessor {
       if (response.text) onChunk(response.text);
     }
 
+    // Capture thinking from the first model response (reasoning about what to do)
+    let thinking = response.thinking || null;
+
     const allResults = [];
     let step = 0;
-    const assignedTaskIds = new Set();
 
     while (response.functionCalls?.length && step < MAX_AGENTIC_STEPS) {
       step++;
       const allCalls = response.functionCalls;
-      const callsToExecute = this.filterFunctionCalls(allCalls, userMessage, assignedTaskIds);
+      const callsToExecute = this.filterFunctionCalls(allCalls, userMessage);
       console.log(
         `[Agentic stream step ${step}] calling: ${callsToExecute.map((f) => f.name).join(", ")}`,
       );
@@ -289,12 +274,6 @@ export class BaseChatProcessor {
         callsToExecute.map((fc) => this.executeFunction(fc)),
       );
       allResults.push(...execResults);
-
-      for (const r of execResults) {
-        if (r.name === "set_create_task_values" && r.result?._assignmentPersisted) {
-          assignedTaskIds.add(Number(r.result.task_id ?? r.result.id));
-        }
-      }
 
       response = await chat.sendMessage({
         message: {
@@ -312,6 +291,7 @@ export class BaseChatProcessor {
     return {
       success: true,
       message: finalText,
+      thinking,
       functionResults: allResults.map(
         ({ name, args, result, functionCall }) => ({
           functionName: name,

@@ -6,6 +6,17 @@ export const MODEL_QUEUE = [
   "groq/compound-mini",  // backup leve de altíssima velocidade (Groq)
 ];
 
+// Nível de esforço de raciocínio para modelos OpenAI na Groq (low | medium | high).
+// Ativa-se via variável de ambiente GROQ_REASONING_EFFORT. Omitido por padrão.
+const REASONING_EFFORT = process.env.GROQ_REASONING_EFFORT || null;
+
+/**
+ * Devolve true se o modelo suporta reasoning_effort (modelos OpenAI na Groq).
+ */
+export function supportsReasoningEffort(model = "") {
+  return model.startsWith("openai/");
+}
+
 /**
  * Envia mensagens para o Groq percorrendo a fila de modelos se esgotar o limite de tokens.
  * @param {import('groq-sdk').Groq} groqInstance
@@ -28,11 +39,18 @@ export async function chatWithFallback(
   const currentModel = queue[modelIndex];
   console.log(`A tentar o modelo: ${currentModel}...`);
 
+  // Adiciona reasoning_effort apenas nos modelos OpenAI que o suportam
+  const reasoningOptions =
+    REASONING_EFFORT && supportsReasoningEffort(currentModel)
+      ? { reasoning_effort: REASONING_EFFORT }
+      : {};
+
   try {
     const completion = await groqInstance.chat.completions.create({
       model: currentModel,
       messages,
       ...options,
+      ...reasoningOptions,
     });
 
     completion.modelUsed = currentModel;

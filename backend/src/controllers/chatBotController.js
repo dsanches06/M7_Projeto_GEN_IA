@@ -67,9 +67,14 @@ const extractRecentTicketIdFromHistory = (history = []) => {
 
 // Inject contextual IDs into the user message so the model uses them directly.
 const injectTaskContext = (userMessage, history) => {
-  const refersToTask   = /\b(esta|essa|a mesma|nesta|nessa|a anterior)\s+tarefa\b/i.test(userMessage);
-  const refersToTicket = /\b(este|esse|o mesmo|neste|nesse|o anterior)\s+ticket\b/i.test(userMessage);
   const hasCreateIntent = /\b(cria|criar|nova\s+tarefa|adiciona\s+uma?\s+tarefa)\b/i.test(userMessage);
+  const hasAssignIntent = /\b(atribui|atribuir|assign)\b/i.test(userMessage);
+
+  // Pronoun-based reference ("esta tarefa", "essa tarefa") OR assign-only intent
+  const refersToTask =
+    /\b(esta|essa|a mesma|nesta|nessa|a anterior)\s+tarefa\b/i.test(userMessage) ||
+    (hasAssignIntent && !hasCreateIntent);
+  const refersToTicket = /\b(este|esse|o mesmo|neste|nesse|o anterior)\s+ticket\b/i.test(userMessage);
 
   let msg = userMessage;
 
@@ -163,35 +168,13 @@ const persistFunctionResult = async (functionResult) => {
   try {
     // ── Tasks ────────────────────────────────────────────────────────────────
     if (functionName === "set_create_task_values") {
-      if (result.user_id != null) {
-        const userIdNum = Number(result.user_id);
-        if (!userIdNum) throw new Error("user_id inválido para task");
-        const existingUser = await getUserById(userIdNum);
-        if (!existingUser) throw new Error(`Utilizador ${userIdNum} não encontrado.`);
-      }
       // Task was already persisted in the agentic loop (createTaskAndPersist); just fetch it.
       if (result.id) {
         task = await getTaskById(result.id);
       } else {
         task = await createTask(result);
       }
-      if (result.user_id && task?.id) {
-        if (result._assignmentPersisted) {
-          const user = await getUserById(Number(result.user_id)).catch(() => null);
-          assignment = {
-            task_id: task.id,
-            user_id: Number(result.user_id),
-            user_name: user?.name || `Utilizador #${result.user_id}`,
-            task_title: task.title || `Tarefa #${task.id}`,
-          };
-        } else {
-          try {
-            assignment = await upsertAssignment({ task_id: task.id, user_id: result.user_id });
-          } catch (e) {
-            console.warn("[persist] Auto-assign failed:", e.message);
-          }
-        }
-      }
+      // Assignment is handled separately by set_assign_task_values in the agentic loop.
     } else if (functionName === "set_update_task_values") {
       const { task_id, ...updateFields } = result;
       const taskIdNum = Number(task_id);
@@ -593,6 +576,7 @@ export const sendMessageToBotStream = async (req, res) => {
         sendEvent("done", {
           success: false,
           message: finalAssistantText,
+          thinking: result.thinking || null,
           conversationId: actualConversationId,
           functionResults: result.functionResults || [],
           summary,
@@ -603,6 +587,7 @@ export const sendMessageToBotStream = async (req, res) => {
         sendEvent("done", {
           success: true,
           message: finalAssistantText,
+          thinking: result.thinking || null,
           conversationId: actualConversationId,
           functionResults: result.functionResults || [],
           summary,

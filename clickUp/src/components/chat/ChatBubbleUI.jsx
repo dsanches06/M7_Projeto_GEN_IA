@@ -1,9 +1,12 @@
+import { useState } from 'react';
+
 /**
  * ChatBubbleUI - Renderiza uma bolha de mensagem
  * Padrão: Componente UI reutilizável
  */
 export function ChatBubbleUI({ message, sender }) {
   const isBot = sender !== 'user';
+  const [thinkingOpen, setThinkingOpen] = useState(false);
 
   return (
     <div className={`flex ${isBot ? 'justify-start' : 'justify-end'} animate-fadeIn`}>
@@ -14,6 +17,23 @@ export function ChatBubbleUI({ message, sender }) {
             : 'bg-[var(--primary)] text-white rounded-br-none'
         }`}
       >
+        {isBot && message.thinking && (
+          <div className="mb-2">
+            <button
+              onClick={() => setThinkingOpen((o) => !o)}
+              className="flex items-center gap-1 text-[11px] text-muted hover:text-secondary transition-colors"
+            >
+              <span>{thinkingOpen ? '▼' : '▶'}</span>
+              <span>Raciocínio do bot</span>
+            </button>
+            {thinkingOpen && (
+              <div className="mt-1 p-2 rounded bg-surface border-l-2 border-[var(--primary)] text-[11px] text-muted whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
+                {message.thinking}
+              </div>
+            )}
+          </div>
+        )}
+
         <p className="text-sm whitespace-pre-wrap">{message.text}</p>
 
         {message.functionResults?.length > 0 && !message.persistenceErrors?.length && !message.text && (

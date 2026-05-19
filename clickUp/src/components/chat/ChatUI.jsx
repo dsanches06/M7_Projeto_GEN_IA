@@ -167,6 +167,7 @@ export function ChatUI({
     const botMsg = {
       id: botMsgId,
       text: "",
+      thinking: null,
       sender: "bot",
       timestamp: new Date(),
       functionResults: [],
@@ -198,10 +199,15 @@ export function ChatUI({
     setLoading(true);
 
     try {
+      let firstChunk = true;
       await chatService.sendMessageToBotStream(
         userMessage,
         updatedHistory,
         (chunk) => {
+          if (firstChunk) {
+            firstChunk = false;
+            setLoading(false);
+          }
           setMessages((p) =>
             p.map((m) =>
               m.id === botMsgId ? { ...m, text: `${m.text || ""}${chunk}` } : m,
@@ -285,7 +291,9 @@ export function ChatUI({
           // This clears any internal reasoning that leaked through streaming chunks.
           setMessages((p) =>
             p.map((m) =>
-              m.id === botMsgId ? { ...m, text: displayText } : m,
+              m.id === botMsgId
+                ? { ...m, text: displayText, thinking: done?.thinking || null }
+                : m,
             ),
           );
           if (displayText) {

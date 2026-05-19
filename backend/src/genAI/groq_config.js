@@ -140,6 +140,19 @@ function buildGroqConfig(tools, extraConfig = {}) {
   };
 }
 
+// Separates <think>...</think> content from the visible response text.
+// Returns { text, thinking } where thinking is null when absent.
+const extractThinking = (rawText) => {
+  const thoughts = [];
+  const text = (rawText || "")
+    .replace(/<think>([\s\S]*?)<\/think>/gi, (_, c) => {
+      thoughts.push(c.trim());
+      return "";
+    })
+    .trim();
+  return { text, thinking: thoughts.length ? thoughts.join("\n\n") : null };
+};
+
 const normalizeGroqText = (message) => {
   if (!message) return "";
   const { content } = message;
@@ -158,8 +171,8 @@ const normalizeGroqText = (message) => {
     return content.text || JSON.stringify(content);
   }
 
-  // Fallback for Groq tool-only responses
-  return String(message.text || message.reasoning || "");
+  // Fallback for Groq tool-only responses (never expose reasoning field)
+  return String(message.text || "");
 };
 
 const parseGroqFunctionArgs = (rawArgs) => {
@@ -211,12 +224,78 @@ const normalizeGroqResponse = (response) => {
   const choice = response?.choices?.[0] || {};
   const assistantMessage = choice.message || {};
 
+  // Extract thinking from <think> tags (Qwen3) or from message.reasoning /
+  // message.reasoning_content (OpenAI models with reasoning_effort).
+  const { text, thinking: thinkFromTags } = extractThinking(normalizeGroqText(assistantMessage));
+  const reasoningField =
+    assistantMessage.reasoning_content ||
+    assistantMessage.reasoning ||
+    null;
+  const thinking = thinkFromTags || (reasoningField ? String(reasoningField).trim() : null) || null;
+
   return {
     ...response,
-    text: normalizeGroqText(assistantMessage),
+    text,
+    thinking,
     functionCalls: extractGroqFunctionCalls(assistantMessage),
   };
 };
+
+// Filters <think>...</think> blocks from streamed chunks in real time.
+// Content inside think tags is accumulated and returned via finalize().
+function createThinkTagFilter(onChunk) {
+  const OPEN = "<think>";
+  const CLOSE = "</think>";
+  let buf = "";
+  let inThink = false;
+  let thinkContent = "";
+
+  const emit = (text) => { if (text) onChunk(text); };
+
+  const feed = (incoming) => {
+    buf += incoming;
+    let visible = "";
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (inThink) {
+        const closeIdx = buf.indexOf(CLOSE);
+        if (closeIdx !== -1) {
+          thinkContent += buf.slice(0, closeIdx);
+          buf = buf.slice(closeIdx + CLOSE.length);
+          inThink = false;
+        } else {
+          const safeLen = Math.max(0, buf.length - CLOSE.length + 1);
+          thinkContent += buf.slice(0, safeLen);
+          buf = buf.slice(safeLen);
+          break;
+        }
+      } else {
+        const openIdx = buf.indexOf(OPEN);
+        if (openIdx !== -1) {
+          visible += buf.slice(0, openIdx);
+          buf = buf.slice(openIdx + OPEN.length);
+          inThink = true;
+        } else {
+          const safeLen = Math.max(0, buf.length - OPEN.length + 1);
+          visible += buf.slice(0, safeLen);
+          buf = buf.slice(safeLen);
+          break;
+        }
+      }
+    }
+
+    emit(visible);
+  };
+
+  const finalize = () => {
+    if (!inThink && buf) emit(buf);
+    buf = "";
+    return thinkContent.trim() || null;
+  };
+
+  return { feed, finalize };
+}
 
 // ── createGroqChat ─────────────────────────────────────────────────────────
 // Creates a stateful chat session (used by BaseChatProcessor agentic loop).
@@ -355,6 +434,136 @@ export const createGroqChat = (tools, history = [], includeTagMap = false) => {
           throw enriched;
         }
       },
+      // ── True token-by-token streaming (first user turn only) ──────────────
+      sendMessageStream: async (messageInput, onChunk) => {
+        try {
+          const message = messageInput?.message ?? messageInput;
+
+          const normParts = (parts) =>
+            Array.isArray(parts)
+              ? parts
+                  .map((p) =>
+                    p == null ? "" : typeof p === "string" ? p : p.text ?? JSON.stringify(p),
+                  )
+                  .join("")
+              : String(parts);
+
+          let normalizedMessage;
+          if (typeof message === "string") {
+            normalizedMessage = { role: "user", content: message };
+          } else if (
+            message?.role &&
+            (typeof message.content === "string" || Array.isArray(message.content))
+          ) {
+            normalizedMessage = message;
+          } else if (message?.parts) {
+            normalizedMessage = { role: message.role || "user", content: normParts(message.parts) };
+          } else {
+            normalizedMessage = { role: "user", content: String(message) };
+          }
+
+          const messages = [...conversationHistory, normalizedMessage];
+          const reasoningEffort = process.env.GROQ_REASONING_EFFORT || null;
+
+          // Try models in fallback order
+          let stream = null;
+          for (let i = 0; i < EFFECTIVE_MODEL_QUEUE.length; i++) {
+            const model = EFFECTIVE_MODEL_QUEUE[i];
+            try {
+              const extraOpts =
+                reasoningEffort && model.startsWith("openai/")
+                  ? { reasoning_effort: reasoningEffort }
+                  : {};
+              console.log(`A tentar streaming com o modelo: ${model}...`);
+              stream = await groq.chat.completions.create({
+                model,
+                messages,
+                temperature: 0.25,
+                tools: normalizeGroqTools(tools),
+                stream: true,
+                ...extraOpts,
+              });
+              break;
+            } catch (err) {
+              if (
+                (err.status === 429 || err.message?.includes("rate limit")) &&
+                i < EFFECTIVE_MODEL_QUEUE.length - 1
+              ) {
+                console.warn(`⚠️ Stream fallback: ${model} → ${EFFECTIVE_MODEL_QUEUE[i + 1]}`);
+                continue;
+              }
+              throw err;
+            }
+          }
+
+          const thinkFilter = createThinkTagFilter(onChunk);
+          let fullContent = "";
+          let reasoningContent = "";
+          const toolCallsAcc = {};
+
+          for await (const chunk of stream) {
+            const delta = chunk.choices?.[0]?.delta || {};
+
+            if (delta.reasoning_content) reasoningContent += delta.reasoning_content;
+
+            if (delta.content) {
+              fullContent += delta.content;
+              thinkFilter.feed(delta.content);
+            }
+
+            if (Array.isArray(delta.tool_calls)) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+                if (!toolCallsAcc[idx]) {
+                  toolCallsAcc[idx] = { id: "", type: "function", function: { name: "", arguments: "" } };
+                }
+                if (tc.id) toolCallsAcc[idx].id = tc.id;
+                if (tc.function?.name) toolCallsAcc[idx].function.name += tc.function.name;
+                if (tc.function?.arguments) toolCallsAcc[idx].function.arguments += tc.function.arguments;
+              }
+            }
+          }
+
+          const thinkFromFilter = thinkFilter.finalize();
+          const { text, thinking: thinkFromTags } = extractThinking(fullContent);
+          const thinking =
+            thinkFromTags ||
+            thinkFromFilter ||
+            (reasoningContent ? reasoningContent.trim() : null) ||
+            null;
+
+          const toolCalls = Object.values(toolCallsAcc).filter((tc) => tc.function?.name);
+          const assistantMsg = {
+            role: "assistant",
+            content: fullContent || null,
+            tool_calls: toolCalls.length ? toolCalls : undefined,
+          };
+
+          conversationHistory.push(normalizedMessage);
+          conversationHistory.push(assistantMsg);
+
+          return {
+            text,
+            thinking,
+            functionCalls: toolCalls.map((tc) => ({
+              name: tc.function.name,
+              args: parseGroqFunctionArgs(tc.function.arguments),
+              raw: tc,
+            })),
+            choices: [
+              { message: assistantMsg, finish_reason: toolCalls.length ? "tool_calls" : "stop" },
+            ],
+          };
+        } catch (error) {
+          const classified = classifyGroqError(error);
+          console.error(`[Groq SendMessageStream] ${classified.type}:`, error.message);
+          const enriched = new Error(classified.userMessage);
+          enriched.groqType = classified.type;
+          enriched.originalError = error;
+          throw enriched;
+        }
+      },
+
       getHistory: () => conversationHistory,
     };
   } catch (error) {

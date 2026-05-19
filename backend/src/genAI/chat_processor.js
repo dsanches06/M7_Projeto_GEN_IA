@@ -22,25 +22,10 @@ import {
 } from "../functions/index.js";
 
 // Persists the task immediately so the model gets the real DB task_id.
-// Also persists the inline assignment (user_id) to survive Vercel timeouts.
 const createTaskAndPersist = async (args) => {
   const mapped = await setCreateTaskValues(args);
   const task = await taskService.createTask(mapped);
-  const result = { ...mapped, id: task.id, task_id: task.id };
-
-  if (mapped.user_id) {
-    try {
-      await taskAssigneesService.createTaskAssignee({
-        task_id: task.id,
-        user_id: mapped.user_id,
-      });
-      result._assignmentPersisted = true;
-    } catch (e) {
-      console.warn("[agentic] inline assign:", e.message);
-    }
-  }
-
-  return result;
+  return { ...mapped, id: task.id, task_id: task.id };
 };
 
 // Persists tags immediately so they survive a Vercel function timeout.
